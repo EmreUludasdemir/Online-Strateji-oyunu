@@ -1,0 +1,1 @@
+{"screen":"/app/dashboard","city":{"name":"Ashwatch","coordinates":{"x":10,"y":10},"resources":{"wood":763,"stone":763,"food":804,"gold":502},"activeUpgrade":null},"selectedCity":null,"map":{"loaded":false,"cities":[]},"coordinateSystem":{"origin":"top-left","xAxis":"increases to the right","yAxis":"increases downward"}}

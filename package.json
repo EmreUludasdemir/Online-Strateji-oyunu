@@ -1,0 +1,18 @@
+{
+  "name": "frontier-dominion-mvp",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "devDependencies": {
+    "playwright": "1.58.2"
+  },
+  "scripts": {
+    "dev": "corepack pnpm -r --parallel dev",
+    "build": "corepack pnpm -r build",
+    "test": "corepack pnpm --filter @frontier/server test && corepack pnpm --filter @frontier/web test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "corepack pnpm --filter @frontier/server prisma:migrate",
+    "db:generate": "corepack pnpm --filter @frontier/server prisma:generate",
+    "db:seed": "corepack pnpm --filter @frontier/server prisma:seed"
+  }
+}

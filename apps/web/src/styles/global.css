@@ -1,0 +1,47 @@
+:root {
+  color-scheme: dark;
+  font-family: "Trebuchet MS", "Lucida Sans Unicode", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  background: #09131b;
+  color: #eff4f7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+dl {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}

@@ -1,0 +1,5 @@
+
+> @frontier/server@0.0.1 dev C:\Users\Emre\Documents\Online Strateji oyunu\apps\server
+> tsx watch src/index.ts
+
+Frontier Dominion server listening on http://localhost:3101

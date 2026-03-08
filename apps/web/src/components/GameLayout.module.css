@@ -1,0 +1,318 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(224, 173, 105, 0.14), transparent 24%),
+    linear-gradient(180deg, #081218 0%, #0d1a24 100%);
+  color: #eff4f7;
+}
+
+.sidebar {
+  padding: 2rem 1.4rem;
+  border-right: 1px solid rgba(239, 244, 247, 0.08);
+  background: rgba(7, 14, 19, 0.38);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.brandKicker,
+.sectionKicker {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #dfa75c;
+  font-size: 0.72rem;
+}
+
+.brandTitle {
+  margin-top: 0.45rem;
+  font-size: 1.9rem;
+}
+
+.brandMeta {
+  color: #aab8c1;
+  margin-top: 0.45rem;
+}
+
+.nav {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.navLink,
+.navLinkActive {
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  color: #dde6ec;
+  text-decoration: none;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.navLink {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navLink:hover,
+.navLinkActive {
+  background: linear-gradient(135deg, rgba(40, 112, 136, 0.7), rgba(197, 129, 58, 0.76));
+  transform: translateX(2px);
+}
+
+.logoutButton,
+.primaryButton {
+  border: none;
+  border-radius: 999px;
+  padding: 0.9rem 1.15rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logoutButton {
+  margin-top: auto;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eff4f7;
+}
+
+.main {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.resourceBar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.resourcePill {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: capitalize;
+}
+
+.notice {
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: rgba(211, 150, 72, 0.16);
+  border: 1px solid rgba(223, 167, 92, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.notice button {
+  border: none;
+  background: transparent;
+  color: #eff4f7;
+  cursor: pointer;
+}
+
+.content {
+  display: grid;
+}
+
+.pageGrid,
+.reportList {
+  display: grid;
+  gap: 1rem;
+}
+
+.heroCard,
+.buildingCard,
+.mapCard,
+.detailCard,
+.reportCard,
+.feedbackCard {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+.heroCard h2,
+.mapCard h2,
+.detailCard h3,
+.reportCard h3 {
+  margin: 0.25rem 0 0.65rem;
+}
+
+.statusStrip {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: rgba(32, 70, 87, 0.48);
+  color: #dbe5eb;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.buildingHeader,
+.reportHeader,
+.mapHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.buildingText,
+.timerText {
+  color: #b2c0c9;
+}
+
+.levelBadge {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(223, 167, 92, 0.16);
+  color: #f2cf93;
+  white-space: nowrap;
+}
+
+.costGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+
+.costGrid div {
+  padding: 0.65rem 0.8rem;
+  border-radius: 14px;
+  background: rgba(7, 14, 19, 0.26);
+}
+
+.costGrid dt {
+  text-transform: capitalize;
+  color: #94a8b5;
+}
+
+.costGrid dd {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+}
+
+.primaryButton {
+  width: 100%;
+  background: linear-gradient(135deg, #bf7a38, #2d809d);
+  color: #fff8ed;
+}
+
+.primaryButton:disabled,
+.logoutButton:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.mapLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 1rem;
+}
+
+.mapInsightGrid {
+  margin: 1rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.mapInsightCard {
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(7, 14, 19, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mapInsightCard strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+}
+
+.mapInsightCard p {
+  margin-top: 0.35rem;
+  color: #aab8c1;
+}
+
+.settlementList {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.settlementButton,
+.settlementButtonActive {
+  text-align: left;
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  background: rgba(7, 14, 19, 0.28);
+  color: #eff4f7;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.settlementButtonActive {
+  border-color: rgba(223, 167, 92, 0.7);
+  background: rgba(223, 167, 92, 0.14);
+}
+
+.settlementButton span,
+.settlementButtonActive span {
+  display: block;
+  font-weight: 700;
+}
+
+.settlementButton small,
+.settlementButtonActive small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #aab8c1;
+}
+
+.feedback,
+.feedbackCard {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+@media (max-width: 1080px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid rgba(239, 244, 247, 0.08);
+  }
+
+  .mapLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .main {
+    padding: 1rem;
+  }
+
+  .resourceBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

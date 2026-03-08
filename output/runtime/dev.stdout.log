@@ -1,0 +1,73 @@
+
+> frontier-dominion-mvp@ dev C:\Users\Emre\Documents\Online Strateji oyunu
+> corepack pnpm -r --parallel dev
+
+Scope: 3 of 4 workspace projects
+apps/web dev$ vite
+packages/shared dev$ tsc -p tsconfig.json --watch
+apps/server dev$ tsx watch src/index.ts
+packages/shared dev: [2J[3J[H11:23:07 - Starting compilation in watch mode...
+apps/web dev:   [32m[1mVITE[22m v7.3.1[39m  [2mready in [0m[1m603[22m[2m[0m ms[22m
+apps/web dev:   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+apps/web dev: [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+packages/shared dev: 11:23:08 - Found 0 errors. Watching for file changes.
+apps/server dev: Frontier Dominion server listening on http://localhost:3101
+apps/web dev: [2m11:24:46[22m [31m[1m[vite][22m[39m [31mws proxy error:[39m
+apps/web dev: Error: read ECONNRESET
+apps/web dev:     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+apps/web dev: [2m11:24:46[22m [31m[1m[vite][22m[39m [31mws proxy socket error:[39m
+apps/web dev: Error: read ECONNRESET
+apps/web dev:     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+apps/web dev: [2m11:25:41[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx[22m
+apps/server dev: 11:25:42 [tsx] change in ./src\routes\auth.ts Restarting...
+packages/shared dev: [2J[3J[H11:25:42 - File change detected. Starting incremental compilation...
+packages/shared dev: 11:25:42 - Found 0 errors. Watching for file changes.
+apps/server dev: c11:25:42 [tsx] change in ./..\..\packages\shared\dist\index.js Restarting...
+apps/server dev: cFrontier Dominion server listening on http://localhost:3101
+apps/web dev: [2m11:25:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx[22m
+apps/server dev: 11:26:08 [tsx] change in ./..\..\packages\shared\dist\index.js Restarting...
+apps/server dev: cFrontier Dominion server listening on http://localhost:3101
+apps/web dev: [2m11:27:34[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+apps/web dev: [2m11:28:08[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx[22m
+apps/web dev: [2m11:28:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+apps/web dev: [2m11:28:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/MapPage.tsx[22m
+apps/server dev: 11:28:09 [tsx] change in ./src\lib\auth.ts Restarting...
+apps/web dev: [2m11:28:09[22m [31m[1m[vite][22m[39m [31mws proxy error:[39m
+apps/web dev: Error: read ECONNRESET
+apps/web dev:     at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+apps/web dev: [2m11:28:09[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+apps/web dev: AggregateError [ECONNREFUSED]: 
+apps/web dev:     at internalConnectMultiple (node:net:1134:18)
+apps/web dev:     at afterConnectMultiple (node:net:1715:7)
+apps/web dev: [2m11:28:09[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/game/state[39m
+apps/web dev: AggregateError [ECONNREFUSED]: 
+apps/web dev:     at internalConnectMultiple (node:net:1134:18)
+apps/web dev:     at afterConnectMultiple (node:net:1715:7)
+apps/server dev: cFrontier Dominion server listening on http://localhost:3101
+apps/server dev: 11:28:19 [tsx] change in ./..\..\packages\shared\dist\index.js Restarting...
+apps/web dev: [2m11:28:20[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/game/state[39m
+apps/web dev: AggregateError [ECONNREFUSED]: 
+apps/web dev:     at internalConnectMultiple (node:net:1134:18)
+apps/web dev:     at afterConnectMultiple (node:net:1715:7)
+apps/server dev: cFrontier Dominion server listening on http://localhost:3101
+apps/server dev: 11:28:42 [tsx] change in ./src\lib\auth.ts Restarting...
+apps/server dev: cFrontier Dominion server listening on http://localhost:3101
+apps/web dev: [2m11:31:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx[22m
+apps/web dev: [2m11:31:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+apps/web dev: [2m11:31:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/MapPage.tsx[22m
+apps/web dev: [2m11:33:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx[22m
+apps/web dev: [2m11:33:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+apps/web dev: [2m11:33:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/MapPage.tsx[22m
+packages/shared dev: [2J[3J[H11:34:08 - File change detected. Starting incremental compilation...
+apps/server dev: 11:34:08 [tsx] change in ./..\..\packages\shared\dist\index.js Restarting...
+packages/shared dev: 11:34:08 - Found 0 errors. Watching for file changes.
+apps/web dev: [2m11:34:09[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/game/state[39m
+apps/web dev: AggregateError [ECONNREFUSED]: 
+apps/web dev:     at internalConnectMultiple (node:net:1134:18)
+apps/web dev:     at afterConnectMultiple (node:net:1715:7)
+apps/server dev: cFrontier Dominion server listening on http://localhost:3101
+apps/web dev: Failed
+C:\Users\Emre\Documents\Online Strateji oyunu\apps\web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @frontier/web@0.0.1 dev: `vite`
+Exit status 4294967295
+ ELIFECYCLE  Command failed with exit code 4294967295.

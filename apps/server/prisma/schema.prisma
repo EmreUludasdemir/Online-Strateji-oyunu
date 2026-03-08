@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BuildingType {
+  TOWN_HALL
+  FARM
+  LUMBER_MILL
+  QUARRY
+  GOLD_MINE
+}
+
+enum UpgradeStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum BattleResult {
+  ATTACKER_WIN
+  DEFENDER_HOLD
+}
+
+model User {
+  id                     String         @id @default(cuid())
+  username               String         @unique
+  passwordHash           String
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  city                   City?
+  reportsAsAttacker      BattleReport[] @relation("AttackerReports")
+  reportsAsDefender      BattleReport[] @relation("DefenderReports")
+}
+
+model City {
+  id                String            @id @default(cuid())
+  name              String
+  ownerId           String            @unique
+  owner             User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  x                 Int
+  y                 Int
+  wood              Float
+  stone             Float
+  food              Float
+  gold              Float
+  resourceUpdatedAt DateTime
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  buildings         Building[]
+  upgrades          BuildingUpgrade[]
+  reportsAsAttacker BattleReport[]    @relation("OriginCityReports")
+  reportsAsDefender BattleReport[]    @relation("TargetCityReports")
+
+  @@unique([x, y])
+}
+
+model Building {
+  id           String       @id @default(cuid())
+  cityId       String
+  buildingType BuildingType
+  level        Int
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  city         City         @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, buildingType])
+}
+
+model BuildingUpgrade {
+  id           String        @id @default(cuid())
+  cityId       String
+  buildingType BuildingType
+  fromLevel    Int
+  toLevel      Int
+  status       UpgradeStatus @default(ACTIVE)
+  startedAt    DateTime      @default(now())
+  completesAt  DateTime
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  city         City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@index([cityId, status])
+}
+
+model BattleReport {
+  id             String       @id @default(cuid())
+  attackerUserId String
+  defenderUserId String
+  attackerCityId String
+  defenderCityId String
+  result         BattleResult
+  attackerPower  Int
+  defenderPower  Int
+  lootWood       Int
+  lootStone      Int
+  lootFood       Int
+  lootGold       Int
+  fromX          Int
+  fromY          Int
+  toX            Int
+  toY            Int
+  distance       Int
+  createdAt      DateTime     @default(now())
+  attackerUser   User         @relation("AttackerReports", fields: [attackerUserId], references: [id], onDelete: Cascade)
+  defenderUser   User         @relation("DefenderReports", fields: [defenderUserId], references: [id], onDelete: Cascade)
+  attackerCity   City         @relation("OriginCityReports", fields: [attackerCityId], references: [id], onDelete: Cascade)
+  defenderCity   City         @relation("TargetCityReports", fields: [defenderCityId], references: [id], onDelete: Cascade)
+}
