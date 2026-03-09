@@ -3,12 +3,18 @@ import { authSchema } from "@frontier/shared";
 
 import { JWT_COOKIE_NAME } from "../game/constants";
 import { getSessionCookieOptions, signSessionToken, verifySessionToken } from "../lib/auth";
+import { env } from "../lib/env";
 import { parseOrThrow } from "../lib/http";
+import { createRateLimit } from "../middleware/rateLimit";
 import { getSessionUser, loginPlayer, registerPlayer } from "../game/service";
 
 export const authRouter = Router();
+const authRateLimit = createRateLimit({
+  max: env.AUTH_RATE_LIMIT_MAX,
+  windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+});
 
-authRouter.post("/register", async (request, response) => {
+authRouter.post("/register", authRateLimit, async (request, response) => {
   const payload = parseOrThrow(authSchema, request.body);
   const user = await registerPlayer(payload);
 
@@ -16,7 +22,7 @@ authRouter.post("/register", async (request, response) => {
   response.status(201).json({ user });
 });
 
-authRouter.post("/login", async (request, response) => {
+authRouter.post("/login", authRateLimit, async (request, response) => {
   const payload = parseOrThrow(authSchema, request.body);
   const user = await loginPlayer(payload);
 

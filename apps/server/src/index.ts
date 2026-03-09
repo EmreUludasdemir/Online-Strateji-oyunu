@@ -4,10 +4,11 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 
 import { createApp } from "./app";
-import { JWT_COOKIE_NAME } from "./game/constants";
+import { JWT_COOKIE_NAME, WORLD_RECONCILE_INTERVAL_MS } from "./game/constants";
+import { reconcileWorld } from "./game/service";
+import { verifySessionToken } from "./lib/auth";
 import { env } from "./lib/env";
 import { notificationHub } from "./lib/notifications";
-import { verifySessionToken } from "./lib/auth";
 
 function parseCookieHeader(rawCookieHeader: string | undefined): Record<string, string> {
   if (!rawCookieHeader) {
@@ -49,6 +50,17 @@ webSocketServer.on("connection", (socket, request) => {
   });
 });
 
+const reconcileTimer = setInterval(() => {
+  void reconcileWorld().catch((error) => {
+    console.error("World reconcile failed", error);
+  });
+}, WORLD_RECONCILE_INTERVAL_MS);
+
 server.listen(env.PORT, () => {
   console.log(`Frontier Dominion server listening on http://localhost:${env.PORT}`);
+});
+
+process.on("SIGINT", () => {
+  clearInterval(reconcileTimer);
+  process.exit(0);
 });

@@ -6,7 +6,23 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
 - 2026-03-07: Validated `corepack pnpm test`, `corepack pnpm build`, database migration + seed, and browser flows for login, dashboard, world map, attack, and reports.
 - 2026-03-08: Split the Phaser map into lazy-loaded frontend chunks, added a selectable settlement list, and improved auth form autofill behavior.
 - 2026-03-08: Added map intelligence cards plus per-settlement attack/defense previews so raid decisions are clearer before committing.
+- 2026-03-08: Reworked the game UI toward a brass-and-parchment strategy look with stronger typography, richer resource plaques, district stamps, and a more structured city overview panel.
+- 2026-03-08: Kept the new map frame styling, but Playwright full-page capture still shows a black Phaser canvas in headless mode even after frontend restarts; dashboard previews remain reliable.
+- 2026-03-08: Added a governor-style command layer: dashboard focus cards, build recommendations, war council guidance, march-planning metrics on the map, and battle-ledger summary cards.
+- 2026-03-08: Docker Desktop had been closed during validation, which caused temporary `500` responses from `/api/auth/me` and `/api/game/state`; restarting Docker and Postgres restored normal operation.
+- 2026-03-08: Refactored the backend into `commands`, `queries`, `reconcile`, and `events`, then expanded the Prisma schema for troops, commanders, research, marches, fog tiles, and richer battle reports.
+- 2026-03-08: Replaced instant attack resolution with march creation, ETA-based resolution, compatibility attack wrapping, chunked `64x64` map queries, and WebSocket events for training/research/march/fog/report updates.
+- 2026-03-08: Added Kingdom Core frontend panels for army training, commander visibility, doctrine research, march dispatch, march recall, fog-of-war rendering, and richer `render_game_to_text()` output.
+- 2026-03-08: Added self-healing city infrastructure backfill so legacy demo users automatically gain the new barracks, academy, watchtower, troop, research, and commander data on first authenticated access.
+- 2026-03-08: Moved session TTL and auth/command rate-limit knobs into environment variables and updated `.env.example`.
+- 2026-03-08: Added `scripts/smoke_kingdom_core.mjs` plus the root `smoke:e2e` script for repeatable Playwright verification against live dev servers.
+- 2026-03-08: Re-ran `corepack pnpm build`, `corepack pnpm test`, the copied `web_game_playwright_client.js` smoke loop, manual Playwright MCP browser validation, and `corepack pnpm smoke:e2e`; all passed.
+- 2026-03-09: Added Social World v1-lite alliance support with Prisma models for alliances, members, chat, help requests, and help responses, plus migration `20260309122022_alliance_social_v1`.
+- 2026-03-09: Implemented alliance backend flows for create, join, leave, chat, request help, and respond help, and wired `alliance.updated` notifications into the existing WebSocket invalidation loop.
+- 2026-03-09: Added the `/app/alliance` frontend route with roster, chat, queue-help controls, and seeded the demo alliance `Bronze Concord [BRZ]`.
+- 2026-03-09: Extended server smoke coverage with an alliance test and updated `smoke:e2e` to verify the seeded alliance chamber before the march/report flow.
+- 2026-03-09: Re-ran `corepack pnpm db:migrate --name alliance_social_v1`, `corepack pnpm db:generate`, `corepack pnpm db:seed`, `corepack pnpm build`, `corepack pnpm test`, `corepack pnpm smoke:e2e`, and the copied `web_game_playwright_client.js` smoke loop; all passed.
 - Note: The frontend now lazy-loads the Phaser map route, but the dedicated Phaser vendor chunk is still large enough to trigger a Vite warning.
 - Note: Browser validation uses the copied `scripts/web_game_playwright_client.js` because the original skill script lives outside the writable workspace and could not resolve local dependencies from there.
 - TODO: Consider swapping Phaser for a lighter renderer or trimming Phaser imports if bundle size becomes a release concern.
-- TODO: Add dedicated frontend component tests if this MVP grows beyond the current smoke-level browser validation.
+- TODO: Add dedicated frontend component tests and a fuller automated Playwright suite if this MVP grows beyond the current smoke-level browser validation.

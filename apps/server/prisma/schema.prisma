@@ -13,6 +13,9 @@ enum BuildingType {
   LUMBER_MILL
   QUARRY
   GOLD_MINE
+  BARRACKS
+  ACADEMY
+  WATCHTOWER
 }
 
 enum UpgradeStatus {
@@ -20,9 +23,48 @@ enum UpgradeStatus {
   COMPLETED
 }
 
+enum QueueStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 enum BattleResult {
   ATTACKER_WIN
   DEFENDER_HOLD
+}
+
+enum TroopType {
+  INFANTRY
+  ARCHER
+  CAVALRY
+}
+
+enum ResearchType {
+  MILITARY_DRILL
+  LOGISTICS
+  AGRONOMY
+  STONEWORK
+  GOLD_TRADE
+  SCOUTING
+}
+
+enum MarchState {
+  ENROUTE
+  RESOLVED
+  RECALLED
+}
+
+enum AllianceRole {
+  LEADER
+  OFFICER
+  MEMBER
+}
+
+enum AllianceHelpKind {
+  BUILDING_UPGRADE
+  TRAINING
+  RESEARCH
 }
 
 model User {
@@ -32,15 +74,22 @@ model User {
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   city                   City?
+  commanders             Commander[]
+  fogTiles               FogTile[]
   reportsAsAttacker      BattleReport[] @relation("AttackerReports")
   reportsAsDefender      BattleReport[] @relation("DefenderReports")
+  marches                March[]        @relation("OwnerMarches")
+  allianceMembership     AllianceMember?
+  allianceMessages       AllianceChatMessage[]
+  requestedHelp          AllianceHelpRequest[]   @relation("AllianceHelpRequester")
+  helpResponses          AllianceHelpResponse[]
 }
 
 model City {
-  id                String            @id @default(cuid())
+  id                String              @id @default(cuid())
   name              String
-  ownerId           String            @unique
-  owner             User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId           String              @unique
+  owner             User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   x                 Int
   y                 Int
   wood              Float
@@ -48,14 +97,97 @@ model City {
   food              Float
   gold              Float
   resourceUpdatedAt DateTime
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   buildings         Building[]
   upgrades          BuildingUpgrade[]
-  reportsAsAttacker BattleReport[]    @relation("OriginCityReports")
-  reportsAsDefender BattleReport[]    @relation("TargetCityReports")
+  troopGarrisons    TroopGarrison[]
+  trainingQueues    TroopTrainingQueue[]
+  researchLevels    ResearchLevel[]
+  researchQueues    ResearchQueue[]
+  outgoingMarches   March[]             @relation("OriginCityMarches")
+  incomingMarches   March[]             @relation("TargetCityMarches")
+  reportsAsAttacker BattleReport[]      @relation("OriginCityReports")
+  reportsAsDefender BattleReport[]      @relation("TargetCityReports")
+  helpRequests      AllianceHelpRequest[]
 
   @@unique([x, y])
+}
+
+model Alliance {
+  id            String                @id @default(cuid())
+  name          String                @unique
+  tag           String                @unique
+  description   String?
+  wood          Float                 @default(0)
+  stone         Float                 @default(0)
+  food          Float                 @default(0)
+  gold          Float                 @default(0)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  members       AllianceMember[]
+  chatMessages  AllianceChatMessage[]
+  helpRequests  AllianceHelpRequest[]
+}
+
+model AllianceMember {
+  id          String       @id @default(cuid())
+  allianceId  String
+  userId      String       @unique
+  role        AllianceRole @default(MEMBER)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  alliance    Alliance     @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([allianceId, userId])
+  @@index([allianceId, role])
+}
+
+model AllianceChatMessage {
+  id          String    @id @default(cuid())
+  allianceId   String
+  userId       String
+  content      String
+  createdAt    DateTime  @default(now())
+  alliance     Alliance  @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([allianceId, createdAt])
+}
+
+model AllianceHelpRequest {
+  id               String             @id @default(cuid())
+  allianceId        String
+  requesterUserId   String
+  cityId            String
+  kind              AllianceHelpKind
+  targetId          String
+  label             String
+  helpCount         Int                @default(0)
+  maxHelps          Int                @default(3)
+  isOpen            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  fulfilledAt       DateTime?
+  alliance          Alliance           @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  requesterUser     User               @relation("AllianceHelpRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  city              City               @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  responses         AllianceHelpResponse[]
+
+  @@unique([kind, targetId])
+  @@index([allianceId, isOpen])
+}
+
+model AllianceHelpResponse {
+  id             String              @id @default(cuid())
+  helpRequestId   String
+  helperUserId    String
+  createdAt       DateTime            @default(now())
+  helpRequest     AllianceHelpRequest @relation(fields: [helpRequestId], references: [id], onDelete: Cascade)
+  helperUser      User                @relation(fields: [helperUserId], references: [id], onDelete: Cascade)
+
+  @@unique([helpRequestId, helperUserId])
 }
 
 model Building {
@@ -86,27 +218,145 @@ model BuildingUpgrade {
   @@index([cityId, status])
 }
 
+model TroopGarrison {
+  id        String    @id @default(cuid())
+  cityId    String
+  troopType TroopType
+  quantity  Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  city      City      @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, troopType])
+}
+
+model TroopTrainingQueue {
+  id          String      @id @default(cuid())
+  cityId       String
+  troopType    TroopType
+  quantity     Int
+  status       QueueStatus @default(ACTIVE)
+  startedAt    DateTime    @default(now())
+  completesAt  DateTime
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  city         City        @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@index([cityId, status])
+}
+
+model Commander {
+  id               String   @id @default(cuid())
+  userId           String
+  name             String
+  templateKey      String
+  level            Int
+  attackBonus      Float
+  defenseBonus     Float
+  marchSpeedBonus  Float
+  carryBonus       Float
+  isPrimary        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marches          March[]
+}
+
+model ResearchLevel {
+  id           String       @id @default(cuid())
+  cityId        String
+  researchType  ResearchType
+  level         Int
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  city          City         @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, researchType])
+}
+
+model ResearchQueue {
+  id           String       @id @default(cuid())
+  cityId        String
+  researchType  ResearchType
+  fromLevel     Int
+  toLevel       Int
+  status        QueueStatus  @default(ACTIVE)
+  startedAt     DateTime     @default(now())
+  completesAt   DateTime
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  city          City         @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@index([cityId, status])
+}
+
+model FogTile {
+  id           String   @id @default(cuid())
+  userId        String
+  x             Int
+  y             Int
+  discoveredAt  DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, x, y])
+}
+
+model March {
+  id                     String       @id @default(cuid())
+  ownerUserId            String
+  ownerCityId            String
+  targetCityId           String
+  commanderId            String
+  state                  MarchState   @default(ENROUTE)
+  infantryCount          Int
+  archerCount            Int
+  cavalryCount           Int
+  attackerPowerSnapshot  Int
+  defenderPowerSnapshot  Int?
+  battleResult           BattleResult?
+  startsAt               DateTime     @default(now())
+  etaAt                  DateTime
+  resolvedAt             DateTime?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  ownerUser              User         @relation("OwnerMarches", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerCity              City         @relation("OriginCityMarches", fields: [ownerCityId], references: [id], onDelete: Cascade)
+  targetCity             City         @relation("TargetCityMarches", fields: [targetCityId], references: [id], onDelete: Cascade)
+  commander              Commander    @relation(fields: [commanderId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, state])
+  @@index([targetCityId, state])
+  @@index([etaAt, state])
+}
+
 model BattleReport {
-  id             String       @id @default(cuid())
-  attackerUserId String
-  defenderUserId String
-  attackerCityId String
-  defenderCityId String
-  result         BattleResult
-  attackerPower  Int
-  defenderPower  Int
-  lootWood       Int
-  lootStone      Int
-  lootFood       Int
-  lootGold       Int
-  fromX          Int
-  fromY          Int
-  toX            Int
-  toY            Int
-  distance       Int
-  createdAt      DateTime     @default(now())
-  attackerUser   User         @relation("AttackerReports", fields: [attackerUserId], references: [id], onDelete: Cascade)
-  defenderUser   User         @relation("DefenderReports", fields: [defenderUserId], references: [id], onDelete: Cascade)
-  attackerCity   City         @relation("OriginCityReports", fields: [attackerCityId], references: [id], onDelete: Cascade)
-  defenderCity   City         @relation("TargetCityReports", fields: [defenderCityId], references: [id], onDelete: Cascade)
+  id                    String       @id @default(cuid())
+  attackerUserId        String
+  defenderUserId        String
+  attackerCityId        String
+  defenderCityId        String
+  result                BattleResult
+  attackerPower         Int
+  defenderPower         Int
+  lootWood              Int
+  lootStone             Int
+  lootFood              Int
+  lootGold              Int
+  attackerLossInfantry  Int          @default(0)
+  attackerLossArcher    Int          @default(0)
+  attackerLossCavalry   Int          @default(0)
+  defenderLossInfantry  Int          @default(0)
+  defenderLossArcher    Int          @default(0)
+  defenderLossCavalry   Int          @default(0)
+  fromX                 Int
+  fromY                 Int
+  toX                   Int
+  toY                   Int
+  distance              Int
+  createdAt             DateTime     @default(now())
+  attackerUser          User         @relation("AttackerReports", fields: [attackerUserId], references: [id], onDelete: Cascade)
+  defenderUser          User         @relation("DefenderReports", fields: [defenderUserId], references: [id], onDelete: Cascade)
+  attackerCity          City         @relation("OriginCityReports", fields: [attackerCityId], references: [id], onDelete: Cascade)
+  defenderCity          City         @relation("TargetCityReports", fields: [defenderCityId], references: [id], onDelete: Cascade)
 }

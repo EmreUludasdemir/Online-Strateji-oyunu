@@ -1,13 +1,30 @@
 import cookieParser from "cookie-parser";
 import express, { type NextFunction, type Request, type Response } from "express";
 
+import { HttpError, toApiError } from "./lib/http";
 import { authRouter } from "./routes/auth";
 import { gameRouter } from "./routes/game";
-import { HttpError, toApiError } from "./lib/http";
+
+function requestLogger(request: Request, response: Response, next: NextFunction) {
+  const startedAt = Date.now();
+  response.on("finish", () => {
+    console.info(
+      JSON.stringify({
+        channel: "http",
+        method: request.method,
+        path: request.path,
+        status: response.statusCode,
+        durationMs: Date.now() - startedAt,
+      }),
+    );
+  });
+  next();
+}
 
 export function createApp() {
   const app = express();
 
+  app.use(requestLogger);
   app.use(express.json());
   app.use(cookieParser());
 

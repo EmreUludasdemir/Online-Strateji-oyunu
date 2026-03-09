@@ -17,6 +17,11 @@ const ReportsPage = lazy(async () => {
   return { default: module.ReportsPage };
 });
 
+const AlliancePage = lazy(async () => {
+  const module = await import("./pages/AlliancePage");
+  return { default: module.AlliancePage };
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -46,6 +51,7 @@ export default function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="map" element={<MapPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="alliance" element={<AlliancePage />} />
             </Route>
             <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
           </Routes>

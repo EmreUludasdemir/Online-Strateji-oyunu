@@ -1,4 +1,4 @@
-import type { MapCity } from "@frontier/shared";
+import type { FogTileView, MapCity, MarchView } from "@frontier/shared";
 import Phaser from "phaser";
 import { useEffect, useRef, useState } from "react";
 
@@ -6,15 +6,23 @@ import styles from "./WorldMap.module.css";
 
 interface WorldMapProps {
   size: number;
+  center: {
+    x: number;
+    y: number;
+  };
+  radius: number;
+  tiles: FogTileView[];
   cities: MapCity[];
+  marches: MarchView[];
   selectedCityId: string | null;
   onSelect: (cityId: string) => void;
 }
 
 class FrontierMapScene extends Phaser.Scene {
   private drawLayer?: Phaser.GameObjects.Container;
-  private size = 20;
+  private tiles: FogTileView[] = [];
   private cities: MapCity[] = [];
+  private marches: MarchView[] = [];
   private selectedCityId: string | null = null;
   private onSelect: (cityId: string) => void = () => undefined;
 
@@ -23,13 +31,20 @@ class FrontierMapScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#09131b");
+    this.cameras.main.setBackgroundColor("#121814");
     this.redraw();
   }
 
-  configure(size: number, cities: MapCity[], selectedCityId: string | null, onSelect: (cityId: string) => void) {
-    this.size = size;
+  configure(
+    tiles: FogTileView[],
+    cities: MapCity[],
+    marches: MarchView[],
+    selectedCityId: string | null,
+    onSelect: (cityId: string) => void,
+  ) {
+    this.tiles = tiles;
     this.cities = cities;
+    this.marches = marches;
     this.selectedCityId = selectedCityId;
     this.onSelect = onSelect;
     this.redraw();
@@ -45,39 +60,68 @@ class FrontierMapScene extends Phaser.Scene {
 
     const width = this.scale.width;
     const height = this.scale.height;
-    const tileWidth = width / this.size;
-    const tileHeight = height / this.size;
+    const minX = Math.min(...this.tiles.map((tile) => tile.x));
+    const maxX = Math.max(...this.tiles.map((tile) => tile.x));
+    const minY = Math.min(...this.tiles.map((tile) => tile.y));
+    const maxY = Math.max(...this.tiles.map((tile) => tile.y));
+    const gridWidth = maxX - minX + 1;
+    const gridHeight = maxY - minY + 1;
+    const tileWidth = width / gridWidth;
+    const tileHeight = height / gridHeight;
 
-    const grid = this.add.graphics();
-    grid.fillStyle(0x0d1923, 1);
-    grid.fillRect(0, 0, width, height);
-    grid.lineStyle(1, 0x193041, 1);
+    const background = this.add.graphics();
+    background.fillStyle(0x1b251d, 1);
+    background.fillRect(0, 0, width, height);
+    this.drawLayer.add(background);
 
-    for (let index = 0; index <= this.size; index += 1) {
-      grid.lineBetween(index * tileWidth, 0, index * tileWidth, height);
-      grid.lineBetween(0, index * tileHeight, width, index * tileHeight);
+    for (const tile of this.tiles) {
+      const localX = tile.x - minX;
+      const localY = tile.y - minY;
+      const pixelX = localX * tileWidth;
+      const pixelY = localY * tileHeight;
+      const fillColor =
+        tile.state === "VISIBLE" ? 0x617d53 : tile.state === "DISCOVERED" ? 0x374637 : 0x111513;
+      const alpha = tile.state === "VISIBLE" ? 0.95 : tile.state === "DISCOVERED" ? 0.82 : 1;
+      const tileGraphic = this.add.graphics();
+      tileGraphic.fillStyle(fillColor, alpha);
+      tileGraphic.fillRect(pixelX, pixelY, tileWidth, tileHeight);
+      tileGraphic.lineStyle(1, 0x4a5a48, tile.state === "HIDDEN" ? 0.18 : 0.35);
+      tileGraphic.strokeRect(pixelX, pixelY, tileWidth, tileHeight);
+      this.drawLayer.add(tileGraphic);
     }
 
-    this.drawLayer.add(grid);
+    for (const march of this.marches) {
+      const line = this.add.graphics();
+      const originX = (march.origin.x - minX + 0.5) * tileWidth;
+      const originY = (march.origin.y - minY + 0.5) * tileHeight;
+      const targetX = (march.target.x - minX + 0.5) * tileWidth;
+      const targetY = (march.target.y - minY + 0.5) * tileHeight;
+      line.lineStyle(3, 0xf0d392, 0.8);
+      line.lineBetween(originX, originY, targetX, targetY);
+      line.fillStyle(0xf0d392, 1);
+      line.fillCircle(targetX, targetY, Math.max(5, tileWidth * 0.14));
+      this.drawLayer.add(line);
+    }
 
     for (const city of this.cities) {
-      const centerX = city.x * tileWidth + tileWidth / 2;
-      const centerY = city.y * tileHeight + tileHeight / 2;
-      const fillColor = city.isCurrentPlayer ? 0x2e8bbf : city.canAttack ? 0xcf8a3a : 0x72808f;
-      const borderColor = city.cityId === this.selectedCityId ? 0xf7d36b : 0xe7eef4;
-      const radius = Math.max(8, Math.min(tileWidth, tileHeight) * 0.22);
-      const marker = this.add.circle(centerX, centerY, radius, fillColor, 1);
+      const centerX = (city.x - minX + 0.5) * tileWidth;
+      const centerY = (city.y - minY + 0.5) * tileHeight;
+      const fillColor =
+        city.isCurrentPlayer ? 0x4f8a89 : city.fogState === "DISCOVERED" ? 0x83745f : 0xc68a48;
+      const borderColor = city.cityId === this.selectedCityId ? 0xf2d083 : 0xf2efe3;
+      const marker = this.add.circle(centerX, centerY, Math.max(8, Math.min(tileWidth, tileHeight) * 0.24), fillColor, 1);
 
       marker.setStrokeStyle(city.cityId === this.selectedCityId ? 4 : 2, borderColor, 1);
       marker.setInteractive({ useHandCursor: true });
       marker.on("pointerdown", () => this.onSelect(city.cityId));
 
       const label = this.add
-        .text(centerX, centerY - radius - 6, city.isCurrentPlayer ? "You" : city.ownerName, {
+        .text(centerX, centerY - 12, city.isCurrentPlayer ? "You" : city.cityName, {
           color: "#f4efe5",
-          fontFamily: "'Trebuchet MS', 'Lucida Sans Unicode', sans-serif",
+          fontFamily: "'Palatino Linotype', 'Book Antiqua', serif",
           fontSize: "12px",
           align: "center",
+          backgroundColor: "rgba(16,20,18,0.45)",
         })
         .setOrigin(0.5, 1);
 
@@ -87,7 +131,13 @@ class FrontierMapScene extends Phaser.Scene {
   }
 }
 
-export default function WorldMap({ size, cities, selectedCityId, onSelect }: WorldMapProps) {
+export default function WorldMap({
+  tiles,
+  cities,
+  marches,
+  selectedCityId,
+  onSelect,
+}: WorldMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<FrontierMapScene | null>(null);
@@ -105,7 +155,7 @@ export default function WorldMap({ size, cities, selectedCityId, onSelect }: Wor
       height: dimension,
       parent: containerRef.current,
       scene: [scene],
-      backgroundColor: "#09131b",
+      backgroundColor: "#121814",
       scale: {
         mode: Phaser.Scale.NONE,
       },
@@ -145,8 +195,8 @@ export default function WorldMap({ size, cities, selectedCityId, onSelect }: Wor
     }
 
     game.scale.resize(dimension, dimension);
-    scene.configure(size, cities, selectedCityId, onSelect);
-  }, [cities, dimension, onSelect, selectedCityId, size]);
+    scene.configure(tiles, cities, marches, selectedCityId, onSelect);
+  }, [cities, dimension, marches, onSelect, selectedCityId, tiles]);
 
   return <div ref={containerRef} className={styles.mapCanvas} />;
 }

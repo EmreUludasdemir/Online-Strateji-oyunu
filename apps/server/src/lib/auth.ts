@@ -7,8 +7,6 @@ export interface SessionPayload {
   userId: string;
 }
 
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
@@ -19,7 +17,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export function signSessionToken(userId: string): string {
   return jwt.sign({ userId }, env.JWT_SECRET, {
-    expiresIn: SESSION_TTL_SECONDS,
+    expiresIn: env.SESSION_TTL_SECONDS,
   });
 }
 
@@ -32,14 +30,14 @@ export function verifySessionToken(token: string): SessionPayload | null {
 }
 
 export function getSessionCookieOptions() {
-  const domain = process.env.NODE_ENV === "test" ? undefined : "localhost";
+  const domain = process.env.NODE_ENV === "test" ? undefined : env.COOKIE_DOMAIN;
 
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
-    secure: false,
+    sameSite: env.COOKIE_SAMESITE,
+    secure: env.COOKIE_SECURE ?? false,
     ...(domain ? { domain } : {}),
-    maxAge: SESSION_TTL_SECONDS * 1000,
+    maxAge: env.SESSION_TTL_SECONDS * 1000,
     path: "/",
-  };
+  } as const;
 }

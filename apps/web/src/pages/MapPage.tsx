@@ -1,52 +1,59 @@
 import { useQuery } from "@tanstack/react-query";
-import { lazy, Suspense, useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import type { TroopStock, TroopType } from "@frontier/shared";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import styles from "../components/GameLayout.module.css";
-import { formatNumber } from "../lib/formatters";
+import { formatNumber, formatRelativeTimer } from "../lib/formatters";
+import { useNow } from "../lib/useNow";
 
 const WorldMap = lazy(() => import("../components/WorldMap"));
 
 export function MapPage() {
-  const { selectedCityId, setSelectedCityId, attack, isAttacking, state } = useGameLayoutContext();
-  const worldMapQuery = useQuery({
-    queryKey: ["world-map"],
-    queryFn: api.worldMap,
+  const now = useNow();
+  const { selectedCityId, setSelectedCityId, sendMarch, recallMarch, isSendingMarch, isRecallingMarch, state } =
+    useGameLayoutContext();
+  const [commanderId, setCommanderId] = useState(state.city.commanders[0]?.id ?? "");
+  const [troopPayload, setTroopPayload] = useState<TroopStock>({
+    INFANTRY: Math.min(18, state.city.troops[0]?.quantity ?? 0),
+    ARCHER: Math.min(12, state.city.troops[1]?.quantity ?? 0),
+    CAVALRY: Math.min(8, state.city.troops[2]?.quantity ?? 0),
+  });
+
+  const worldChunkQuery = useQuery({
+    queryKey: ["world-chunk"],
+    queryFn: () =>
+      api.worldChunk({
+        centerX: state.city.coordinates.x,
+        centerY: state.city.coordinates.y,
+        radius: 8,
+      }),
   });
 
   useEffect(() => {
-    if (!worldMapQuery.data || selectedCityId) {
+    if (!worldChunkQuery.data || selectedCityId) {
       return;
     }
 
-    const preferredCity =
-      worldMapQuery.data.cities.find((city) => city.isCurrentPlayer) ?? worldMapQuery.data.cities[0];
+    const preferredCity = worldChunkQuery.data.cities.find((city) => city.isCurrentPlayer) ?? worldChunkQuery.data.cities[0];
     setSelectedCityId(preferredCity?.cityId ?? null);
-  }, [selectedCityId, setSelectedCityId, worldMapQuery.data]);
+  }, [selectedCityId, setSelectedCityId, worldChunkQuery.data]);
 
   const selectedCity = useMemo(() => {
-    return worldMapQuery.data?.cities.find((city) => city.cityId === selectedCityId) ?? null;
-  }, [selectedCityId, worldMapQuery.data]);
+    return worldChunkQuery.data?.cities.find((city) => city.cityId === selectedCityId) ?? null;
+  }, [selectedCityId, worldChunkQuery.data]);
 
-  const attackableSettlements = useMemo(
-    () => worldMapQuery.data?.cities.filter((city) => city.canAttack) ?? [],
-    [worldMapQuery.data],
-  );
+  const visibleTiles = worldChunkQuery.data?.tiles.filter((tile) => tile.state === "VISIBLE").length ?? 0;
+  const discoveredTiles = worldChunkQuery.data?.tiles.filter((tile) => tile.state !== "HIDDEN").length ?? 0;
+  const commandableCities = worldChunkQuery.data?.cities.filter((city) => city.canSendMarch) ?? [];
+  const totalAssignedTroops = Object.values(troopPayload).reduce((sum, value) => sum + value, 0);
 
-  const emptyTiles = useMemo(() => {
-    if (!worldMapQuery.data) {
-      return 0;
-    }
-
-    return worldMapQuery.data.size * worldMapQuery.data.size - worldMapQuery.data.cities.length;
-  }, [worldMapQuery.data]);
-
-  if (worldMapQuery.isPending) {
+  if (worldChunkQuery.isPending) {
     return <div className={styles.feedbackCard}>Loading the regional map...</div>;
   }
 
-  if (worldMapQuery.isError || !worldMapQuery.data) {
+  if (worldChunkQuery.isError || !worldChunkQuery.data) {
     return <div className={styles.feedbackCard}>Unable to load the world map.</div>;
   }
 
@@ -56,41 +63,43 @@ export function MapPage() {
         <div className={styles.mapHeader}>
           <div>
             <p className={styles.sectionKicker}>World map</p>
-            <h2>Nearby frontier settlements</h2>
+            <h2>Chunked frontier theatre</h2>
           </div>
           <span className={styles.levelBadge}>
-            {worldMapQuery.data.size} x {worldMapQuery.data.size} grid
+            Center {worldChunkQuery.data.center.x},{worldChunkQuery.data.center.y}
           </span>
         </div>
         <div className={styles.mapInsightGrid}>
           <article className={styles.mapInsightCard}>
-            <span className={styles.sectionKicker}>Command reach</span>
-            <strong>{attackableSettlements.length} targets in range</strong>
-            <p>{worldMapQuery.data.cities.length - 1} rival settlements currently known.</p>
+            <span className={styles.sectionKicker}>Visible ground</span>
+            <strong>{formatNumber(visibleTiles)} tiles</strong>
+            <p>{formatNumber(discoveredTiles)} tiles have been discovered in the current chunk.</p>
           </article>
           <article className={styles.mapInsightCard}>
-            <span className={styles.sectionKicker}>Frontier density</span>
-            <strong>{emptyTiles} empty tiles</strong>
-            <p>The map still has open ground for future expansion.</p>
+            <span className={styles.sectionKicker}>March reach</span>
+            <strong>{formatNumber(commandableCities.length)} valid targets</strong>
+            <p>Your current command center can project force across nearby territory.</p>
           </article>
           <article className={styles.mapInsightCard}>
-            <span className={styles.sectionKicker}>City posture</span>
-            <strong>
-              {formatNumber(state.city.attackPower)} atk / {formatNumber(state.city.defensePower)} def
-            </strong>
-            <p>{state.city.cityName} remains your current command center.</p>
+            <span className={styles.sectionKicker}>Field orders</span>
+            <strong>{formatNumber(state.city.activeMarches.length)} active marches</strong>
+            <p>Fog updates follow city vision and live march positions.</p>
           </article>
         </div>
         <Suspense fallback={<div className={styles.statusStrip}>Loading the tactical map...</div>}>
           <WorldMap
-            size={worldMapQuery.data.size}
-            cities={worldMapQuery.data.cities}
+            size={worldChunkQuery.data.size}
+            center={worldChunkQuery.data.center}
+            radius={worldChunkQuery.data.radius}
+            tiles={worldChunkQuery.data.tiles}
+            cities={worldChunkQuery.data.cities}
+            marches={worldChunkQuery.data.marches}
             selectedCityId={selectedCityId}
             onSelect={setSelectedCityId}
           />
         </Suspense>
         <div className={styles.settlementList}>
-          {worldMapQuery.data.cities.map((city) => (
+          {worldChunkQuery.data.cities.map((city) => (
             <button
               key={city.cityId}
               className={city.cityId === selectedCityId ? styles.settlementButtonActive : styles.settlementButton}
@@ -101,7 +110,7 @@ export function MapPage() {
               <small>
                 {city.isCurrentPlayer
                   ? "Your city"
-                  : `${city.ownerName} - ${city.distance ?? "-"} tiles`}
+                  : `${city.ownerName} · ${city.fogState.toLowerCase()} · ${city.distance ?? "-"} tiles`}
               </small>
             </button>
           ))}
@@ -117,48 +126,104 @@ export function MapPage() {
             <p>
               Coordinates {selectedCity.x}, {selectedCity.y}
             </p>
-            <p>Town Hall level: {formatNumber(selectedCity.townHallLevel)}</p>
+            <p>Visibility: {selectedCity.fogState.toLowerCase()}</p>
             <div className={styles.costGrid}>
               <div>
-                <dt>Attack</dt>
-                <dd>{formatNumber(selectedCity.attackPower)}</dd>
+                <dt>Projected attack</dt>
+                <dd>{formatNumber(state.city.attackPower)}</dd>
               </div>
               <div>
-                <dt>Defense</dt>
+                <dt>Target defense</dt>
                 <dd>{formatNumber(selectedCity.defensePower)}</dd>
               </div>
             </div>
-            <p>
-              {selectedCity.isCurrentPlayer
-                ? "This is your current city."
-                : `Distance: ${selectedCity.distance ?? "-"} tiles`}
-            </p>
+
             {!selectedCity.isCurrentPlayer ? (
-              <div className={styles.statusStrip}>
-                {selectedCity.canAttack
-                  ? selectedCity.projectedOutcome === "ATTACKER_WIN"
-                    ? "Projected result: raid favored with current forces."
-                    : "Projected result: target defense is favored."
-                  : "Target is currently out of range for an attack order."}
+              <>
+                <article className={styles.commandCard}>
+                  <p className={styles.sectionKicker}>Send march</p>
+                  <strong className={styles.commandValue}>
+                    {selectedCity.projectedOutcome === "ATTACKER_WIN" ? "Favored" : "Risky"}
+                  </strong>
+                  <p className={styles.commandHint}>
+                    Assign troops and a commander. The server will lock the march until ETA and then resolve it.
+                  </p>
+                  <div className={styles.inlineForm}>
+                    <select value={commanderId} onChange={(event) => setCommanderId(event.target.value)}>
+                      {state.city.commanders.map((commander) => (
+                        <option key={commander.id} value={commander.id}>
+                          {commander.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className={styles.inlineMetric}>{formatNumber(totalAssignedTroops)} troops assigned</span>
+                  </div>
+                  <div className={styles.cardStack}>
+                    {state.city.troops.map((troop) => (
+                      <label key={troop.type} className={styles.inlineRange}>
+                        <span>
+                          {troop.label} ({formatNumber(troop.quantity)})
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={troop.quantity}
+                          value={troopPayload[troop.type as TroopType]}
+                          onChange={(event) =>
+                            setTroopPayload((current) => ({
+                              ...current,
+                              [troop.type]: Number(event.target.value),
+                            }))
+                          }
+                        />
+                        <strong>{formatNumber(troopPayload[troop.type as TroopType])}</strong>
+                      </label>
+                    ))}
+                  </div>
+                </article>
+
+                {selectedCity.canSendMarch ? (
+                  <button
+                    className={styles.primaryButton}
+                    type="button"
+                    disabled={isSendingMarch || totalAssignedTroops <= 0}
+                    onClick={() =>
+                      sendMarch({
+                        targetCityId: selectedCity.cityId,
+                        commanderId,
+                        troops: troopPayload,
+                      })
+                    }
+                  >
+                    {isSendingMarch ? "Dispatching march..." : "Send march"}
+                  </button>
+                ) : (
+                  <div className={styles.statusStrip}>This target cannot receive a march from the current city.</div>
+                )}
+              </>
+            ) : (
+              <div className={styles.statusStrip}>This is your command center. Choose another city to issue a march.</div>
+            )}
+
+            {state.city.activeMarches.length > 0 ? (
+              <div className={styles.cardStack}>
+                {state.city.activeMarches.map((march) => (
+                  <article key={march.id} className={styles.commandCard}>
+                    <p className={styles.sectionKicker}>Active march</p>
+                    <strong className={styles.commandValue}>{march.targetCityName}</strong>
+                    <p className={styles.commandHint}>ETA {formatRelativeTimer(march.etaAt, now)}</p>
+                    <button
+                      className={styles.subtleButton}
+                      type="button"
+                      disabled={isRecallingMarch}
+                      onClick={() => recallMarch(march.id)}
+                    >
+                      {isRecallingMarch ? "Recalling..." : "Recall march"}
+                    </button>
+                  </article>
+                ))}
               </div>
             ) : null}
-
-            {selectedCity.canAttack ? (
-              <button
-                className={styles.primaryButton}
-                type="button"
-                disabled={isAttacking}
-                onClick={() => attack(selectedCity.cityId)}
-              >
-                {isAttacking ? "Sending attack..." : "Send attack"}
-              </button>
-            ) : (
-              <div className={styles.statusStrip}>
-                {selectedCity.isCurrentPlayer
-                  ? "Select another settlement to inspect attack options."
-                  : "This target is outside the current attack range."}
-              </div>
-            )}
           </>
         ) : (
           <div className={styles.statusStrip}>Pick a city marker to inspect it.</div>

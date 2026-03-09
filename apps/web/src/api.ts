@@ -1,10 +1,16 @@
 import type {
-  AttackResponse,
+  AllianceMutationResponse,
+  AllianceStateResponse,
   AuthResponse,
   BattleReportsResponse,
   GameStateResponse,
+  MarchCommandResponse,
   OkResponse,
-  WorldMapResponse,
+  StartResearchResponse,
+  TrainTroopsResponse,
+  TroopStock,
+  TroopType,
+  WorldChunkResponse,
 } from "@frontier/shared";
 
 export class ApiClientError extends Error {
@@ -73,11 +79,75 @@ export const api = {
     apiRequest<GameStateResponse>(`/api/game/buildings/${buildingType}/upgrade`, {
       method: "POST",
     }),
-  worldMap: () => apiRequest<WorldMapResponse>("/api/game/map"),
+  worldChunk: (query?: { centerX?: number; centerY?: number; radius?: number }) => {
+    const params = new URLSearchParams();
+    if (query?.centerX != null) params.set("centerX", String(query.centerX));
+    if (query?.centerY != null) params.set("centerY", String(query.centerY));
+    if (query?.radius != null) params.set("radius", String(query.radius));
+    const suffix = params.size > 0 ? `?${params.toString()}` : "";
+    return apiRequest<WorldChunkResponse>(`/api/game/world/chunk${suffix}`);
+  },
+  trainTroops: (body: { troopType: TroopType; quantity: number }) =>
+    apiRequest<TrainTroopsResponse>("/api/game/troops/train", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  startResearch: (body: { researchType: string }) =>
+    apiRequest<StartResearchResponse>("/api/game/research/start", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  createMarch: (body: { targetCityId: string; commanderId: string; troops: TroopStock }) =>
+    apiRequest<MarchCommandResponse>("/api/game/marches", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  recallMarch: (marchId: string) =>
+    apiRequest<{ city: GameStateResponse["city"] }>(`/api/game/marches/${marchId}/recall`, {
+      method: "POST",
+    }),
   attack: (targetCityId: string) =>
-    apiRequest<AttackResponse>("/api/game/attacks", {
+    apiRequest<MarchCommandResponse>("/api/game/attacks", {
       method: "POST",
       body: JSON.stringify({ targetCityId }),
     }),
   reports: () => apiRequest<BattleReportsResponse>("/api/game/reports"),
+  allianceState: () => apiRequest<AllianceStateResponse>("/api/game/alliance"),
+  createAlliance: (body: { name: string; tag: string; description?: string }) =>
+    apiRequest<AllianceMutationResponse>("/api/game/alliances", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  joinAlliance: (allianceId: string) =>
+    apiRequest<AllianceMutationResponse>(`/api/game/alliances/${allianceId}/join`, {
+      method: "POST",
+    }),
+  leaveAlliance: () =>
+    apiRequest<OkResponse>("/api/game/alliances/leave", {
+      method: "POST",
+    }),
+  sendAllianceChat: (content: string) =>
+    apiRequest<AllianceMutationResponse>("/api/game/alliance/chat", {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
+  donateAllianceResources: (body: { wood: number; stone: number; food: number; gold: number }) =>
+    apiRequest<AllianceMutationResponse>("/api/game/alliance/donate", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateAllianceRole: (userId: string, role: "LEADER" | "OFFICER" | "MEMBER") =>
+    apiRequest<AllianceMutationResponse>(`/api/game/alliances/members/${userId}/role`, {
+      method: "POST",
+      body: JSON.stringify({ role }),
+    }),
+  requestAllianceHelp: (kind: "BUILDING_UPGRADE" | "TRAINING" | "RESEARCH") =>
+    apiRequest<AllianceMutationResponse>("/api/game/alliance-help", {
+      method: "POST",
+      body: JSON.stringify({ kind }),
+    }),
+  respondAllianceHelp: (helpRequestId: string) =>
+    apiRequest<AllianceMutationResponse>(`/api/game/alliance-help/${helpRequestId}/respond`, {
+      method: "POST",
+    }),
 };

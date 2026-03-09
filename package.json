@@ -9,6 +9,7 @@
     "dev": "corepack pnpm -r --parallel dev",
     "build": "corepack pnpm -r build",
     "test": "corepack pnpm --filter @frontier/server test && corepack pnpm --filter @frontier/web test",
+    "smoke:e2e": "node ./scripts/smoke_kingdom_core.mjs",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "corepack pnpm --filter @frontier/server prisma:migrate",
