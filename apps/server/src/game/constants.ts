@@ -1,4 +1,12 @@
-import type { BuildingType, ResearchType, ResourceStock, TroopStock, TroopType } from "@frontier/shared";
+import type {
+  BuildingType,
+  PoiResourceType,
+  ResearchType,
+  ResourceKey,
+  ResourceStock,
+  TroopStock,
+  TroopType,
+} from "@frontier/shared";
 import { MAP_SIZE } from "@frontier/shared";
 
 export const GAME_MAP_SIZE = MAP_SIZE;
@@ -111,6 +119,12 @@ export const BASE_MARCH_SECONDS_PER_TILE = 20;
 export const MIN_MARCH_SECONDS = 15;
 export const BASE_VISION_RADIUS = 4;
 export const MARCH_VISION_RADIUS = 2;
+export const BARBARIAN_CAMP_COUNT = 8;
+export const RESOURCE_NODE_COUNT = 16;
+export const BATTLE_WINDOW_DURATION_MS = 15_000;
+export const RESOURCE_GATHER_DURATION_MS = 45_000;
+export const RESOURCE_NODE_RESPAWN_MS = 10 * 60 * 1000;
+export const BARBARIAN_CAMP_RESPAWN_MS = 15 * 60 * 1000;
 export const DEFAULT_WORLD_RADIUS = 8;
 export const WORLD_RECONCILE_INTERVAL_MS = 5_000;
 export const ALLIANCE_MAX_MEMBERS = 12;
@@ -119,3 +133,55 @@ export const ALLIANCE_HELP_MAX_RESPONSES = 3;
 export const ALLIANCE_HELP_REDUCTION_MS = 20_000;
 
 export const JWT_COOKIE_NAME = "frontier_session";
+
+export const RESOURCE_TYPE_TO_KEY: Record<PoiResourceType, ResourceKey> = {
+  WOOD: "wood",
+  STONE: "stone",
+  FOOD: "food",
+  GOLD: "gold",
+};
+
+export const RESOURCE_NODE_AMOUNTS: Record<number, number> = {
+  1: 800,
+  2: 1400,
+  3: 2200,
+};
+
+export const BARBARIAN_CAMP_TROOPS: Record<number, TroopStock> = {
+  1: {
+    INFANTRY: 20,
+    ARCHER: 12,
+    CAVALRY: 4,
+  },
+  2: {
+    INFANTRY: 32,
+    ARCHER: 20,
+    CAVALRY: 8,
+  },
+  3: {
+    INFANTRY: 48,
+    ARCHER: 28,
+    CAVALRY: 12,
+  },
+};
+
+export const BARBARIAN_CAMP_REWARDS: Record<number, ResourceStock> = {
+  1: {
+    wood: 100,
+    stone: 40,
+    food: 100,
+    gold: 20,
+  },
+  2: {
+    wood: 150,
+    stone: 60,
+    food: 150,
+    gold: 40,
+  },
+  3: {
+    wood: 220,
+    stone: 90,
+    food: 220,
+    gold: 70,
+  },
+};

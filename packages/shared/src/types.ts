@@ -1,18 +1,37 @@
 import type {
   AllianceHelpKind,
   AllianceRole,
+  AnalyticsEventType,
   BattleResult,
   BuildingType,
+  CommanderTalentTrack,
   FogState,
+  ItemKey,
+  ItemTargetKind,
+  LiveEventKey,
+  MailboxKind,
+  MarchObjective,
   MarchState,
+  PoiKind,
+  PoiResourceType,
+  PoiState,
+  PurchaseStatus,
+  RallyState,
+  ReportEntryKind,
   ResearchType,
   ResourceKey,
+  ScoutState,
+  ScoutTargetKind,
   SocketEventType,
+  TaskKind,
   TroopType,
 } from "./game";
 
 export type ResourceStock = Record<ResourceKey, number>;
 export type TroopStock = Record<TroopType, number>;
+export type ResourceGrant = Partial<ResourceStock>;
+export type AnalyticsMetadataValue = string | number | boolean | null;
+export type AnalyticsMetadata = Record<string, AnalyticsMetadataValue>;
 
 export interface ApiError {
   code: string;
@@ -43,6 +62,11 @@ export interface AuthResponse {
 
 export interface OkResponse {
   ok: true;
+}
+
+export interface AnalyticsEventRequest {
+  event: AnalyticsEventType;
+  metadata?: AnalyticsMetadata;
 }
 
 export interface ActiveUpgradeView {
@@ -101,11 +125,21 @@ export interface CommanderView {
   name: string;
   templateKey: string;
   level: number;
+  xp: number;
+  xpToNextLevel: number;
+  starLevel: number;
+  talentTrack: CommanderTalentTrack;
+  talentPointsSpent: number;
+  assignedPreset: string | null;
   attackBonusPct: number;
   defenseBonusPct: number;
   marchSpeedBonusPct: number;
   carryBonusPct: number;
   isPrimary: boolean;
+}
+
+export interface CommanderProgressView extends CommanderView {
+  totalPowerScore: number;
 }
 
 export interface ResearchView {
@@ -120,16 +154,29 @@ export interface ResearchView {
   isActive: boolean;
 }
 
+export interface CargoView {
+  resourceType: PoiResourceType | null;
+  amount: number;
+}
+
 export interface MarchView {
   id: string;
+  objective: MarchObjective;
   state: MarchState;
-  targetCityId: string;
-  targetCityName: string;
+  battleWindowId: string | null;
+  battleWindowClosesAt: string | null;
+  targetCityId: string | null;
+  targetCityName: string | null;
+  targetPoiId: string | null;
+  targetPoiName: string | null;
   commanderId: string;
   commanderName: string;
   troops: TroopStock;
+  cargo: CargoView;
   startedAt: string;
   etaAt: string;
+  gatherStartedAt: string | null;
+  returnEtaAt: string | null;
   remainingSeconds: number;
   distance: number;
   origin: {
@@ -141,6 +188,27 @@ export interface MarchView {
     y: number;
   };
   projectedOutcome: BattleResult | null;
+}
+
+export interface PoiView {
+  id: string;
+  kind: PoiKind;
+  state: PoiState;
+  label: string;
+  level: number;
+  x: number;
+  y: number;
+  fogState: FogState;
+  distance: number | null;
+  resourceType: PoiResourceType | null;
+  remainingAmount: number | null;
+  maxAmount: number | null;
+  respawnsAt: string | null;
+  occupantMarchId: string | null;
+  canSendMarch: boolean;
+  canGather: boolean;
+  projectedOutcome: BattleResult | null;
+  projectedLoad: number | null;
 }
 
 export interface CityState {
@@ -164,6 +232,7 @@ export interface CityState {
   visionRadius: number;
   attackPower: number;
   defensePower: number;
+  peaceShieldUntil: string | null;
 }
 
 export interface GameStateResponse {
@@ -209,9 +278,13 @@ export interface AllianceView {
   role: AllianceRole;
   memberCount: number;
   treasury: ResourceStock;
+  announcement: string | null;
   members: AllianceMemberView[];
   chatMessages: AllianceChatMessageView[];
   helpRequests: AllianceHelpRequestView[];
+  markers: AllianceMarkerView[];
+  logs: AllianceLogEntryView[];
+  contributions: AllianceContributionView[];
 }
 
 export interface AllianceListItemView {
@@ -228,6 +301,27 @@ export interface AllianceStateResponse {
   alliances: AllianceListItemView[];
 }
 
+export interface AllianceMarkerView {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  createdAt: string;
+}
+
+export interface AllianceLogEntryView {
+  id: string;
+  kind: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface AllianceContributionView {
+  userId: string;
+  username: string;
+  points: number;
+}
+
 export interface MapCity {
   cityId: string;
   cityName: string;
@@ -241,6 +335,8 @@ export interface MapCity {
   townHallLevel: number;
   attackPower: number;
   defensePower: number;
+  battleWindowClosesAt: string | null;
+  stagedMarchCount: number;
   projectedOutcome: BattleResult | null;
 }
 
@@ -259,11 +355,13 @@ export interface WorldChunkResponse {
   radius: number;
   tiles: FogTileView[];
   cities: MapCity[];
+  pois: PoiView[];
   marches: MarchView[];
 }
 
-export interface BattleReportView {
+export interface CityBattleReportView {
   id: string;
+  kind: Extract<ReportEntryKind, "CITY_BATTLE">;
   createdAt: string;
   attackerName: string;
   defenderName: string;
@@ -288,8 +386,287 @@ export interface BattleReportView {
   };
 }
 
+export interface BarbarianBattleReportView {
+  id: string;
+  kind: Extract<ReportEntryKind, "BARBARIAN_BATTLE">;
+  createdAt: string;
+  attackerName: string;
+  attackerCityName: string;
+  poiName: string;
+  poiLevel: number;
+  result: BattleResult;
+  attackerPower: number;
+  defenderPower: number;
+  loot: ResourceStock;
+  attackerLosses: TroopStock;
+  defenderLosses: TroopStock;
+  location: {
+    from: {
+      x: number;
+      y: number;
+    };
+    to: {
+      x: number;
+      y: number;
+    };
+    distance: number;
+  };
+}
+
+export interface ResourceGatherReportView {
+  id: string;
+  kind: Extract<ReportEntryKind, "RESOURCE_GATHER">;
+  createdAt: string;
+  ownerName: string;
+  cityName: string;
+  poiName: string;
+  resourceType: PoiResourceType;
+  amount: number;
+  troops: TroopStock;
+  location: {
+    from: {
+      x: number;
+      y: number;
+    };
+    to: {
+      x: number;
+      y: number;
+    };
+    distance: number;
+  };
+}
+
+export type ReportEntryView =
+  | CityBattleReportView
+  | BarbarianBattleReportView
+  | ResourceGatherReportView;
+
 export interface BattleReportsResponse {
-  reports: BattleReportView[];
+  reports: ReportEntryView[];
+}
+
+export interface RewardBundleView {
+  resources: ResourceGrant;
+  items: Array<{
+    itemKey: ItemKey;
+    quantity: number;
+  }>;
+  commanderXp: number;
+  seasonPassXp: number;
+}
+
+export interface TaskView {
+  id: string;
+  taskKey: string;
+  kind: TaskKind;
+  title: string;
+  description: string;
+  progress: number;
+  target: number;
+  isCompleted: boolean;
+  isClaimed: boolean;
+  reward: RewardBundleView;
+  completedAt: string | null;
+  claimedAt: string | null;
+}
+
+export interface TasksResponse {
+  tutorial: TaskView[];
+  daily: TaskView[];
+  tutorialCompleted: boolean;
+  dailyKey: string;
+}
+
+export interface InventoryItemView {
+  itemKey: ItemKey;
+  label: string;
+  description: string;
+  quantity: number;
+}
+
+export interface InventoryResponse {
+  items: InventoryItemView[];
+}
+
+export interface ItemUseRequest {
+  itemKey: ItemKey;
+  targetKind?: ItemTargetKind;
+  targetId?: string;
+}
+
+export interface ScoutReportView {
+  id: string;
+  targetKind: ScoutTargetKind;
+  createdAt: string;
+  title: string;
+  summary: string;
+  cityIntel:
+    | {
+        cityId: string;
+        cityName: string;
+        ownerName: string;
+        resources: ResourceStock;
+        troops: TroopStock;
+        defensePower: number;
+        peaceShieldUntil: string | null;
+      }
+    | null;
+  poiIntel:
+    | {
+        poiId: string;
+        poiName: string;
+        poiKind: PoiKind;
+        state: PoiState;
+        level: number;
+        resourceType: PoiResourceType | null;
+        remainingAmount: number | null;
+      }
+    | null;
+}
+
+export interface ScoutMissionView {
+  id: string;
+  state: ScoutState;
+  targetKind: ScoutTargetKind;
+  targetCityId: string | null;
+  targetPoiId: string | null;
+  etaAt: string;
+  remainingSeconds: number;
+}
+
+export interface RallyMemberView {
+  userId: string;
+  username: string;
+  pledgedTroops: TroopStock;
+  joinedAt: string;
+}
+
+export interface RallyView {
+  id: string;
+  state: RallyState;
+  objective: MarchObjective;
+  targetCityId: string | null;
+  targetCityName: string | null;
+  targetPoiId: string | null;
+  targetPoiName: string | null;
+  leaderUserId: string;
+  leaderName: string;
+  leaderCommanderId: string;
+  leaderCommanderName: string;
+  supportBonusPct: number;
+  launchAt: string;
+  remainingSeconds: number;
+  launchedMarchId: string | null;
+  members: RallyMemberView[];
+}
+
+export interface MailboxEntryView {
+  id: string;
+  kind: MailboxKind;
+  title: string;
+  body: string;
+  createdAt: string;
+  claimedAt: string | null;
+  canClaim: boolean;
+  reward: RewardBundleView | null;
+  scoutReport: ScoutReportView | null;
+}
+
+export interface MailboxResponse {
+  entries: MailboxEntryView[];
+  unreadCount: number;
+}
+
+export interface StoreProductView {
+  productId: string;
+  label: string;
+  description: string;
+  priceLabel: string;
+  reward: RewardBundleView;
+}
+
+export interface StoreOfferView {
+  offerId: string;
+  title: string;
+  description: string;
+  productIds: string[];
+  segmentTags: string[];
+}
+
+export interface StoreCatalogView {
+  products: StoreProductView[];
+  offers: StoreOfferView[];
+}
+
+export interface StoreCatalogResponse {
+  catalog: StoreCatalogView;
+}
+
+export interface EntitlementView {
+  id: string;
+  entitlementKey: string;
+  productId: string;
+  status: string;
+  grantedAt: string;
+}
+
+export interface EntitlementsResponse {
+  entitlements: EntitlementView[];
+}
+
+export interface PurchaseVerifyRequest {
+  platform: "APPLE_APP_STORE" | "GOOGLE_PLAY";
+  productId: string;
+  purchaseToken: string;
+}
+
+export interface PurchaseVerifyResponse {
+  status: PurchaseStatus;
+  entitlements: EntitlementView[];
+}
+
+export interface SeasonPassTierView {
+  tier: number;
+  requiredXp: number;
+  freeReward: RewardBundleView;
+  premiumReward: RewardBundleView | null;
+  claimedFree: boolean;
+  claimedPremium: boolean;
+}
+
+export interface SeasonPassView {
+  seasonKey: string;
+  label: string;
+  xp: number;
+  premiumUnlocked: boolean;
+  tiers: SeasonPassTierView[];
+}
+
+export interface LiveEventView {
+  eventKey: LiveEventKey;
+  label: string;
+  description: string;
+  score: number;
+  target: number;
+  reward: RewardBundleView;
+}
+
+export interface GameEventsResponse {
+  events: LiveEventView[];
+  seasonPass: SeasonPassView;
+}
+
+export interface LeaderboardEntryView {
+  rank: number;
+  userId: string;
+  username: string;
+  value: number;
+  secondaryLabel: string | null;
+}
+
+export interface LeaderboardResponse {
+  leaderboardId: string;
+  entries: LeaderboardEntryView[];
 }
 
 export interface MarchCommandResponse {
@@ -308,12 +685,28 @@ export interface AllianceMutationResponse {
   alliance: AllianceView;
 }
 
+export interface ScoutMutationResponse {
+  scout: ScoutMissionView;
+}
+
+export interface RallyMutationResponse {
+  rally: RallyView;
+}
+
+export interface RalliesResponse {
+  rallies: RallyView[];
+}
+
 export interface SocketEnvelope {
   type: SocketEventType;
   payload: {
     cityId?: string;
     reportId?: string;
     marchId?: string;
+    scoutId?: string;
+    rallyId?: string;
+    mailboxId?: string;
+    poiId?: string;
     allianceId?: string;
     helpRequestId?: string;
   };

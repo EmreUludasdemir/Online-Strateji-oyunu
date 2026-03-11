@@ -98,7 +98,7 @@ async function waitForMarchResolution(page) {
     return;
   }
 
-  const timeoutMs = Math.max(15_000, (activeMarch.remainingSeconds + 10) * 1_000);
+  const timeoutMs = Math.max(45_000, (activeMarch.remainingSeconds + 25) * 1_000);
   await waitFor(async () => {
     const nextState = await readGameState(page);
     return nextState?.city?.activeMarches?.length === 0 ? nextState : null;
@@ -107,9 +107,34 @@ async function waitForMarchResolution(page) {
 
 async function dispatchMarch(page) {
   const mapState = await ensureMapLoaded(page);
+  const targetPoi = mapState.map.pois.find((poi) => poi.canGather) ?? mapState.map.pois.find((poi) => poi.canSendMarch);
+  if (targetPoi) {
+    await page.evaluate((poiId) => {
+      window.select_map_poi?.(poiId);
+    }, targetPoi.id);
+
+    await waitFor(async () => {
+      const state = await readGameState(page);
+      return state?.selectedPoi?.id === targetPoi.id ? state : null;
+    }, 5_000, "the target point of interest to become selected");
+
+    await page.getByRole("button", { name: targetPoi.canGather ? "Send gather" : "Send assault" }).click();
+
+    const sentState = await waitFor(async () => {
+      const state = await readGameState(page);
+      return state?.city?.activeMarches?.length > 0 ? state : null;
+    }, 10_000, "a new poi march to be accepted");
+
+    return {
+      mission: targetPoi.canGather ? "RESOURCE_GATHER" : "BARBARIAN_ATTACK",
+      targetName: targetPoi.label,
+      march: sentState.city.activeMarches[0],
+    };
+  }
+
   const targetCity = mapState.map.cities.find((city) => !city.isCurrentPlayer && city.canSendMarch);
   if (!targetCity) {
-    throw new Error("No valid march target was visible in the current chunk.");
+    throw new Error("No valid POI or city march target was visible in the current chunk.");
   }
 
   await page.evaluate((cityId) => {
@@ -128,7 +153,11 @@ async function dispatchMarch(page) {
     return state?.city?.activeMarches?.length > 0 ? state : null;
   }, 10_000, "a new march to be accepted");
 
-  return sentState.city.activeMarches[0];
+  return {
+    mission: "CITY_ATTACK",
+    targetName: targetCity.cityName,
+    march: sentState.city.activeMarches[0],
+  };
 }
 
 async function main() {
@@ -168,7 +197,7 @@ async function main() {
     await page.waitForURL("**/app/map");
     await ensureMapLoaded(page);
     await waitForMarchResolution(page);
-    const march = await dispatchMarch(page);
+    const marchDispatch = await dispatchMarch(page);
     await waitForMarchResolution(page);
 
     await page.getByRole("link", { name: "Reports" }).click();
@@ -192,7 +221,8 @@ async function main() {
           screenshot: args.screenshotPath,
           dashboardCity: dashboardState.city.name,
           alliance: `${allianceState.alliance.tag}:${allianceState.alliance.memberCount}`,
-          marchTarget: march.targetCityName,
+          mission: marchDispatch.mission,
+          marchTarget: marchDispatch.targetName,
           reportHeading,
         },
         null,

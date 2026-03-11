@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  analyticsEventSchema,
   attackSchema,
   buildingTypeSchema,
   createAllianceSchema,
@@ -13,6 +14,7 @@ import {
 } from "@frontier/shared";
 
 import { requireAuth } from "../middleware/auth";
+import { ingestAnalyticsEvent } from "../lib/analytics";
 import { env } from "../lib/env";
 import { createRateLimit } from "../middleware/rateLimit";
 import { parseOrThrow } from "../lib/http";
@@ -156,6 +158,12 @@ gameRouter.post("/marches", mutationRateLimit, async (request, response) => {
 gameRouter.post("/marches/:id/recall", mutationRateLimit, async (request, response) => {
   const city = await recallMarch(request.authUserId!, String(request.params.id));
   response.json({ city });
+});
+
+gameRouter.post("/analytics", mutationRateLimit, async (request, response) => {
+  const payload = parseOrThrow(analyticsEventSchema, request.body);
+  ingestAnalyticsEvent(request.authUserId!, payload);
+  response.status(202).json({ ok: true });
 });
 
 gameRouter.post("/attacks", mutationRateLimit, async (request, response) => {

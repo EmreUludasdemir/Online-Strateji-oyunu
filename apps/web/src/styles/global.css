@@ -1,20 +1,24 @@
 :root {
   color-scheme: dark;
-  --font-display: "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --font-body: "Trebuchet MS", "Gill Sans", "Segoe UI", sans-serif;
-  --bg-night: #101515;
-  --bg-deep: #18201d;
-  --bg-panel: rgba(19, 23, 22, 0.84);
-  --bg-panel-strong: rgba(14, 18, 17, 0.94);
-  --bg-panel-soft: rgba(29, 36, 32, 0.82);
-  --ink-main: #f3ebdb;
-  --ink-soft: #cabda0;
-  --ink-muted: #a8b0a6;
-  --gold: #cb9854;
-  --gold-soft: rgba(203, 152, 84, 0.18);
-  --teal: #5e8d8a;
-  --edge: rgba(220, 184, 119, 0.24);
-  --shadow-heavy: 0 24px 60px rgba(0, 0, 0, 0.28);
+  --font-display: "Baskerville Old Face", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-body: Candara, "Trebuchet MS", "Gill Sans", sans-serif;
+  --bg-night: #20110b;
+  --bg-deep: #3a2117;
+  --bg-panel: rgba(54, 31, 21, 0.86);
+  --bg-panel-strong: rgba(34, 18, 12, 0.94);
+  --bg-panel-soft: rgba(92, 58, 37, 0.86);
+  --ink-main: #f7ecd8;
+  --ink-soft: #ddc49e;
+  --ink-muted: #b99a72;
+  --gold: #c7994c;
+  --gold-bright: #f0cf86;
+  --gold-soft: rgba(199, 153, 76, 0.16);
+  --teal: #2e7374;
+  --teal-soft: rgba(46, 115, 116, 0.18);
+  --copper: #8b4f2f;
+  --copper-soft: rgba(139, 79, 47, 0.2);
+  --edge: rgba(199, 153, 76, 0.26);
+  --shadow-heavy: 0 28px 68px rgba(26, 12, 8, 0.34);
   font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
@@ -40,24 +44,32 @@ body,
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 16% 14%, rgba(203, 152, 84, 0.16), transparent 17%),
-    radial-gradient(circle at 86% 10%, rgba(94, 141, 138, 0.14), transparent 18%),
-    linear-gradient(180deg, #121718 0%, #151c1d 48%, #0d1112 100%);
+    radial-gradient(circle at 12% 0%, rgba(240, 207, 134, 0.15), transparent 20%),
+    radial-gradient(circle at 84% 10%, rgba(46, 115, 116, 0.15), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(139, 79, 47, 0.18), transparent 28%),
+    linear-gradient(180deg, #4a2418 0%, #2e170f 38%, #1b0e0b 100%);
 }
 
-body::before {
+body::before,
+body::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
+}
+
+body::before {
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0, rgba(255, 255, 255, 0) 14%, rgba(255, 255, 255, 0.018) 100%),
-    repeating-linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.012) 0 2px,
-      transparent 2px 18px
-    );
-  opacity: 0.45;
+    linear-gradient(90deg, rgba(255, 244, 217, 0.02), transparent 14%, rgba(255, 244, 217, 0.02)),
+    repeating-linear-gradient(135deg, rgba(255, 244, 217, 0.015) 0 2px, transparent 2px 18px),
+    repeating-radial-gradient(circle at center, rgba(255, 244, 217, 0.012) 0 1px, transparent 1px 32px);
+  opacity: 0.54;
+}
+
+body::after {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 56%, rgba(13, 8, 6, 0.38) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%, rgba(0, 0, 0, 0.1));
 }
 
 button,
@@ -85,4 +97,9 @@ h3 {
 
 a {
   color: inherit;
+}
+
+::selection {
+  background: rgba(199, 153, 76, 0.28);
+  color: #fff9ef;
 }

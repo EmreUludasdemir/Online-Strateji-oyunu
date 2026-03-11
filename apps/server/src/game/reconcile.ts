@@ -6,12 +6,14 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "../lib/prisma";
+import { incrementCounter, observeDuration } from "../lib/metrics";
 import {
   emitBattleResolved,
   emitCityUpdated,
   emitFogUpdated,
   emitMapUpdated,
   emitMarchUpdated,
+  emitPoiUpdated,
   emitReportCreated,
   emitResearchCompleted,
   emitTrainingCompleted,
@@ -22,38 +24,99 @@ import {
   addTroops,
   applyProduction,
   getBuildingLevels,
+  getCarryCapacity,
   getMarchPosition,
   getResearchLevels,
+  getTroopDefensePower,
   getVisionRadius,
   resolveBattle,
   spendResources,
   spendTroops,
 } from "./engine";
 import {
+  BATTLE_WINDOW_DURATION_MS,
+  BARBARIAN_CAMP_RESPAWN_MS,
+  MARCH_VISION_RADIUS,
+  RESOURCE_GATHER_DURATION_MS,
+  RESOURCE_NODE_RESPAWN_MS,
+} from "./constants";
+import {
+  getBarbarianCampReward,
+  getBarbarianCampTroops,
+  getMarchTargetCoordinates,
+  getPoiResourceKey,
   getPrimaryCommander,
   getResourceLedger,
   getTroopLedger,
   loadCityStateRecordOrThrow,
+  loadMapPoiRecordOrThrow,
   resourceLedgerToCityUpdate,
   toCommanderBonuses,
 } from "./shared";
-import { MARCH_VISION_RADIUS } from "./constants";
 
 interface WorldEvents {
   upgradeCompletions: Array<{ userId: string; cityId: string }>;
   trainingCompletions: Array<{ userId: string; cityId: string }>;
   researchCompletions: Array<{ userId: string; cityId: string }>;
+  marchTransitions: Array<{
+    userIds: string[];
+    cityIds: string[];
+    marchId: string;
+    poiId: string | null;
+  }>;
   resolvedMarches: Array<{
     userIds: string[];
     cityIds: string[];
     marchId: string;
     reportId: string;
+    poiId: string | null;
+    notifyBattleResolved: boolean;
   }>;
+  poiUpdates: string[];
+}
+
+function createEmptyResearchLevels() {
+  return {
+    MILITARY_DRILL: 0,
+    LOGISTICS: 0,
+    AGRONOMY: 0,
+    STONEWORK: 0,
+    GOLD_TRADE: 0,
+    SCOUTING: 0,
+  };
+}
+
+function createEmptyBuildingLevels() {
+  return {
+    TOWN_HALL: 0,
+    FARM: 0,
+    LUMBER_MILL: 0,
+    QUARRY: 0,
+    GOLD_MINE: 0,
+    BARRACKS: 0,
+    ACADEMY: 0,
+    WATCHTOWER: 0,
+  };
+}
+
+function createEmptyResources() {
+  return {
+    wood: 0,
+    stone: 0,
+    food: 0,
+    gold: 0,
+  };
 }
 
 function pushUniqueCity(events: Array<{ userId: string; cityId: string }>, item: { userId: string; cityId: string }) {
   if (!events.some((entry) => entry.userId === item.userId && entry.cityId === item.cityId)) {
     events.push(item);
+  }
+}
+
+function pushUniquePoi(events: string[], poiId: string | null) {
+  if (poiId && !events.includes(poiId)) {
+    events.push(poiId);
   }
 }
 
@@ -298,6 +361,529 @@ export async function syncCityStateTx(
   };
 }
 
+async function reconcilePoiRespawnsTx(
+  tx: Prisma.TransactionClient,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const duePois = await tx.mapPoi.findMany({
+    where: {
+      state: {
+        in: ["DEPLETED", "RESPAWNING"],
+      },
+      respawnsAt: {
+        lte: now,
+      },
+    },
+  });
+
+  for (const poi of duePois) {
+    await tx.mapPoi.update({
+      where: { id: poi.id },
+      data: {
+        state: "ACTIVE",
+        respawnsAt: null,
+        remainingAmount: poi.kind === "RESOURCE_NODE" ? poi.maxAmount : poi.remainingAmount,
+      },
+    });
+    pushUniquePoi(worldEvents.poiUpdates, poi.id);
+  }
+}
+
+async function reconcileCityBattleTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  defenderCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const attackerResearch = getResearchLevels(
+    attackerCity.researchLevels.map((research) => ({
+      researchType: research.researchType,
+      level: research.level,
+    })),
+  );
+  const defenderResearch = getResearchLevels(
+    defenderCity.researchLevels.map((research) => ({
+      researchType: research.researchType,
+      level: research.level,
+    })),
+  );
+  const defenderBuildings = getBuildingLevels(
+    defenderCity.buildings.map((building) => ({
+      buildingType: building.buildingType,
+      level: building.level,
+    })),
+  );
+  const attackerCommander = attackerCity.owner.commanders.find((entry) => entry.id === march.commanderId);
+  const defenderCommander = getPrimaryCommander(defenderCity);
+  const attackerTroops = {
+    INFANTRY: march.infantryCount,
+    ARCHER: march.archerCount,
+    CAVALRY: march.cavalryCount,
+  };
+  const defenderTroops = getTroopLedger(
+    defenderCity.troopGarrisons.map((troop) => ({
+      troopType: troop.troopType,
+      quantity: troop.quantity,
+    })),
+  );
+  const defenderResources = getResourceLedger(defenderCity);
+  const battle = resolveBattle(
+    attackerTroops,
+    defenderTroops,
+    toCommanderBonuses(attackerCommander),
+    toCommanderBonuses(defenderCommander),
+    attackerResearch,
+    defenderResearch,
+    defenderBuildings,
+    defenderResources,
+  );
+
+  const attackerGarrison = getTroopLedger(
+    attackerCity.troopGarrisons.map((troop) => ({
+      troopType: troop.troopType,
+      quantity: troop.quantity,
+    })),
+  );
+  const nextAttackerGarrison = addTroops(attackerGarrison, battle.attackerSurvivors);
+  const nextDefenderGarrison = spendTroops(defenderTroops, battle.defenderLosses);
+
+  await upsertTroopLedgerTx(tx, attackerCity.id, nextAttackerGarrison);
+  await upsertTroopLedgerTx(tx, defenderCity.id, nextDefenderGarrison);
+
+  await tx.city.update({
+    where: { id: attackerCity.id },
+    data: resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), battle.loot), now),
+  });
+  await tx.city.update({
+    where: { id: defenderCity.id },
+    data: resourceLedgerToCityUpdate(spendResources(defenderResources, battle.loot), now),
+  });
+
+  const report = await tx.battleReport.create({
+    data: {
+      attackerUserId: attackerCity.ownerId,
+      defenderUserId: defenderCity.ownerId,
+      attackerCityId: attackerCity.id,
+      defenderCityId: defenderCity.id,
+      result: battle.result,
+      attackerPower: battle.attackerPower,
+      defenderPower: battle.defenderPower,
+      lootWood: battle.loot.wood,
+      lootStone: battle.loot.stone,
+      lootFood: battle.loot.food,
+      lootGold: battle.loot.gold,
+      attackerLossInfantry: battle.attackerLosses.INFANTRY,
+      attackerLossArcher: battle.attackerLosses.ARCHER,
+      attackerLossCavalry: battle.attackerLosses.CAVALRY,
+      defenderLossInfantry: battle.defenderLosses.INFANTRY,
+      defenderLossArcher: battle.defenderLosses.ARCHER,
+      defenderLossCavalry: battle.defenderLosses.CAVALRY,
+      fromX: attackerCity.x,
+      fromY: attackerCity.y,
+      toX: defenderCity.x,
+      toY: defenderCity.y,
+      distance: Math.abs(attackerCity.x - defenderCity.x) + Math.abs(attackerCity.y - defenderCity.y),
+    },
+  });
+
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "RESOLVED",
+      battleWindowId: null,
+      resolvedAt: now,
+      defenderPowerSnapshot: battle.defenderPower,
+      battleResult: battle.result,
+    },
+  });
+
+  worldEvents.resolvedMarches.push({
+    userIds: [attackerCity.ownerId, defenderCity.ownerId],
+    cityIds: [attackerCity.id, defenderCity.id],
+    marchId: march.id,
+    reportId: report.id,
+    poiId: null,
+    notifyBattleResolved: true,
+  });
+}
+
+async function stageCityBattleMarchTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  defenderCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const existingWindow = await tx.battleWindow.findFirst({
+    where: {
+      targetCityId: defenderCity.id,
+      resolvedAt: null,
+      closesAt: {
+        gt: now,
+      },
+    },
+    orderBy: {
+      openedAt: "asc",
+    },
+  });
+
+  const battleWindow =
+    existingWindow ??
+    (await tx.battleWindow.create({
+      data: {
+        targetCityId: defenderCity.id,
+        closesAt: new Date(now.getTime() + BATTLE_WINDOW_DURATION_MS),
+      },
+    }));
+
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "STAGING",
+      battleWindowId: battleWindow.id,
+    },
+  });
+
+  worldEvents.marchTransitions.push({
+    userIds: [attackerCity.ownerId, defenderCity.ownerId],
+    cityIds: [attackerCity.id, defenderCity.id],
+    marchId: march.id,
+    poiId: null,
+  });
+}
+
+async function reconcileBarbarianBattleTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const poi = await loadMapPoiRecordOrThrow(tx, march.targetPoiId!);
+  const attackerResearch = getResearchLevels(
+    attackerCity.researchLevels.map((research) => ({
+      researchType: research.researchType,
+      level: research.level,
+    })),
+  );
+  const attackerCommander = attackerCity.owner.commanders.find((entry) => entry.id === march.commanderId);
+  const attackerTroops = {
+    INFANTRY: march.infantryCount,
+    ARCHER: march.archerCount,
+    CAVALRY: march.cavalryCount,
+  };
+  const defenderTroops = getBarbarianCampTroops(poi.level);
+  const baseBattle = resolveBattle(
+    attackerTroops,
+    defenderTroops,
+    toCommanderBonuses(attackerCommander),
+    toCommanderBonuses(null),
+    attackerResearch,
+    createEmptyResearchLevels(),
+    createEmptyBuildingLevels(),
+    createEmptyResources(),
+  );
+  const loot = baseBattle.result === "ATTACKER_WIN" ? getBarbarianCampReward(poi.level) : createEmptyResources();
+  const attackerGarrison = getTroopLedger(
+    attackerCity.troopGarrisons.map((troop) => ({
+      troopType: troop.troopType,
+      quantity: troop.quantity,
+    })),
+  );
+  const nextAttackerGarrison = addTroops(attackerGarrison, baseBattle.attackerSurvivors);
+
+  await upsertTroopLedgerTx(tx, attackerCity.id, nextAttackerGarrison);
+  await tx.city.update({
+    where: { id: attackerCity.id },
+    data: resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), loot), now),
+  });
+  await tx.mapPoi.update({
+    where: { id: poi.id },
+    data: {
+      state: baseBattle.result === "ATTACKER_WIN" ? "RESPAWNING" : "ACTIVE",
+      respawnsAt: baseBattle.result === "ATTACKER_WIN" ? new Date(now.getTime() + BARBARIAN_CAMP_RESPAWN_MS) : null,
+    },
+  });
+
+  const report = await tx.marchReport.create({
+    data: {
+      marchId: march.id,
+      kind: "BARBARIAN_BATTLE",
+      ownerUserId: attackerCity.ownerId,
+      ownerCityId: attackerCity.id,
+      poiId: poi.id,
+      poiKind: poi.kind,
+      poiName: poi.label,
+      poiLevel: poi.level,
+      result: baseBattle.result,
+      attackerPower: baseBattle.attackerPower,
+      defenderPower: getTroopDefensePower(defenderTroops),
+      infantryCount: march.infantryCount,
+      archerCount: march.archerCount,
+      cavalryCount: march.cavalryCount,
+      lootWood: loot.wood,
+      lootStone: loot.stone,
+      lootFood: loot.food,
+      lootGold: loot.gold,
+      attackerLossInfantry: baseBattle.attackerLosses.INFANTRY,
+      attackerLossArcher: baseBattle.attackerLosses.ARCHER,
+      attackerLossCavalry: baseBattle.attackerLosses.CAVALRY,
+      defenderLossInfantry: baseBattle.defenderLosses.INFANTRY,
+      defenderLossArcher: baseBattle.defenderLosses.ARCHER,
+      defenderLossCavalry: baseBattle.defenderLosses.CAVALRY,
+      fromX: attackerCity.x,
+      fromY: attackerCity.y,
+      toX: poi.x,
+      toY: poi.y,
+      distance: Math.abs(attackerCity.x - poi.x) + Math.abs(attackerCity.y - poi.y),
+    },
+  });
+
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "RESOLVED",
+      resolvedAt: now,
+      defenderPowerSnapshot: getTroopDefensePower(defenderTroops),
+      battleResult: baseBattle.result,
+    },
+  });
+
+  worldEvents.resolvedMarches.push({
+    userIds: [attackerCity.ownerId],
+    cityIds: [attackerCity.id],
+    marchId: march.id,
+    reportId: report.id,
+    poiId: poi.id,
+    notifyBattleResolved: true,
+  });
+}
+
+async function reconcileGatherArrivalTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const poi = await loadMapPoiRecordOrThrow(tx, march.targetPoiId!);
+  const outboundDurationMs = march.etaAt.getTime() - march.startsAt.getTime();
+  const gatherCompleteAt = new Date(now.getTime() + RESOURCE_GATHER_DURATION_MS);
+  const returnEtaAt = new Date(gatherCompleteAt.getTime() + outboundDurationMs);
+
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "GATHERING",
+      gatherStartedAt: now,
+      etaAt: gatherCompleteAt,
+      returnEtaAt,
+    },
+  });
+
+  worldEvents.marchTransitions.push({
+    userIds: [attackerCity.ownerId],
+    cityIds: [attackerCity.id],
+    marchId: march.id,
+    poiId: poi.id,
+  });
+}
+
+async function reconcileGatherCompletionTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const poi = await loadMapPoiRecordOrThrow(tx, march.targetPoiId!);
+  const commander = attackerCity.owner.commanders.find((entry) => entry.id === march.commanderId);
+  const troops = {
+    INFANTRY: march.infantryCount,
+    ARCHER: march.archerCount,
+    CAVALRY: march.cavalryCount,
+  };
+  const cargoAmount = Math.min(
+    poi.remainingAmount ?? 0,
+    getCarryCapacity(troops, toCommanderBonuses(commander)),
+  );
+  const remainingAmount = Math.max(0, (poi.remainingAmount ?? 0) - cargoAmount);
+  const nextPoiState = remainingAmount <= 0 ? "DEPLETED" : "ACTIVE";
+
+  await tx.mapPoi.update({
+    where: { id: poi.id },
+    data: {
+      state: nextPoiState,
+      remainingAmount,
+      respawnsAt: nextPoiState === "DEPLETED" ? new Date(now.getTime() + RESOURCE_NODE_RESPAWN_MS) : null,
+    },
+  });
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "RETURNING",
+      cargoAmount,
+      cargoResourceType: poi.resourceType,
+    },
+  });
+
+  worldEvents.marchTransitions.push({
+    userIds: [attackerCity.ownerId],
+    cityIds: [attackerCity.id],
+    marchId: march.id,
+    poiId: poi.id,
+  });
+  pushUniquePoi(worldEvents.poiUpdates, poi.id);
+}
+
+async function reconcileGatherReturnTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const poi = await loadMapPoiRecordOrThrow(tx, march.targetPoiId!);
+  const attackerGarrison = getTroopLedger(
+    attackerCity.troopGarrisons.map((troop) => ({
+      troopType: troop.troopType,
+      quantity: troop.quantity,
+    })),
+  );
+  await upsertTroopLedgerTx(tx, attackerCity.id, addTroops(attackerGarrison, {
+    INFANTRY: march.infantryCount,
+    ARCHER: march.archerCount,
+    CAVALRY: march.cavalryCount,
+  }));
+
+  const resourceKey = march.cargoResourceType ? getPoiResourceKey(march.cargoResourceType) : null;
+  const gainedResources = {
+    wood: resourceKey === "wood" ? march.cargoAmount : 0,
+    stone: resourceKey === "stone" ? march.cargoAmount : 0,
+    food: resourceKey === "food" ? march.cargoAmount : 0,
+    gold: resourceKey === "gold" ? march.cargoAmount : 0,
+  };
+  await tx.city.update({
+    where: { id: attackerCity.id },
+    data: resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), gainedResources), now),
+  });
+
+  const report = await tx.marchReport.create({
+    data: {
+      marchId: march.id,
+      kind: "RESOURCE_GATHER",
+      ownerUserId: attackerCity.ownerId,
+      ownerCityId: attackerCity.id,
+      poiId: poi.id,
+      poiKind: poi.kind,
+      poiName: poi.label,
+      poiLevel: poi.level,
+      resourceType: march.cargoResourceType,
+      resourceAmount: march.cargoAmount,
+      infantryCount: march.infantryCount,
+      archerCount: march.archerCount,
+      cavalryCount: march.cavalryCount,
+      fromX: attackerCity.x,
+      fromY: attackerCity.y,
+      toX: poi.x,
+      toY: poi.y,
+      distance: Math.abs(attackerCity.x - poi.x) + Math.abs(attackerCity.y - poi.y),
+    },
+  });
+
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "RESOLVED",
+      resolvedAt: now,
+    },
+  });
+
+  worldEvents.resolvedMarches.push({
+    userIds: [attackerCity.ownerId],
+    cityIds: [attackerCity.id],
+    marchId: march.id,
+    reportId: report.id,
+    poiId: poi.id,
+    notifyBattleResolved: false,
+  });
+}
+
+async function reconcileBattleWindowsTx(
+  tx: Prisma.TransactionClient,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const startedAt = Date.now();
+  const dueWindows = await tx.battleWindow.findMany({
+    where: {
+      resolvedAt: null,
+      closesAt: {
+        lte: now,
+      },
+    },
+    orderBy: {
+      closesAt: "asc",
+    },
+  });
+
+  for (const window of dueWindows) {
+    const windowStartedAt = Date.now();
+    const stagedMarches = await tx.march.findMany({
+      where: {
+        battleWindowId: window.id,
+        state: "STAGING",
+      },
+      include: {
+        commander: true,
+        targetCity: {
+          include: {
+            owner: true,
+          },
+        },
+        targetPoi: true,
+        battleWindow: true,
+      },
+      orderBy: [{ etaAt: "asc" }, { startsAt: "asc" }],
+    });
+
+    for (const march of stagedMarches) {
+      if (!march.targetCityId) {
+        continue;
+      }
+
+      const attackerCity = await loadCityStateRecordOrThrow(tx, march.ownerCityId);
+      const defenderCity = await loadCityStateRecordOrThrow(tx, march.targetCityId);
+      const battleStartedAt = Date.now();
+      await reconcileCityBattleTx(tx, march, attackerCity, defenderCity, now, worldEvents);
+      observeDuration("game_battle_resolve_duration_ms", Date.now() - battleStartedAt, {
+        objective: "CITY_ATTACK",
+      });
+      incrementCounter("game_battle_resolve_total", {
+        objective: "CITY_ATTACK",
+      });
+    }
+
+    await tx.battleWindow.update({
+      where: { id: window.id },
+      data: {
+        resolvedAt: now,
+      },
+    });
+
+    observeDuration("game_battle_window_duration_ms", Date.now() - windowStartedAt, {
+      windowState: "closed",
+    });
+    incrementCounter("game_battle_window_resolved_total");
+  }
+
+  observeDuration("game_reconcile_battle_windows_duration_ms", Date.now() - startedAt);
+}
+
 async function reconcileMarchesTx(
   tx: Prisma.TransactionClient,
   now: Date,
@@ -305,10 +891,30 @@ async function reconcileMarchesTx(
 ) {
   const dueMarches = await tx.march.findMany({
     where: {
-      state: "ENROUTE",
-      etaAt: {
-        lte: now,
+      OR: [
+        {
+          state: "ENROUTE",
+          etaAt: { lte: now },
+        },
+        {
+          state: "GATHERING",
+          etaAt: { lte: now },
+        },
+        {
+          state: "RETURNING",
+          returnEtaAt: { lte: now },
+        },
+      ],
+    },
+    include: {
+      commander: true,
+      targetCity: {
+        include: {
+          owner: true,
+        },
       },
+      targetPoi: true,
+      battleWindow: true,
     },
     orderBy: {
       etaAt: "asc",
@@ -317,8 +923,8 @@ async function reconcileMarchesTx(
 
   const syncedCities = new Set<string>();
 
-  async function ensureSynced(cityId: string) {
-    if (syncedCities.has(cityId)) {
+  async function ensureSynced(cityId: string | null) {
+    if (!cityId || syncedCities.has(cityId)) {
       return;
     }
 
@@ -349,124 +955,53 @@ async function reconcileMarchesTx(
     await ensureSynced(march.targetCityId);
 
     const attackerCity = await loadCityStateRecordOrThrow(tx, march.ownerCityId);
-    const defenderCity = await loadCityStateRecordOrThrow(tx, march.targetCityId);
-    const attackerResearch = getResearchLevels(
-      attackerCity.researchLevels.map((research) => ({
-        researchType: research.researchType,
-        level: research.level,
-      })),
-    );
-    const defenderResearch = getResearchLevels(
-      defenderCity.researchLevels.map((research) => ({
-        researchType: research.researchType,
-        level: research.level,
-      })),
-    );
-    const defenderBuildings = getBuildingLevels(
-      defenderCity.buildings.map((building) => ({
-        buildingType: building.buildingType,
-        level: building.level,
-      })),
-    );
-    const attackerCommander = attackerCity.owner.commanders.find((entry) => entry.id === march.commanderId);
-    const defenderCommander = getPrimaryCommander(defenderCity);
-    const attackerTroops = {
-      INFANTRY: march.infantryCount,
-      ARCHER: march.archerCount,
-      CAVALRY: march.cavalryCount,
-    };
-    const defenderTroops = getTroopLedger(
-      defenderCity.troopGarrisons.map((troop) => ({
-        troopType: troop.troopType,
-        quantity: troop.quantity,
-      })),
-    );
-    const defenderResources = getResourceLedger(defenderCity);
-    const battle = resolveBattle(
-      attackerTroops,
-      defenderTroops,
-      toCommanderBonuses(attackerCommander),
-      toCommanderBonuses(defenderCommander),
-      attackerResearch,
-      defenderResearch,
-      defenderBuildings,
-      defenderResources,
-    );
 
-    const attackerGarrison = getTroopLedger(
-      attackerCity.troopGarrisons.map((troop) => ({
-        troopType: troop.troopType,
-        quantity: troop.quantity,
-      })),
-    );
-    const nextAttackerGarrison = addTroops(attackerGarrison, battle.attackerSurvivors);
-    const nextDefenderGarrison = spendTroops(defenderTroops, battle.defenderLosses);
+    if (march.state === "ENROUTE" && march.objective === "CITY_ATTACK" && march.targetCityId) {
+      const defenderCity = await loadCityStateRecordOrThrow(tx, march.targetCityId);
+      await stageCityBattleMarchTx(tx, march, attackerCity, defenderCity, now, worldEvents);
+      continue;
+    }
 
-    await upsertTroopLedgerTx(tx, attackerCity.id, nextAttackerGarrison);
-    await upsertTroopLedgerTx(tx, defenderCity.id, nextDefenderGarrison);
+    if (march.state === "ENROUTE" && march.objective === "BARBARIAN_ATTACK" && march.targetPoiId) {
+      const battleStartedAt = Date.now();
+      await reconcileBarbarianBattleTx(tx, march, attackerCity, now, worldEvents);
+      observeDuration("game_battle_resolve_duration_ms", Date.now() - battleStartedAt, {
+        objective: "BARBARIAN_ATTACK",
+      });
+      incrementCounter("game_battle_resolve_total", {
+        objective: "BARBARIAN_ATTACK",
+      });
+      continue;
+    }
 
-    await tx.city.update({
-      where: { id: attackerCity.id },
-      data: resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), battle.loot), now),
-    });
-    await tx.city.update({
-      where: { id: defenderCity.id },
-      data: resourceLedgerToCityUpdate(spendResources(defenderResources, battle.loot), now),
-    });
+    if (march.state === "ENROUTE" && march.objective === "RESOURCE_GATHER" && march.targetPoiId) {
+      await reconcileGatherArrivalTx(tx, march, attackerCity, now, worldEvents);
+      continue;
+    }
 
-    const report = await tx.battleReport.create({
-      data: {
-        attackerUserId: attackerCity.ownerId,
-        defenderUserId: defenderCity.ownerId,
-        attackerCityId: attackerCity.id,
-        defenderCityId: defenderCity.id,
-        result: battle.result,
-        attackerPower: battle.attackerPower,
-        defenderPower: battle.defenderPower,
-        lootWood: battle.loot.wood,
-        lootStone: battle.loot.stone,
-        lootFood: battle.loot.food,
-        lootGold: battle.loot.gold,
-        attackerLossInfantry: battle.attackerLosses.INFANTRY,
-        attackerLossArcher: battle.attackerLosses.ARCHER,
-        attackerLossCavalry: battle.attackerLosses.CAVALRY,
-        defenderLossInfantry: battle.defenderLosses.INFANTRY,
-        defenderLossArcher: battle.defenderLosses.ARCHER,
-        defenderLossCavalry: battle.defenderLosses.CAVALRY,
-        fromX: attackerCity.x,
-        fromY: attackerCity.y,
-        toX: defenderCity.x,
-        toY: defenderCity.y,
-        distance: Math.abs(attackerCity.x - defenderCity.x) + Math.abs(attackerCity.y - defenderCity.y),
-      },
-    });
+    if (march.state === "GATHERING" && march.objective === "RESOURCE_GATHER" && march.targetPoiId) {
+      await reconcileGatherCompletionTx(tx, march, attackerCity, now, worldEvents);
+      continue;
+    }
 
-    await tx.march.update({
-      where: { id: march.id },
-      data: {
-        state: "RESOLVED",
-        resolvedAt: now,
-        defenderPowerSnapshot: battle.defenderPower,
-        battleResult: battle.result,
-      },
-    });
-
-    worldEvents.resolvedMarches.push({
-      userIds: [attackerCity.ownerId, defenderCity.ownerId],
-      cityIds: [attackerCity.id, defenderCity.id],
-      marchId: march.id,
-      reportId: report.id,
-    });
+    if (march.state === "RETURNING" && march.objective === "RESOURCE_GATHER" && march.targetPoiId) {
+      await reconcileGatherReturnTx(tx, march, attackerCity, now, worldEvents);
+    }
   }
+
+  await reconcileBattleWindowsTx(tx, now, worldEvents);
 }
 
 export async function reconcileWorld(now: Date = new Date()): Promise<void> {
+  const startedAt = Date.now();
   const worldEvents = await prisma.$transaction(async (tx) => {
     const events: WorldEvents = {
       upgradeCompletions: [],
       trainingCompletions: [],
       researchCompletions: [],
+      marchTransitions: [],
       resolvedMarches: [],
+      poiUpdates: [],
     };
 
     const dueCityIds = new Set<string>();
@@ -520,6 +1055,7 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
       }
     }
 
+    await reconcilePoiRespawnsTx(tx, now, events);
     await reconcileMarchesTx(tx, now, events);
     return events;
   });
@@ -541,16 +1077,38 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
     emitFogUpdated(item.userId, item.cityId);
   }
 
+  for (const poiId of worldEvents.poiUpdates) {
+    emitPoiUpdated(poiId);
+  }
+
+  for (const item of worldEvents.marchTransitions) {
+    emitMarchUpdated(item.userIds, item.cityIds[0], item.marchId);
+    for (const cityId of item.cityIds) {
+      emitCityUpdated(item.userIds, cityId);
+      emitMapUpdated(cityId);
+    }
+    if (item.poiId) {
+      emitPoiUpdated(item.poiId);
+    }
+  }
+
   for (const item of worldEvents.resolvedMarches) {
-    emitBattleResolved(item.userIds, item.cityIds[0], item.marchId);
+    if (item.notifyBattleResolved) {
+      emitBattleResolved(item.userIds, item.cityIds[0], item.marchId);
+    }
     emitMarchUpdated(item.userIds, item.cityIds[0], item.marchId);
     emitReportCreated(item.userIds, item.reportId);
     for (const cityId of item.cityIds) {
       emitMapUpdated(cityId);
+      emitCityUpdated(item.userIds, cityId);
     }
-    emitCityUpdated(item.userIds, item.cityIds[0]);
-    emitCityUpdated(item.userIds, item.cityIds[1]);
+    if (item.poiId) {
+      emitPoiUpdated(item.poiId);
+    }
   }
+
+  observeDuration("game_reconcile_world_duration_ms", Date.now() - startedAt);
+  incrementCounter("game_reconcile_world_total");
 }
 
 function visibleCoordinatesForRadius(center: { x: number; y: number }, radius: number) {
@@ -558,7 +1116,11 @@ function visibleCoordinatesForRadius(center: { x: number; y: number }, radius: n
 
   for (let y = center.y - radius; y <= center.y + radius; y += 1) {
     for (let x = center.x - radius; x <= center.x + radius; x += 1) {
-      if (Math.abs(center.x - x) + Math.abs(center.y - y) <= radius && x >= 0 && y >= 0) {
+      if (
+        Math.abs(center.x - x) + Math.abs(center.y - y) <= radius &&
+        x >= 0 &&
+        y >= 0
+      ) {
         coordinates.push({ x, y });
       }
     }
@@ -594,13 +1156,13 @@ export async function refreshFogOfWar(
   }
 
   for (const march of city.outgoingMarches) {
-    const position = getMarchPosition(
-      { x: city.x, y: city.y },
-      { x: march.targetCity.x, y: march.targetCity.y },
-      march.startsAt,
-      march.etaAt,
-      now,
-    );
+    const target = getMarchTargetCoordinates(march);
+    const position =
+      march.state === "STAGING" || march.state === "GATHERING"
+        ? target
+        : march.state === "RETURNING" && march.returnEtaAt
+          ? getMarchPosition(target, { x: city.x, y: city.y }, march.etaAt, march.returnEtaAt, now)
+          : getMarchPosition({ x: city.x, y: city.y }, target, march.startsAt, march.etaAt, now);
 
     for (const coordinate of visibleCoordinatesForRadius(position, MARCH_VISION_RADIUS)) {
       coordinates.set(`${coordinate.x}:${coordinate.y}`, coordinate);

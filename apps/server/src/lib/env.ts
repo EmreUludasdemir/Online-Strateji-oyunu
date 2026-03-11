@@ -16,6 +16,12 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   COMMAND_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   COMMAND_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  OPS_METRICS_TOKEN: z.string().optional(),
+  REALTIME_ADAPTER: z.enum(["in_memory", "redis"]).optional().default("in_memory"),
+  REDIS_URL: z.preprocess(
+    (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+    z.string().url().optional(),
+  ),
 });
 
 export const env = envSchema.parse(process.env);

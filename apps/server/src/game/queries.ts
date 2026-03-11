@@ -1,19 +1,38 @@
 import type {
   AllianceStateResponse,
-  BattleReportView,
+  BattleReportsResponse,
   CommanderView,
+  EntitlementsResponse,
+  GameEventsResponse,
   GameStateResponse,
-  MarchView,
+  InventoryResponse,
+  LeaderboardResponse,
+  MailboxResponse,
+  RalliesResponse,
+  StoreCatalogResponse,
+  TasksResponse,
   TroopView,
   WorldChunkResponse,
 } from "@frontier/shared";
 
 import { prisma } from "../lib/prisma";
 import { DEFAULT_WORLD_RADIUS, GAME_MAP_SIZE, MAX_MARCH_DISTANCE } from "./constants";
-import { getMarchPosition, getVisionRadius, manhattanDistance } from "./engine";
+import { getVisionRadius } from "./engine";
+import {
+  getCommanderProgressViewTx,
+  getEntitlementsViewTx,
+  getEventsViewTx,
+  getInventoryViewTx,
+  getLeaderboardTx,
+  getMailboxViewTx,
+  getStoreCatalogViewTx,
+  getStoreOffersViewTx,
+  getTasksViewTx,
+} from "./progression";
 import { reconcileWorld, refreshFogOfWar, syncCityStateTx } from "./reconcile";
 import {
   battleReportInclude,
+  cityStateInclude,
   ensureCityInfrastructureTx,
   getAllianceMembershipTx,
   getUserWithCityOrThrow,
@@ -21,11 +40,16 @@ import {
   mapAllianceListItem,
   mapAllianceSummary,
   mapAllianceView,
-  mapCityInclude,
   mapBattleReport,
+  mapCityInclude,
   mapCityState,
   mapMapCity,
+  mapMarchReport,
+  mapMarchView,
+  mapPoiInclude,
+  mapPoiView,
 } from "./shared";
+import { ensureWorldPoisTx } from "./world";
 
 function buildVisibleSet(city: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>, now: Date) {
   const visible = new Set<string>();
@@ -51,20 +75,20 @@ function buildVisibleSet(city: Awaited<ReturnType<typeof loadCityStateRecordOrTh
 
   for (let y = city.y - radius; y <= city.y + radius; y += 1) {
     for (let x = city.x - radius; x <= city.x + radius; x += 1) {
-      if (x >= 0 && y >= 0 && x < GAME_MAP_SIZE && y < GAME_MAP_SIZE && Math.abs(city.x - x) + Math.abs(city.y - y) <= radius) {
+      if (
+        x >= 0 &&
+        y >= 0 &&
+        x < GAME_MAP_SIZE &&
+        y < GAME_MAP_SIZE &&
+        Math.abs(city.x - x) + Math.abs(city.y - y) <= radius
+      ) {
         visible.add(`${x}:${y}`);
       }
     }
   }
 
   for (const march of city.outgoingMarches) {
-    const position = getMarchPosition(
-      { x: city.x, y: city.y },
-      { x: march.targetCity.x, y: march.targetCity.y },
-      march.startsAt,
-      march.etaAt,
-      now,
-    );
+    const position = mapMarchView(march, { x: city.x, y: city.y }, now).target;
 
     for (let y = position.y - 2; y <= position.y + 2; y += 1) {
       for (let x = position.x - 2; x <= position.x + 2; x += 1) {
@@ -89,6 +113,7 @@ export async function getGameState(userId: string): Promise<GameStateResponse> {
   const now = new Date();
 
   return prisma.$transaction(async (tx) => {
+    await ensureWorldPoisTx(tx);
     const user = await getUserWithCityOrThrow(tx, userId);
     await ensureCityInfrastructureTx(tx, {
       cityId: user.city!.id,
@@ -124,6 +149,7 @@ export async function getWorldChunk(
   const now = new Date();
 
   return prisma.$transaction(async (tx) => {
+    await ensureWorldPoisTx(tx);
     const user = await getUserWithCityOrThrow(tx, userId);
     await ensureCityInfrastructureTx(tx, {
       cityId: user.city!.id,
@@ -133,7 +159,28 @@ export async function getWorldChunk(
     const synced = await syncCityStateTx(tx, user.city!.id, now);
     await refreshFogOfWar(tx, synced.city, now);
     const currentCity = await loadCityStateRecordOrThrow(tx, synced.city.id);
-    const visible = buildVisibleSet(currentCity, now);
+    const membership = await getAllianceMembershipTx(tx, userId);
+    const memberUserIds = membership
+      ? membership.alliance.members.map((member) => member.userId)
+      : [userId];
+    const allianceCities = membership
+      ? await tx.city.findMany({
+          where: {
+            ownerId: {
+              in: memberUserIds,
+            },
+          },
+          include: cityStateInclude,
+        })
+      : [currentCity];
+
+    const visible = new Set<string>();
+    for (const city of allianceCities) {
+      for (const coordinate of buildVisibleSet(city, now)) {
+        visible.add(coordinate);
+      }
+    }
+
     const radius = query.radius ?? DEFAULT_WORLD_RADIUS;
     const centerX = query.centerX ?? currentCity.x;
     const centerY = query.centerY ?? currentCity.y;
@@ -142,10 +189,12 @@ export async function getWorldChunk(
     const minY = Math.max(0, centerY - radius);
     const maxY = Math.min(GAME_MAP_SIZE - 1, centerY + radius);
 
-    const [fogTiles, cities] = await Promise.all([
+    const [fogTiles, cities, pois] = await Promise.all([
       tx.fogTile.findMany({
         where: {
-          userId,
+          userId: {
+            in: memberUserIds,
+          },
           x: { gte: minX, lte: maxX },
           y: { gte: minY, lte: maxY },
         },
@@ -156,6 +205,14 @@ export async function getWorldChunk(
           y: { gte: minY, lte: maxY },
         },
         include: mapCityInclude,
+        orderBy: [{ y: "asc" }, { x: "asc" }],
+      }),
+      tx.mapPoi.findMany({
+        where: {
+          x: { gte: minX, lte: maxX },
+          y: { gte: minY, lte: maxY },
+        },
+        include: mapPoiInclude,
         orderBy: [{ y: "asc" }, { x: "asc" }],
       }),
     ]);
@@ -181,43 +238,16 @@ export async function getWorldChunk(
       })
       .filter((city) => city.fogState !== "HIDDEN" || city.isCurrentPlayer);
 
-    const marches: MarchView[] = currentCity.outgoingMarches
-      .map((march) => {
-        const position = getMarchPosition(
-          { x: currentCity.x, y: currentCity.y },
-          { x: march.targetCity.x, y: march.targetCity.y },
-          march.startsAt,
-          march.etaAt,
-          now,
-        );
-        const distance = manhattanDistance({ x: currentCity.x, y: currentCity.y }, { x: march.targetCity.x, y: march.targetCity.y });
-
-        return {
-          id: march.id,
-          state: march.state,
-          targetCityId: march.targetCityId,
-          targetCityName: march.targetCity.name,
-          commanderId: march.commanderId,
-          commanderName: march.commander.name,
-          troops: {
-            INFANTRY: march.infantryCount,
-            ARCHER: march.archerCount,
-            CAVALRY: march.cavalryCount,
-          },
-          startedAt: march.startsAt.toISOString(),
-          etaAt: march.etaAt.toISOString(),
-          remainingSeconds: Math.max(0, Math.ceil((march.etaAt.getTime() - now.getTime()) / 1000)),
-          distance,
-          origin: { x: currentCity.x, y: currentCity.y },
-          target: position,
-          projectedOutcome:
-            march.defenderPowerSnapshot == null
-              ? null
-              : march.attackerPowerSnapshot > march.defenderPowerSnapshot
-                ? ("ATTACKER_WIN" as const)
-                : ("DEFENDER_HOLD" as const),
-        };
+    const visiblePois = pois
+      .map((poi) => {
+        const key = `${poi.x}:${poi.y}`;
+        const fogState = visible.has(key) ? "VISIBLE" : discovered.has(key) ? "DISCOVERED" : "HIDDEN";
+        return mapPoiView(poi, currentCity, fogState);
       })
+      .filter((poi) => poi.fogState !== "HIDDEN");
+
+    const marches = currentCity.outgoingMarches
+      .map((march) => mapMarchView(march, { x: currentCity.x, y: currentCity.y }, now))
       .filter((march) => {
         return (
           march.target.x >= minX &&
@@ -233,16 +263,18 @@ export async function getWorldChunk(
       radius,
       tiles,
       cities: visibleCities,
+      pois: visiblePois,
       marches,
     };
   });
 }
 
-export async function getBattleReports(userId: string): Promise<BattleReportView[]> {
+export async function getBattleReports(userId: string): Promise<BattleReportsResponse["reports"]> {
   await reconcileWorld();
   const now = new Date();
 
   return prisma.$transaction(async (tx) => {
+    await ensureWorldPoisTx(tx);
     const user = await getUserWithCityOrThrow(tx, userId);
     await ensureCityInfrastructureTx(tx, {
       cityId: user.city!.id,
@@ -252,18 +284,36 @@ export async function getBattleReports(userId: string): Promise<BattleReportView
     const synced = await syncCityStateTx(tx, user.city!.id, now);
     await refreshFogOfWar(tx, synced.city, now);
 
-    const reports = await tx.battleReport.findMany({
-      where: {
-        OR: [{ attackerUserId: userId }, { defenderUserId: userId }],
-      },
-      include: battleReportInclude,
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 20,
-    });
+    const [battleReports, marchReports] = await Promise.all([
+      tx.battleReport.findMany({
+        where: {
+          OR: [{ attackerUserId: userId }, { defenderUserId: userId }],
+        },
+        include: battleReportInclude,
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 20,
+      }),
+      tx.marchReport.findMany({
+        where: {
+          ownerUserId: userId,
+        },
+        include: {
+          ownerUser: true,
+          ownerCity: true,
+          poi: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 20,
+      }),
+    ]);
 
-    return reports.map(mapBattleReport);
+    return [...battleReports.map(mapBattleReport), ...marchReports.map(mapMarchReport)]
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, 20);
   });
 }
 
@@ -273,8 +323,21 @@ export async function getTroops(userId: string): Promise<TroopView[]> {
 }
 
 export async function getCommanders(userId: string): Promise<CommanderView[]> {
-  const state = await getGameState(userId);
-  return state.city.commanders;
+  await reconcileWorld();
+  const now = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    await ensureWorldPoisTx(tx);
+    const user = await getUserWithCityOrThrow(tx, userId);
+    await ensureCityInfrastructureTx(tx, {
+      cityId: user.city!.id,
+      userId: user.id,
+      username: user.username,
+    });
+    const synced = await syncCityStateTx(tx, user.city!.id, now);
+    await refreshFogOfWar(tx, synced.city, now);
+    return getCommanderProgressViewTx(tx, userId);
+  });
 }
 
 export async function getAllianceState(userId: string): Promise<AllianceStateResponse> {
@@ -282,6 +345,7 @@ export async function getAllianceState(userId: string): Promise<AllianceStateRes
   const now = new Date();
 
   return prisma.$transaction(async (tx) => {
+    await ensureWorldPoisTx(tx);
     const user = await getUserWithCityOrThrow(tx, userId);
     await ensureCityInfrastructureTx(tx, {
       cityId: user.city!.id,
@@ -309,6 +373,122 @@ export async function getAllianceState(userId: string): Promise<AllianceStateRes
     return {
       alliance: membership?.alliance ? mapAllianceView(membership.alliance, userId) : null,
       alliances: alliances.map((alliance) => mapAllianceListItem(alliance, userId)),
+    };
+  });
+}
+
+export async function getTasks(userId: string): Promise<TasksResponse> {
+  await reconcileWorld();
+  return prisma.$transaction((tx) => getTasksViewTx(tx, userId));
+}
+
+export async function getInventory(userId: string): Promise<InventoryResponse> {
+  await reconcileWorld();
+  return prisma.$transaction(async (tx) => ({
+    items: await getInventoryViewTx(tx, userId),
+  }));
+}
+
+export async function getMailbox(userId: string): Promise<MailboxResponse> {
+  await reconcileWorld();
+  return prisma.$transaction((tx) => getMailboxViewTx(tx, userId));
+}
+
+export async function getEvents(userId: string): Promise<GameEventsResponse> {
+  await reconcileWorld();
+  return prisma.$transaction((tx) => getEventsViewTx(tx, userId));
+}
+
+export async function getLeaderboard(userId: string, leaderboardId: string): Promise<LeaderboardResponse> {
+  await reconcileWorld();
+  return prisma.$transaction(async (tx) => ({
+    leaderboardId,
+    entries: await getLeaderboardTx(tx, leaderboardId),
+  }));
+}
+
+export async function getStoreCatalog(userId: string): Promise<StoreCatalogResponse> {
+  await reconcileWorld();
+  return prisma.$transaction(async (tx) => ({
+    catalog: {
+      ...(await getStoreCatalogViewTx(tx)),
+      offers: await getStoreOffersViewTx(tx, userId),
+    },
+  }));
+}
+
+export async function getEntitlements(userId: string): Promise<EntitlementsResponse> {
+  await reconcileWorld();
+  return prisma.$transaction(async (tx) => ({
+    entitlements: await getEntitlementsViewTx(tx, userId),
+  }));
+}
+
+export async function getRallies(userId: string): Promise<RalliesResponse> {
+  await reconcileWorld();
+  const now = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const membership = await getAllianceMembershipTx(tx, userId);
+    if (!membership) {
+      return { rallies: [] };
+    }
+
+    const rallies = await tx.rally.findMany({
+      where: {
+        allianceId: membership.alliance.id,
+        state: {
+          in: ["OPEN", "LAUNCHED"],
+        },
+      },
+      include: {
+        leaderUser: true,
+        commander: true,
+        targetCity: true,
+        targetPoi: true,
+        members: {
+          include: {
+            user: true,
+          },
+          orderBy: {
+            joinedAt: "asc",
+          },
+        },
+      },
+      orderBy: {
+        launchAt: "asc",
+      },
+      take: 12,
+    });
+
+    return {
+      rallies: rallies.map((rally) => ({
+        id: rally.id,
+        state: rally.state,
+        objective: rally.objective,
+        targetCityId: rally.targetCityId,
+        targetCityName: rally.targetCity?.name ?? null,
+        targetPoiId: rally.targetPoiId,
+        targetPoiName: rally.targetPoi?.label ?? null,
+        leaderUserId: rally.leaderUserId,
+        leaderName: rally.leaderUser.username,
+        leaderCommanderId: rally.commanderId,
+        leaderCommanderName: rally.commander.name,
+        supportBonusPct: Math.round(rally.supportBonusPct * 100),
+        launchAt: rally.launchAt.toISOString(),
+        remainingSeconds: Math.max(0, Math.ceil((rally.launchAt.getTime() - now.getTime()) / 1000)),
+        launchedMarchId: rally.launchedMarchId,
+        members: rally.members.map((member) => ({
+          userId: member.userId,
+          username: member.user.username,
+          pledgedTroops: {
+            INFANTRY: member.infantryCount,
+            ARCHER: member.archerCount,
+            CAVALRY: member.cavalryCount,
+          },
+          joinedAt: member.joinedAt.toISOString(),
+        })),
+      })),
     };
   });
 }

@@ -12,17 +12,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 
 import { api, ApiClientError } from "../api";
+import type { CreateMarchPayload } from "../api";
+import { trackAnalyticsEvent, trackAnalyticsOnce } from "../lib/analytics";
 import { formatNumber } from "../lib/formatters";
 import styles from "./GameLayout.module.css";
 
 export interface GameLayoutContext {
   state: GameStateResponse;
   selectedCityId: string | null;
-  setSelectedCityId: (cityId: string | null) => void;
+  selectedPoiId: string | null;
+  selectCity: (cityId: string | null) => void;
+  selectPoi: (poiId: string | null) => void;
   upgrade: (buildingType: BuildingType) => Promise<void>;
   train: (troopType: TroopType, quantity: number) => Promise<void>;
   research: (researchType: ResearchType) => Promise<void>;
-  sendMarch: (payload: { targetCityId: string; commanderId: string; troops: TroopStock }) => Promise<void>;
+  sendMarch: (payload: CreateMarchPayload) => Promise<void>;
   recallMarch: (marchId: string) => Promise<void>;
   isUpgrading: boolean;
   isTraining: boolean;
@@ -38,10 +42,15 @@ declare global {
     render_game_to_text?: () => string;
     advanceTime?: (ms: number) => void;
     select_map_city?: (cityId: string | null) => void;
+    select_map_poi?: (poiId: string | null) => void;
   }
 }
 
-function useSocketNotifications(enabled: boolean, onNotice: (message: string) => void): void {
+function useSocketNotifications(
+  enabled: boolean,
+  analyticsUserId: string | null,
+  onNotice: (message: string) => void,
+): void {
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -69,6 +78,7 @@ function useSocketNotifications(enabled: boolean, onNotice: (message: string) =>
         if (
           payload.type === "map.updated" ||
           payload.type === "fog.updated" ||
+          payload.type === "poi.updated" ||
           payload.type === "march.created" ||
           payload.type === "march.updated"
         ) {
@@ -88,7 +98,12 @@ function useSocketNotifications(enabled: boolean, onNotice: (message: string) =>
 
         if (payload.type === "upgrade.completed") onNotice("A building upgrade completed.");
         if (payload.type === "training.completed") onNotice("Fresh troops completed their drill cycle.");
-        if (payload.type === "research.completed") onNotice("A research order completed at the academy.");
+        if (payload.type === "research.completed") {
+          if (analyticsUserId) {
+            trackAnalyticsEvent("research_completed");
+          }
+          onNotice("A research order completed at the academy.");
+        }
         if (payload.type === "battle.resolved") onNotice("A march resolved on the frontier.");
       });
     }, 300);
@@ -97,7 +112,7 @@ function useSocketNotifications(enabled: boolean, onNotice: (message: string) =>
       window.clearTimeout(timer);
       socket?.close();
     };
-  }, [enabled, onNotice, queryClient]);
+  }, [analyticsUserId, enabled, onNotice, queryClient]);
 }
 
 export function GameLayout() {
@@ -105,7 +120,16 @@ export function GameLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+  const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const selectCity = useCallback((cityId: string | null) => {
+    setSelectedCityId(cityId);
+    setSelectedPoiId(null);
+  }, []);
+  const selectPoi = useCallback((poiId: string | null) => {
+    setSelectedPoiId(poiId);
+    setSelectedCityId(null);
+  }, []);
 
   const sessionQuery = useQuery({
     queryKey: ["session"],
@@ -130,37 +154,59 @@ export function GameLayout() {
 
   const upgradeMutation = useMutation({
     mutationFn: (buildingType: BuildingType) => api.startUpgrade(buildingType),
-    onSuccess: async () => {
+    onSuccess: async (_response, buildingType) => {
       await queryClient.invalidateQueries({ queryKey: ["game-state"] });
+      if (stateQuery.data?.player.id) {
+        trackAnalyticsOnce(`first_upgrade:${stateQuery.data.player.id}`, "first_upgrade", {
+          buildingType,
+        });
+      }
       setNotice("Construction order accepted.");
     },
   });
 
   const trainMutation = useMutation({
     mutationFn: (payload: { troopType: TroopType; quantity: number }) => api.trainTroops(payload),
-    onSuccess: async () => {
+    onSuccess: async (_response, payload) => {
       await queryClient.invalidateQueries({ queryKey: ["game-state"] });
+      if (stateQuery.data?.player.id) {
+        trackAnalyticsOnce(`first_troop_train:${stateQuery.data.player.id}`, "first_troop_train", {
+          troopType: payload.troopType,
+          quantity: payload.quantity,
+        });
+      }
       setNotice("Training order posted to the barracks.");
     },
   });
 
   const researchMutation = useMutation({
     mutationFn: (payload: { researchType: ResearchType }) => api.startResearch(payload),
-    onSuccess: async () => {
+    onSuccess: async (_response, payload) => {
       await queryClient.invalidateQueries({ queryKey: ["game-state"] });
       await queryClient.invalidateQueries({ queryKey: ["world-chunk"] });
+      trackAnalyticsEvent("research_started", {
+        researchType: payload.researchType,
+      });
       setNotice("Research order accepted by the academy.");
     },
   });
 
   const marchMutation = useMutation({
-    mutationFn: (payload: { targetCityId: string; commanderId: string; troops: TroopStock }) => api.createMarch(payload),
-    onSuccess: async ({ march }) => {
+    mutationFn: (payload: CreateMarchPayload) => api.createMarch(payload),
+    onSuccess: async ({ march }, payload) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["game-state"] }),
         queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
       ]);
-      setNotice(`March dispatched toward ${march.targetCityName}. ETA ${march.remainingSeconds}s.`);
+      if (stateQuery.data?.player.id) {
+        trackAnalyticsOnce(`first_march:${stateQuery.data.player.id}`, "first_march", {
+          objective: march.objective,
+          targetType: "targetCityId" in payload ? "CITY" : "POI",
+        });
+      }
+      const targetName = march.targetPoiName ?? march.targetCityName ?? "target";
+      const missionLabel = march.objective === "RESOURCE_GATHER" ? "Gathering march" : "March";
+      setNotice(`${missionLabel} dispatched toward ${targetName}. ETA ${march.remainingSeconds}s.`);
     },
   });
 
@@ -179,7 +225,7 @@ export function GameLayout() {
     setNotice(message);
   }, []);
 
-  useSocketNotifications(Boolean(stateQuery.data), handleNotice);
+  useSocketNotifications(Boolean(stateQuery.data), stateQuery.data?.player.id ?? null, handleNotice);
 
   const contextValue = useMemo<GameLayoutContext | null>(() => {
     if (!stateQuery.data) {
@@ -189,7 +235,9 @@ export function GameLayout() {
     return {
       state: stateQuery.data,
       selectedCityId,
-      setSelectedCityId,
+      selectedPoiId,
+      selectCity,
+      selectPoi,
       upgrade: async (buildingType: BuildingType) => {
         await upgradeMutation.mutateAsync(buildingType);
       },
@@ -213,7 +261,19 @@ export function GameLayout() {
       notice,
       clearNotice: () => setNotice(null),
     };
-  }, [marchMutation, notice, recallMutation, researchMutation, selectedCityId, stateQuery.data, trainMutation, upgradeMutation]);
+  }, [
+    marchMutation,
+    notice,
+    recallMutation,
+    researchMutation,
+    selectCity,
+    selectPoi,
+    selectedCityId,
+    selectedPoiId,
+    stateQuery.data,
+    trainMutation,
+    upgradeMutation,
+  ]);
 
   useEffect(() => {
     if (!stateQuery.data) {
@@ -224,6 +284,7 @@ export function GameLayout() {
       const worldChunk = queryClient.getQueryData<WorldChunkResponse>(["world-chunk"]);
       const allianceState = queryClient.getQueryData<AllianceStateResponse>(["alliance-state"]);
       const selectedCity = worldChunk?.cities.find((city) => city.cityId === selectedCityId) ?? null;
+      const selectedPoi = worldChunk?.pois.find((poi) => poi.id === selectedPoiId) ?? null;
 
       return JSON.stringify({
         screen: location.pathname,
@@ -260,6 +321,7 @@ export function GameLayout() {
           treasury: allianceState?.alliance?.treasury ?? null,
         },
         selectedCity,
+        selectedPoi,
         map: {
           loaded: Boolean(worldChunk),
           center: worldChunk?.center,
@@ -276,7 +338,26 @@ export function GameLayout() {
               fogState: city.fogState,
               canSendMarch: city.canSendMarch,
               isCurrentPlayer: city.isCurrentPlayer,
+              battleWindowClosesAt: city.battleWindowClosesAt,
+              stagedMarchCount: city.stagedMarchCount,
               projectedOutcome: city.projectedOutcome,
+            })) ?? [],
+          pois:
+            worldChunk?.pois.map((poi) => ({
+              id: poi.id,
+              kind: poi.kind,
+              label: poi.label,
+              level: poi.level,
+              state: poi.state,
+              resourceType: poi.resourceType,
+              remainingAmount: poi.remainingAmount,
+              fogState: poi.fogState,
+              x: poi.x,
+              y: poi.y,
+              canSendMarch: poi.canSendMarch,
+              canGather: poi.canGather,
+              occupantMarchId: poi.occupantMarchId,
+              projectedOutcome: poi.projectedOutcome,
             })) ?? [],
           marches: worldChunk?.marches ?? [],
         },
@@ -297,15 +378,20 @@ export function GameLayout() {
     };
 
     window.select_map_city = (cityId: string | null) => {
-      setSelectedCityId(cityId);
+      selectCity(cityId);
+    };
+
+    window.select_map_poi = (poiId: string | null) => {
+      selectPoi(poiId);
     };
 
     return () => {
       delete window.render_game_to_text;
       delete window.advanceTime;
       delete window.select_map_city;
+      delete window.select_map_poi;
     };
-  }, [location.pathname, queryClient, selectedCityId, stateQuery.data]);
+  }, [location.pathname, queryClient, selectCity, selectPoi, selectedCityId, selectedPoiId, stateQuery.data]);
 
   if (sessionQuery.isError) {
     return <div className={styles.feedback}>Unable to restore the current session.</div>;
@@ -336,21 +422,21 @@ export function GameLayout() {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <div>
-          <p className={styles.brandKicker}>Frontier Dominion</p>
+          <p className={styles.brandKicker}>Imperial Divan</p>
           <h1 className={styles.brandTitle}>{contextValue.state.city.cityName}</h1>
-          <p className={styles.brandMeta}>Commander: {contextValue.state.player.username}</p>
-          <p className={styles.brandMeta}>Vision radius: {formatNumber(contextValue.state.city.visionRadius)}</p>
+          <p className={styles.brandMeta}>Governor {contextValue.state.player.username}</p>
+          <p className={styles.brandMeta}>Watch range {formatNumber(contextValue.state.city.visionRadius)} tiles</p>
         </div>
 
         <nav className={styles.nav}>
           <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            City
+            Divan
           </NavLink>
           <NavLink to="/app/map" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            World Map
+            Atlas
           </NavLink>
           <NavLink to="/app/reports" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            Reports
+            Ledger
           </NavLink>
           <NavLink to="/app/alliance" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
             Alliance
@@ -381,7 +467,7 @@ export function GameLayout() {
           <div className={styles.notice} role="status">
             <span>{contextValue.notice}</span>
             <button type="button" onClick={contextValue.clearNotice}>
-              Dismiss
+              Seal
             </button>
           </div>
         ) : null}
@@ -392,13 +478,13 @@ export function GameLayout() {
 
         <nav className={styles.mobileNav}>
           <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
-            City
+            Divan
           </NavLink>
           <NavLink to="/app/map" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
-            Map
+            Atlas
           </NavLink>
           <NavLink to="/app/reports" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
-            Reports
+            Ledger
           </NavLink>
           <NavLink to="/app/alliance" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
             Alliance

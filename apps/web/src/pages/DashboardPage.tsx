@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type BuildingType, type ResearchType, type TroopType } from "@frontier/shared";
 
 import { useGameLayoutContext } from "../components/GameLayout";
+import { trackAnalyticsOnce } from "../lib/analytics";
 import styles from "../components/GameLayout.module.css";
 import { formatNumber, formatRelativeTimer } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
@@ -41,19 +42,25 @@ export function DashboardPage() {
     [state.city.research],
   );
 
+  useEffect(() => {
+    trackAnalyticsOnce(`tutorial_started:${state.player.id}`, "tutorial_started", {
+      cityId: state.city.cityId,
+    });
+  }, [state.city.cityId, state.player.id]);
+
   return (
     <section className={styles.pageGrid}>
       <article className={styles.heroCard}>
         <div className={styles.heroTopline}>
           <div>
-            <p className={styles.sectionKicker}>City overview</p>
+            <p className={styles.sectionKicker}>Imperial estate</p>
             <h2>{state.city.cityName}</h2>
             <p className={styles.heroLead}>
-              Command roads, academies, and marching fields from coordinates {state.city.coordinates.x},{" "}
-              {state.city.coordinates.y}. This city now operates as a mobilization hub rather than a passive hold.
+              From coordinates {state.city.coordinates.x}, {state.city.coordinates.y}, this province directs roads,
+              storehouses, academies, and banners like a living court rather than a static settlement.
             </p>
           </div>
-          <span className={styles.levelBadge}>Kingdom Core v1</span>
+          <span className={styles.levelBadge}>Imperial Core v2</span>
         </div>
         <div className={styles.heroStats}>
           <article className={styles.heroStat}>
@@ -88,8 +95,8 @@ export function DashboardPage() {
       </article>
 
       <section className={styles.commandDeck}>
-        <article className={styles.commandCard}>
-          <p className={styles.sectionKicker}>Governor focus</p>
+          <article className={styles.commandCard}>
+          <p className={styles.sectionKicker}>Divan focus</p>
           <strong className={styles.commandValue}>{lowestResource?.[0] ?? "wood"}</strong>
           <p className={styles.commandHint}>Lowest stockpile should be stabilized before extended marches.</p>
         </article>

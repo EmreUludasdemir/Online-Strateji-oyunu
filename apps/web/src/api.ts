@@ -1,9 +1,11 @@
 import type {
   AllianceMutationResponse,
   AllianceStateResponse,
+  AnalyticsEventRequest,
   AuthResponse,
   BattleReportsResponse,
   GameStateResponse,
+  MarchObjective,
   MarchCommandResponse,
   OkResponse,
   StartResearchResponse,
@@ -58,6 +60,20 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   return parseResponse<T>(response);
 }
 
+export type CreateMarchPayload =
+  | {
+      objective?: "CITY_ATTACK";
+      targetCityId: string;
+      commanderId: string;
+      troops: TroopStock;
+    }
+  | {
+      objective: Extract<MarchObjective, "BARBARIAN_ATTACK" | "RESOURCE_GATHER">;
+      targetPoiId: string;
+      commanderId: string;
+      troops: TroopStock;
+    };
+
 export const api = {
   session: () => apiRequest<AuthResponse>("/api/auth/me"),
   login: (body: { username: string; password: string }) =>
@@ -97,7 +113,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  createMarch: (body: { targetCityId: string; commanderId: string; troops: TroopStock }) =>
+  createMarch: (body: CreateMarchPayload) =>
     apiRequest<MarchCommandResponse>("/api/game/marches", {
       method: "POST",
       body: JSON.stringify(body),
@@ -149,5 +165,10 @@ export const api = {
   respondAllianceHelp: (helpRequestId: string) =>
     apiRequest<AllianceMutationResponse>(`/api/game/alliance-help/${helpRequestId}/respond`, {
       method: "POST",
+    }),
+  trackAnalytics: (body: AnalyticsEventRequest) =>
+    apiRequest<OkResponse>("/api/game/analytics", {
+      method: "POST",
+      body: JSON.stringify(body),
     }),
 };

@@ -1,20 +1,45 @@
 import cookieParser from "cookie-parser";
 import express, { type NextFunction, type Request, type Response } from "express";
 
+import { env } from "./lib/env";
 import { HttpError, toApiError } from "./lib/http";
+import { incrementCounter, observeDuration, snapshotMetrics } from "./lib/metrics";
+import { getRealtimeAdapterDiagnostics } from "./lib/notifications";
+import { storeValidationPort } from "./lib/storeValidation";
 import { authRouter } from "./routes/auth";
 import { gameRouter } from "./routes/game";
+
+function getStatusClass(statusCode: number): string {
+  return `${Math.floor(statusCode / 100)}xx`;
+}
+
+function canAccessOps(request: Request): boolean {
+  if (env.OPS_METRICS_TOKEN) {
+    return request.header("x-ops-token") === env.OPS_METRICS_TOKEN;
+  }
+
+  return ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(request.ip ?? "");
+}
 
 function requestLogger(request: Request, response: Response, next: NextFunction) {
   const startedAt = Date.now();
   response.on("finish", () => {
+    const durationMs = Date.now() - startedAt;
+    const tags = {
+      method: request.method,
+      path: request.path,
+      statusClass: getStatusClass(response.statusCode),
+    };
+
+    incrementCounter("http_requests_total", tags);
+    observeDuration("http_request_duration_ms", durationMs, tags);
     console.info(
       JSON.stringify({
         channel: "http",
         method: request.method,
         path: request.path,
         status: response.statusCode,
-        durationMs: Date.now() - startedAt,
+        durationMs,
       }),
     );
   });
@@ -30,6 +55,20 @@ export function createApp() {
 
   app.get("/api/health", (_request, response) => {
     response.json({ ok: true });
+  });
+
+  app.get("/api/ops/metrics", (request, response) => {
+    if (!canAccessOps(request)) {
+      throw new HttpError(403, "OPS_FORBIDDEN", "Metrics access is not allowed from this client.");
+    }
+
+    response.json({
+      metrics: snapshotMetrics(),
+      realtime: getRealtimeAdapterDiagnostics(),
+      storeValidation: {
+        mode: storeValidationPort.mode,
+      },
+    });
   });
 
   app.use("/api/auth", authRouter);

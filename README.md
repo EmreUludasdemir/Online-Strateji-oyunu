@@ -80,16 +80,21 @@ Frontier Dominion is a browser-based online strategy game MVP. Each player comma
 - March-based combat instead of instant attacks
 - Compatibility `POST /api/game/attacks` route that now creates a default march
 - Deterministic battle resolution and persistent battle reports
+- POI-backed barbarian camps and resource nodes with deterministic seeding
+- Resource gathering marches with gather, return, depletion, and respawn states
+- City battle windows that stage same-target attacks before resolving them
 - Fog-of-war and chunked world queries on a 64x64 logical map
 - WebSocket notifications for city, march, fog, and report updates
+- In-memory ops metrics, analytics ingest, and a Redis-ready realtime adapter boundary
 - Alliance create, join, leave, chat, and queue-help flows
+- Alliance vision sharing in world chunk responses
 
 ### Frontend
 
 - City dashboard with resource bar, district upgrades, troop drill panel, and research board
 - Phaser-based world map with visible, discovered, and hidden tiles
 - Settlement selection, commander assignment, troop sliders, march dispatch, and recall
-- Battle report ledger with loot and troop losses
+- Battle report ledger with city battles, barbarian clears, and gather returns
 - Alliance chamber with roster, chat, and help request handling
 - `window.render_game_to_text()` and `window.advanceTime(ms)` hooks for browser validation
 - Mobile bottom navigation for narrow screens
@@ -113,6 +118,8 @@ PostgreSQL persists:
 - alliance members
 - alliance chat messages
 - alliance help requests and responses
+- map POIs
+- battle windows
 
 ## Requirements
 
@@ -157,6 +164,9 @@ AUTH_RATE_LIMIT_MAX=15
 AUTH_RATE_LIMIT_WINDOW_MS=60000
 COMMAND_RATE_LIMIT_MAX=30
 COMMAND_RATE_LIMIT_WINDOW_MS=60000
+OPS_METRICS_TOKEN=
+REALTIME_ADAPTER=in_memory
+REDIS_URL=
 ```
 
 ## Database workflow
@@ -214,6 +224,10 @@ Auth:
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 
+Ops:
+
+- `GET /api/ops/metrics`
+
 Game:
 
 - `GET /api/game/state`
@@ -233,6 +247,7 @@ Game:
 - `POST /api/game/research/start`
 - `POST /api/game/marches`
 - `POST /api/game/marches/:id/recall`
+- `POST /api/game/analytics`
 - `POST /api/game/attacks`
 - `GET /api/game/reports`
 
@@ -262,7 +277,7 @@ The smoke script:
 - verifies dashboard troops, commanders, and research
 - verifies the seeded alliance chamber and member count
 - opens the map and waits for the chunk to load
-- dispatches a march to a visible nearby city
+- dispatches a march to a visible nearby POI when available, otherwise a nearby city
 - waits for resolution
 - verifies the reports screen
 - writes a screenshot to `output/kingdom-core-e2e.png`
@@ -295,17 +310,22 @@ The smoke script:
 - One city per player
 - Alliance roles stop at `leader/officer/member`; role management UI is not exposed yet
 - Alliance help currently accelerates queues with a flat time reduction; there is no deeper alliance tech tree
-- No PvE camps or gathering nodes yet
-- Combat resolves at march ETA in a single authoritative step; there is no live battle instance
+- Combat still resolves authoritatively without free-form join/leave battle instances; only city attacks have a short battle window
 - Reports are currently listed as the latest 20 entries without filtering
 - Web frontend tests are still smoke-level only; dedicated React tests are not present
 - Phaser is split into its own lazy-loaded chunk, but that vendor chunk is still large
 - Cookie and CORS defaults are aimed at localhost development rather than hardened production deployment
+- Realtime fanout still runs on the in-memory adapter; `REALTIME_ADAPTER=redis` only falls back to a Redis-ready boundary today
+- Ops metrics are in-memory JSON snapshots, not OpenTelemetry exporters or durable TSDB pipelines
+- Product analytics events now ingest server-side, but there is no warehouse sink or dashboarding yet
+- IAP validation is only represented by a noop service port; no store receipt verification exists yet
 
 ## Next improvements
 
-- Add PvE camps and resource nodes
+- Extend battle windows beyond city attacks and expose richer coordinated-siege UI
 - Add alliance role management, donations, and shared territory mechanics
 - Expand commander progression beyond fixed template bonuses
 - Add richer map overlays, march trails, and report filtering
-- Add production observability, Redis-backed event fanout, and deeper abuse controls
+- Replace the in-memory metrics and realtime adapters with Redis/pubsub plus OpenTelemetry exporters
+- Wire the analytics ingest stream into a real warehouse or dashboard sink
+- Implement real App Store / Play receipt validation behind the existing store port

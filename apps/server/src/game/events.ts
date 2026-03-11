@@ -89,6 +89,13 @@ export function emitFogUpdated(userId: string, cityId: string): void {
   });
 }
 
+export function emitPoiUpdated(poiId: string): void {
+  gameEventBus.broadcast({
+    type: "poi.updated",
+    payload: { poiId },
+  });
+}
+
 export function emitAllianceUpdated(userIds: string[], allianceId: string): void {
   gameEventBus.notifyUsers(userIds, {
     type: "alliance.updated",

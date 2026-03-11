@@ -3,24 +3,35 @@ import {
   BUILDING_TYPES,
   BUILDING_DESCRIPTIONS,
   BUILDING_LABELS,
+  COMMANDER_TALENT_LABELS,
+  POI_KIND_LABELS,
+  POI_RESOURCE_LABELS,
   RESEARCH_TYPES,
   RESEARCH_DESCRIPTIONS,
   RESEARCH_LABELS,
   TROOP_LABELS,
   TROOP_TYPES,
+  type CargoView,
   type AllianceHelpRequestView,
   type AllianceListItemView,
+  type AllianceContributionView,
+  type AllianceLogEntryView,
+  type AllianceMarkerView,
   type AllianceSummaryView,
   type AllianceView,
   type AuthUser,
-  type BattleReportView,
+  type BattleReportsResponse,
   type BuildingType,
   type BuildingView,
   type CityState,
   type CommanderView,
   type MapCity,
+  type PoiView,
+  type PoiResourceType,
+  type ReportEntryView,
   type ResearchType,
   type ResearchView,
+  type ResourceKey,
   type ResourceStock,
   type TrainingQueueView,
   type TroopStock,
@@ -39,6 +50,7 @@ import {
   getResearchDurationMs,
   getResearchLevels,
   getTrainingDurationMs,
+  getTroopDefensePower,
   getTroopTrainingCost,
   getUpgradeCost,
   getUpgradeDurationMs,
@@ -47,14 +59,24 @@ import {
   type CommanderBonuses,
 } from "./engine";
 import {
+  BARBARIAN_CAMP_REWARDS,
+  BARBARIAN_CAMP_TROOPS,
+  ALLIANCE_CHAT_HISTORY_LIMIT,
+  MAX_MARCH_DISTANCE,
   STARTING_BUILDING_LEVEL,
+  RESEARCH_MAX_LEVEL,
+  RESOURCE_TYPE_TO_KEY,
+  STARTING_TROOPS,
   TROOP_ATTACK,
   TROOP_CARRY,
   TROOP_DEFENSE,
   TROOP_SPEED,
-  RESEARCH_MAX_LEVEL,
-  STARTING_TROOPS,
 } from "./constants";
+import { buildCommanderPresetLabel, COMMANDER_TEMPLATES } from "./content";
+
+export const battleWindowInclude = Prisma.validator<Prisma.BattleWindowInclude>()({
+  targetCity: true,
+});
 
 export const cityStateInclude = Prisma.validator<Prisma.CityInclude>()({
   owner: {
@@ -107,7 +129,9 @@ export const cityStateInclude = Prisma.validator<Prisma.CityInclude>()({
   },
   outgoingMarches: {
     where: {
-      state: "ENROUTE",
+      state: {
+        in: ["ENROUTE", "STAGING", "GATHERING", "RETURNING"],
+      },
     },
     include: {
       commander: true,
@@ -116,6 +140,8 @@ export const cityStateInclude = Prisma.validator<Prisma.CityInclude>()({
           owner: true,
         },
       },
+      targetPoi: true,
+      battleWindow: true,
     },
     orderBy: {
       etaAt: "asc",
@@ -134,6 +160,25 @@ export const mapCityInclude = Prisma.validator<Prisma.CityInclude>()({
   buildings: true,
   troopGarrisons: true,
   researchLevels: true,
+  battleWindows: {
+    where: {
+      resolvedAt: null,
+    },
+    orderBy: {
+      closesAt: "asc",
+    },
+    take: 1,
+    include: {
+      marches: {
+        where: {
+          state: "STAGING",
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+  },
 });
 
 export const battleReportInclude = Prisma.validator<Prisma.BattleReportInclude>()({
@@ -141,6 +186,26 @@ export const battleReportInclude = Prisma.validator<Prisma.BattleReportInclude>(
   defenderUser: true,
   attackerCity: true,
   defenderCity: true,
+});
+
+export const marchReportInclude = Prisma.validator<Prisma.MarchReportInclude>()({
+  ownerUser: true,
+  ownerCity: true,
+  poi: true,
+});
+
+export const mapPoiInclude = Prisma.validator<Prisma.MapPoiInclude>()({
+  targetMarches: {
+    where: {
+      state: {
+        in: ["ENROUTE", "GATHERING"],
+      },
+    },
+    select: {
+      id: true,
+    },
+    take: 1,
+  },
 });
 
 export const allianceStateInclude = Prisma.validator<Prisma.AllianceInclude>()({
@@ -157,6 +222,26 @@ export const allianceStateInclude = Prisma.validator<Prisma.AllianceInclude>()({
       },
     },
     orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+  },
+  announcement: true,
+  markers: {
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 12,
+  },
+  logs: {
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 50,
+  },
+  contributions: {
+    include: {
+      user: true,
+    },
+    orderBy: [{ points: "desc" }, { userId: "asc" }],
+    take: 12,
   },
   chatMessages: {
     include: {
@@ -185,7 +270,10 @@ export const allianceStateInclude = Prisma.validator<Prisma.AllianceInclude>()({
 export type CityStateRecord = Prisma.CityGetPayload<{ include: typeof cityStateInclude }>;
 export type MapCityRecord = Prisma.CityGetPayload<{ include: typeof mapCityInclude }>;
 export type BattleReportRecord = Prisma.BattleReportGetPayload<{ include: typeof battleReportInclude }>;
+export type MarchReportRecord = Prisma.MarchReportGetPayload<{ include: typeof marchReportInclude }>;
 export type AllianceStateRecord = Prisma.AllianceGetPayload<{ include: typeof allianceStateInclude }>;
+export type MapPoiRecord = Prisma.MapPoiGetPayload<{ include: typeof mapPoiInclude }>;
+export type BattleWindowRecord = Prisma.BattleWindowGetPayload<{ include: typeof battleWindowInclude }>;
 
 export function getResourceLedger(city: {
   wood: number;
@@ -213,6 +301,33 @@ export function getTroopLedger(
     ARCHER: 0,
     CAVALRY: 0,
   });
+}
+
+export function getPoiResourceKey(resourceType: PoiResourceType): ResourceKey {
+  return RESOURCE_TYPE_TO_KEY[resourceType];
+}
+
+export function getBarbarianCampTroops(level: number): TroopStock {
+  return BARBARIAN_CAMP_TROOPS[Math.max(1, Math.min(3, level))];
+}
+
+export function getBarbarianCampReward(level: number): ResourceStock {
+  return BARBARIAN_CAMP_REWARDS[Math.max(1, Math.min(3, level))];
+}
+
+export function getMarchTargetCoordinates(march: {
+  targetCity: { x: number; y: number } | null;
+  targetPoi: { x: number; y: number } | null;
+}) {
+  if (march.targetCity) {
+    return { x: march.targetCity.x, y: march.targetCity.y };
+  }
+
+  if (march.targetPoi) {
+    return { x: march.targetPoi.x, y: march.targetPoi.y };
+  }
+
+  throw new HttpError(500, "MARCH_TARGET_MISSING", "The march target is missing.");
 }
 
 export function resourceLedgerToCityUpdate(resources: ResourceStock, resourceUpdatedAt: Date) {
@@ -329,21 +444,129 @@ export async function ensureCityInfrastructureTx(
     });
   }
 
-  if (city.owner.commanders.length === 0) {
+  const existingCommanderTemplates = new Set(city.owner.commanders.map((commander) => commander.templateKey));
+  for (const template of COMMANDER_TEMPLATES) {
+    if (existingCommanderTemplates.has(template.key)) {
+      continue;
+    }
+
     await tx.commander.create({
       data: {
         userId: options.userId,
-        name: `${options.username} Vanguard`,
-        templateKey: "VANGUARD_MARSHAL",
+        name: template.isPrimary ? `${options.username} ${template.name}` : template.name,
+        templateKey: template.key,
         level: 1,
-        attackBonus: 0.08,
-        defenseBonus: 0.08,
-        marchSpeedBonus: 0.1,
-        carryBonus: 0.15,
-        isPrimary: true,
+        xp: 0,
+        starLevel: 1,
+        talentTrack: template.track,
+        talentPointsSpent: 0,
+        assignedPreset: buildCommanderPresetLabel(template.track),
+        attackBonus: template.attackBonus,
+        defenseBonus: template.defenseBonus,
+        marchSpeedBonus: template.marchSpeedBonus,
+        carryBonus: template.carryBonus,
+        isPrimary: template.isPrimary ?? false,
       },
     });
   }
+}
+
+function mapCargoView(march: {
+  cargoResourceType: PoiResourceType | null;
+  cargoAmount: number;
+}): CargoView {
+  return {
+    resourceType: march.cargoResourceType,
+    amount: march.cargoAmount,
+  };
+}
+
+function getMarchDisplayPosition(
+  march: {
+    state: CityState["activeMarches"][number]["state"];
+    startsAt: Date;
+    etaAt: Date;
+    returnEtaAt: Date | null;
+    battleWindow: { closesAt: Date } | null;
+    targetCity: { x: number; y: number } | null;
+    targetPoi: { x: number; y: number } | null;
+  },
+  origin: { x: number; y: number },
+  now: Date,
+) {
+  const finalTarget = getMarchTargetCoordinates(march);
+
+  if (march.state === "STAGING" || march.state === "GATHERING") {
+    return finalTarget;
+  }
+
+  if (march.state === "RETURNING" && march.returnEtaAt) {
+    return getMarchPosition(finalTarget, origin, march.etaAt, march.returnEtaAt, now);
+  }
+
+  return getMarchPosition(origin, finalTarget, march.startsAt, march.etaAt, now);
+}
+
+function getMarchRemainingSeconds(
+  march: {
+    state: CityState["activeMarches"][number]["state"];
+    etaAt: Date;
+    returnEtaAt: Date | null;
+    battleWindow: { closesAt: Date } | null;
+  },
+  now: Date,
+) {
+  const deadline =
+    march.state === "RETURNING"
+      ? march.returnEtaAt ?? march.etaAt
+      : march.state === "STAGING" && march.battleWindow
+        ? march.battleWindow.closesAt
+        : march.etaAt;
+  return Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / 1000));
+}
+
+export function mapMarchView(
+  march: CityStateRecord["outgoingMarches"][number],
+  origin: { x: number; y: number },
+  now: Date,
+) {
+  const launchOrigin = { x: march.originX, y: march.originY };
+  const currentTarget = getMarchDisplayPosition(march, origin, now);
+  const finalTarget = getMarchTargetCoordinates(march);
+
+  return {
+    id: march.id,
+    objective: march.objective,
+    state: march.state,
+    battleWindowId: march.battleWindowId,
+    battleWindowClosesAt: march.battleWindow?.closesAt.toISOString() ?? null,
+    targetCityId: march.targetCityId,
+    targetCityName: march.targetCity?.name ?? null,
+    targetPoiId: march.targetPoiId,
+    targetPoiName: march.targetPoi?.label ?? null,
+    commanderId: march.commanderId,
+    commanderName: march.commander.name,
+    troops: {
+      INFANTRY: march.infantryCount,
+      ARCHER: march.archerCount,
+      CAVALRY: march.cavalryCount,
+    },
+    cargo: mapCargoView(march),
+    startedAt: march.startsAt.toISOString(),
+    etaAt: march.etaAt.toISOString(),
+    gatherStartedAt: march.gatherStartedAt?.toISOString() ?? null,
+    returnEtaAt: march.returnEtaAt?.toISOString() ?? null,
+    remainingSeconds: getMarchRemainingSeconds(march, now),
+    distance: Math.abs(finalTarget.x - launchOrigin.x) + Math.abs(finalTarget.y - launchOrigin.y),
+    origin: launchOrigin,
+    target: currentTarget,
+    projectedOutcome:
+      march.defenderPowerSnapshot == null
+        ? null
+        : march.attackerPowerSnapshot > march.defenderPowerSnapshot
+          ? ("ATTACKER_WIN" as const)
+          : ("DEFENDER_HOLD" as const),
+  };
 }
 
 export function mapCommanderViews(city: CityStateRecord): CommanderView[] {
@@ -352,6 +575,12 @@ export function mapCommanderViews(city: CityStateRecord): CommanderView[] {
     name: commander.name,
     templateKey: commander.templateKey,
     level: commander.level,
+    xp: commander.xp,
+    xpToNextLevel: Math.max(0, 80 + Math.max(0, commander.level - 1) * 35 - commander.xp),
+    starLevel: commander.starLevel,
+    talentTrack: commander.talentTrack,
+    talentPointsSpent: commander.talentPointsSpent,
+    assignedPreset: commander.assignedPreset,
     attackBonusPct: Math.round(commander.attackBonus * 100),
     defenseBonusPct: Math.round(commander.defenseBonus * 100),
     marchSpeedBonusPct: Math.round(commander.marchSpeedBonus * 100),
@@ -518,35 +747,12 @@ export function mapCityState(city: CityStateRecord, now: Date = new Date()): Cit
     troops: mapTroopViews(city),
     commanders: mapCommanderViews(city),
     research: mapResearchViews(city),
-    activeMarches: city.outgoingMarches.map((march) => ({
-      id: march.id,
-      state: march.state,
-      targetCityId: march.targetCityId,
-      targetCityName: march.targetCity.name,
-      commanderId: march.commanderId,
-      commanderName: march.commander.name,
-      troops: {
-        INFANTRY: march.infantryCount,
-        ARCHER: march.archerCount,
-        CAVALRY: march.cavalryCount,
-      },
-      startedAt: march.startsAt.toISOString(),
-      etaAt: march.etaAt.toISOString(),
-      remainingSeconds: Math.max(0, Math.ceil((march.etaAt.getTime() - now.getTime()) / 1000)),
-      distance: Math.abs(march.targetCity.x - city.x) + Math.abs(march.targetCity.y - city.y),
-      origin: { x: city.x, y: city.y },
-      target: { x: march.targetCity.x, y: march.targetCity.y },
-      projectedOutcome:
-        march.defenderPowerSnapshot == null
-          ? null
-          : march.attackerPowerSnapshot > march.defenderPowerSnapshot
-            ? "ATTACKER_WIN"
-            : "DEFENDER_HOLD",
-    })),
+    activeMarches: city.outgoingMarches.map((march) => mapMarchView(march, { x: city.x, y: city.y }, now)),
     openMarchCount: city.outgoingMarches.length,
     visionRadius: getVisionRadius(buildingLevels.WATCHTOWER, researchLevels),
     attackPower: getAttackPower(troopLedger, commanderBonuses, researchLevels),
     defensePower: getDefensePower(troopLedger, buildingLevels, commanderBonuses, researchLevels),
+    peaceShieldUntil: city.peaceShieldUntil?.toISOString() ?? null,
   };
 }
 
@@ -597,6 +803,7 @@ export function mapMapCity(
   const isCurrentPlayer = currentCity.id === city.id;
   const distance = isCurrentPlayer ? null : Math.abs(currentCity.x - city.x) + Math.abs(currentCity.y - city.y);
   const townHall = city.buildings.find((building) => building.buildingType === "TOWN_HALL");
+  const battleWindow = city.battleWindows[0] ?? null;
 
   return {
     cityId: city.id,
@@ -611,6 +818,8 @@ export function mapMapCity(
     townHallLevel: townHall?.level ?? 1,
     attackPower: currentAttack,
     defensePower: targetDefense,
+    battleWindowClosesAt: battleWindow?.closesAt.toISOString() ?? null,
+    stagedMarchCount: battleWindow?.marches.length ?? 0,
     projectedOutcome:
       isCurrentPlayer || fogState === "HIDDEN"
         ? null
@@ -620,9 +829,73 @@ export function mapMapCity(
   };
 }
 
-export function mapBattleReport(report: BattleReportRecord): BattleReportView {
+export function mapPoiView(
+  poi: MapPoiRecord,
+  currentCity: CityStateRecord,
+  fogState: PoiView["fogState"],
+): PoiView {
+  const currentCommander = getPrimaryCommander(currentCity);
+  const currentCommanderBonuses = toCommanderBonuses(currentCommander);
+  const currentResearchLevels = getResearchLevels(
+    currentCity.researchLevels.map((research) => ({
+      researchType: research.researchType as ResearchType,
+      level: research.level,
+    })),
+  );
+  const currentTroops = getTroopLedger(
+    currentCity.troopGarrisons.map((troop) => ({
+      troopType: troop.troopType as TroopType,
+      quantity: troop.quantity,
+    })),
+  );
+  const currentAttack = getAttackPower(currentTroops, currentCommanderBonuses, currentResearchLevels);
+  const distance = Math.abs(currentCity.x - poi.x) + Math.abs(currentCity.y - poi.y);
+  const occupantMarchId = poi.targetMarches[0]?.id ?? null;
+  const campTroops = poi.kind === "BARBARIAN_CAMP" ? getBarbarianCampTroops(poi.level) : null;
+  const projectedOutcome =
+    poi.kind === "BARBARIAN_CAMP" && fogState !== "HIDDEN" && poi.state === "ACTIVE" && campTroops
+      ? currentAttack > getTroopDefensePower(campTroops)
+        ? "ATTACKER_WIN"
+        : "DEFENDER_HOLD"
+      : null;
+
+  return {
+    id: poi.id,
+    kind: poi.kind,
+    state: poi.state,
+    label: poi.label,
+    level: poi.level,
+    x: poi.x,
+    y: poi.y,
+    fogState,
+    distance,
+    resourceType: poi.resourceType,
+    remainingAmount: poi.remainingAmount,
+    maxAmount: poi.maxAmount,
+    respawnsAt: poi.respawnsAt?.toISOString() ?? null,
+    occupantMarchId,
+    canSendMarch:
+      fogState !== "HIDDEN" &&
+      distance <= MAX_MARCH_DISTANCE &&
+      poi.kind === "BARBARIAN_CAMP" &&
+      poi.state === "ACTIVE" &&
+      occupantMarchId == null,
+    canGather:
+      fogState !== "HIDDEN" &&
+      distance <= MAX_MARCH_DISTANCE &&
+      poi.kind === "RESOURCE_NODE" &&
+      poi.state === "ACTIVE" &&
+      occupantMarchId == null &&
+      (poi.remainingAmount ?? 0) > 0,
+    projectedOutcome,
+    projectedLoad: getCarryCapacity(currentTroops, currentCommanderBonuses),
+  };
+}
+
+export function mapBattleReport(report: BattleReportRecord): ReportEntryView {
   return {
     id: report.id,
+    kind: "CITY_BATTLE",
     createdAt: report.createdAt.toISOString(),
     attackerName: report.attackerUser.username,
     defenderName: report.defenderUser.username,
@@ -646,6 +919,77 @@ export function mapBattleReport(report: BattleReportRecord): BattleReportView {
       INFANTRY: report.defenderLossInfantry,
       ARCHER: report.defenderLossArcher,
       CAVALRY: report.defenderLossCavalry,
+    },
+    location: {
+      from: {
+        x: report.fromX,
+        y: report.fromY,
+      },
+      to: {
+        x: report.toX,
+        y: report.toY,
+      },
+      distance: report.distance,
+    },
+  };
+}
+
+export function mapMarchReport(report: MarchReportRecord): ReportEntryView {
+  if (report.kind === "BARBARIAN_BATTLE") {
+    return {
+      id: report.id,
+      kind: "BARBARIAN_BATTLE",
+      createdAt: report.createdAt.toISOString(),
+      attackerName: report.ownerUser.username,
+      attackerCityName: report.ownerCity.name,
+      poiName: report.poiName,
+      poiLevel: report.poiLevel,
+      result: report.result ?? "DEFENDER_HOLD",
+      attackerPower: report.attackerPower ?? 0,
+      defenderPower: report.defenderPower ?? 0,
+      loot: {
+        wood: report.lootWood,
+        stone: report.lootStone,
+        food: report.lootFood,
+        gold: report.lootGold,
+      },
+      attackerLosses: {
+        INFANTRY: report.attackerLossInfantry,
+        ARCHER: report.attackerLossArcher,
+        CAVALRY: report.attackerLossCavalry,
+      },
+      defenderLosses: {
+        INFANTRY: report.defenderLossInfantry,
+        ARCHER: report.defenderLossArcher,
+        CAVALRY: report.defenderLossCavalry,
+      },
+      location: {
+        from: {
+          x: report.fromX,
+          y: report.fromY,
+        },
+        to: {
+          x: report.toX,
+          y: report.toY,
+        },
+        distance: report.distance,
+      },
+    };
+  }
+
+  return {
+    id: report.id,
+    kind: "RESOURCE_GATHER",
+    createdAt: report.createdAt.toISOString(),
+    ownerName: report.ownerUser.username,
+    cityName: report.ownerCity.name,
+    poiName: report.poiName,
+    resourceType: report.resourceType ?? "WOOD",
+    amount: report.resourceAmount,
+    troops: {
+      INFANTRY: report.infantryCount,
+      ARCHER: report.archerCount,
+      CAVALRY: report.cavalryCount,
     },
     location: {
       from: {
@@ -698,6 +1042,7 @@ export function mapAllianceView(
       food: Math.floor(alliance.food),
       gold: Math.floor(alliance.gold),
     },
+    announcement: alliance.announcement?.content ?? null,
     members: alliance.members.map((member) => ({
       userId: member.userId,
       username: member.user.username,
@@ -713,6 +1058,24 @@ export function mapAllianceView(
       createdAt: message.createdAt.toISOString(),
     })),
     helpRequests: alliance.helpRequests.map(mapAllianceHelpRequest),
+    markers: alliance.markers.map<AllianceMarkerView>((marker) => ({
+      id: marker.id,
+      label: marker.label,
+      x: marker.x,
+      y: marker.y,
+      createdAt: marker.createdAt.toISOString(),
+    })),
+    logs: alliance.logs.map<AllianceLogEntryView>((entry) => ({
+      id: entry.id,
+      kind: entry.kind,
+      body: entry.body,
+      createdAt: entry.createdAt.toISOString(),
+    })),
+    contributions: alliance.contributions.map<AllianceContributionView>((entry) => ({
+      userId: entry.userId,
+      username: entry.user.username,
+      points: entry.points,
+    })),
   };
 }
 
@@ -819,4 +1182,20 @@ export async function loadCityStateRecordOrThrow(
   }
 
   return city;
+}
+
+export async function loadMapPoiRecordOrThrow(
+  tx: Prisma.TransactionClient,
+  poiId: string,
+): Promise<MapPoiRecord> {
+  const poi = await tx.mapPoi.findUnique({
+    where: { id: poiId },
+    include: mapPoiInclude,
+  });
+
+  if (!poi) {
+    throw new HttpError(404, "POI_NOT_FOUND", "The requested point of interest was not found.");
+  }
+
+  return poi;
 }

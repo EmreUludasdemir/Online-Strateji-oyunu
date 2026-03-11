@@ -43,22 +43,22 @@ export function AuthPage({ mode }: AuthPageProps) {
     <main className={styles.shell}>
       <section className={styles.hero}>
         <p className={styles.kicker}>Frontier Dominion</p>
-        <h1 className={styles.title}>Command a growing frontier city from a browser tab.</h1>
+        <h1 className={styles.title}>Raise an imperial frontier province from a browser tab.</h1>
         <p className={styles.subtitle}>
-          Gather supplies, expand civic districts, scout nearby settlements, and launch disciplined raids
-          from a fully server-authoritative strategy MVP.
+          Govern storehouses, academies, roads, and war banners through an original parchment-and-brass
+          strategy interface built around authoritative marches, frontier pressure, and courtly command.
         </p>
         <ul className={styles.highlights}>
-          <li>Server-timed resource growth</li>
-          <li>Single-slot building upgrades</li>
-          <li>Interactive world map with Phaser</li>
-          <li>Persistent battle reports</li>
+          <li>March-led kingdom pressure</li>
+          <li>Single-seat imperial build queue</li>
+          <li>Parchment campaign atlas</li>
+          <li>Persistent war ledger</li>
         </ul>
       </section>
 
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>
-          {mode === "login" ? "Return to your command tent" : "Claim a frontier hold"}
+          {mode === "login" ? "Enter the imperial pavilion" : "Charter a frontier province"}
         </h2>
         <form
           className={styles.form}

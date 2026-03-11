@@ -49,10 +49,43 @@ enum ResearchType {
   SCOUTING
 }
 
+enum PoiKind {
+  BARBARIAN_CAMP
+  RESOURCE_NODE
+}
+
+enum PoiState {
+  ACTIVE
+  OCCUPIED
+  DEPLETED
+  RESPAWNING
+}
+
+enum PoiResourceType {
+  WOOD
+  STONE
+  FOOD
+  GOLD
+}
+
+enum MarchObjective {
+  CITY_ATTACK
+  BARBARIAN_ATTACK
+  RESOURCE_GATHER
+}
+
 enum MarchState {
   ENROUTE
+  STAGING
+  GATHERING
+  RETURNING
   RESOLVED
   RECALLED
+}
+
+enum MarchReportKind {
+  BARBARIAN_BATTLE
+  RESOURCE_GATHER
 }
 
 enum AllianceRole {
@@ -67,6 +100,49 @@ enum AllianceHelpKind {
   RESEARCH
 }
 
+enum CommanderTalentTrack {
+  CONQUEST
+  PEACEKEEPING
+  GATHERING
+}
+
+enum TaskKind {
+  TUTORIAL
+  DAILY
+}
+
+enum ScoutState {
+  ENROUTE
+  RESOLVED
+  RECALLED
+}
+
+enum ScoutTargetKind {
+  CITY
+  POI
+}
+
+enum RallyState {
+  OPEN
+  LAUNCHED
+  RESOLVED
+  CANCELLED
+}
+
+enum MailboxKind {
+  SCOUT_REPORT
+  BATTLE_REPORT
+  RALLY_REPORT
+  SYSTEM_REWARD
+  PURCHASE_REWARD
+}
+
+enum PurchaseStatus {
+  VALIDATED
+  DUPLICATE
+  REJECTED
+}
+
 model User {
   id                     String         @id @default(cuid())
   username               String         @unique
@@ -78,11 +154,30 @@ model User {
   fogTiles               FogTile[]
   reportsAsAttacker      BattleReport[] @relation("AttackerReports")
   reportsAsDefender      BattleReport[] @relation("DefenderReports")
+  marchReports           MarchReport[]  @relation("OwnerMarchReports")
   marches                March[]        @relation("OwnerMarches")
   allianceMembership     AllianceMember?
   allianceMessages       AllianceChatMessage[]
   requestedHelp          AllianceHelpRequest[]   @relation("AllianceHelpRequester")
   helpResponses          AllianceHelpResponse[]
+  tutorialProgress       TutorialProgress?
+  tasks                  PlayerTask[]
+  inventoryItems         InventoryItem[]
+  scoutMissions          ScoutMission[]          @relation("OwnerScoutMissions")
+  scoutReports           ScoutReport[]           @relation("OwnerScoutReports")
+  ralliesLed             Rally[]                 @relation("RallyLeader")
+  rallyMemberships       RallyMember[]
+  mailboxEntries         MailboxEntry[]
+  purchases              Purchase[]
+  entitlements           Entitlement[]
+  analyticsEvents        AnalyticsEvent[]
+  seasonPassProgresses   SeasonPassProgress[]
+  liveEventScores        LiveEventScore[]
+  allianceMarkers        AllianceMarker[]
+  allianceContributions  AllianceContribution[]
+  allianceLogs           AllianceLogEntry[]      @relation("AllianceActorLogs")
+  updatedAnnouncements   AllianceAnnouncement[]  @relation("AllianceAnnouncementUpdater")
+  idempotencyKeys        IdempotencyKey[]
 }
 
 model City {
@@ -96,6 +191,7 @@ model City {
   stone             Float
   food              Float
   gold              Float
+  peaceShieldUntil  DateTime?
   resourceUpdatedAt DateTime
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -105,8 +201,17 @@ model City {
   trainingQueues    TroopTrainingQueue[]
   researchLevels    ResearchLevel[]
   researchQueues    ResearchQueue[]
+  marchReports      MarchReport[]       @relation("OwnerCityMarchReports")
+  scoutReports      ScoutReport[]       @relation("OwnerCityScoutReports")
+  targetScoutReports ScoutReport[]      @relation("TargetCityScoutReports")
+  battleWindows     BattleWindow[]
   outgoingMarches   March[]             @relation("OriginCityMarches")
   incomingMarches   March[]             @relation("TargetCityMarches")
+  outgoingScouts    ScoutMission[]      @relation("OriginCityScoutMissions")
+  incomingScouts    ScoutMission[]      @relation("TargetCityScoutMissions")
+  ledRallies        Rally[]             @relation("RallyLeaderCity")
+  rallyMemberships  RallyMember[]
+  rallyTargets      Rally[]             @relation("RallyTargetCity")
   reportsAsAttacker BattleReport[]      @relation("OriginCityReports")
   reportsAsDefender BattleReport[]      @relation("TargetCityReports")
   helpRequests      AllianceHelpRequest[]
@@ -128,6 +233,11 @@ model Alliance {
   members       AllianceMember[]
   chatMessages  AllianceChatMessage[]
   helpRequests  AllianceHelpRequest[]
+  announcement  AllianceAnnouncement?
+  markers       AllianceMarker[]
+  logs          AllianceLogEntry[]
+  contributions AllianceContribution[]
+  rallies       Rally[]
 }
 
 model AllianceMember {
@@ -251,6 +361,11 @@ model Commander {
   name             String
   templateKey      String
   level            Int
+  xp               Int      @default(0)
+  starLevel        Int      @default(1)
+  talentTrack      CommanderTalentTrack @default(CONQUEST)
+  talentPointsSpent Int     @default(0)
+  assignedPreset   String?
   attackBonus      Float
   defenseBonus     Float
   marchSpeedBonus  Float
@@ -260,6 +375,7 @@ model Commander {
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   marches          March[]
+  rallies          Rally[]
 }
 
 model ResearchLevel {
@@ -302,32 +418,129 @@ model FogTile {
   @@unique([userId, x, y])
 }
 
+model MapPoi {
+  id             String          @id @default(cuid())
+  kind           PoiKind
+  state          PoiState        @default(ACTIVE)
+  label          String
+  level          Int
+  x              Int
+  y              Int
+  resourceType   PoiResourceType?
+  remainingAmount Int?
+  maxAmount      Int?
+  respawnsAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  targetMarches  March[]         @relation("PoiTargetMarches")
+  reports        MarchReport[]   @relation("PoiMarchReports")
+  targetScouts   ScoutMission[]  @relation("TargetPoiScoutMissions")
+  scoutReports   ScoutReport[]   @relation("TargetPoiScoutReports")
+  rallies        Rally[]         @relation("RallyTargetPoi")
+
+  @@unique([x, y])
+  @@index([kind, state])
+}
+
+model BattleWindow {
+  id          String    @id @default(cuid())
+  targetCityId String
+  openedAt    DateTime  @default(now())
+  closesAt    DateTime
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  targetCity  City      @relation(fields: [targetCityId], references: [id], onDelete: Cascade)
+  marches     March[]
+
+  @@index([targetCityId, closesAt])
+  @@index([resolvedAt, closesAt])
+}
+
 model March {
   id                     String       @id @default(cuid())
   ownerUserId            String
   ownerCityId            String
-  targetCityId           String
+  originX                Int
+  originY                Int
+  targetCityId           String?
+  targetPoiId            String?
+  battleWindowId         String?
   commanderId            String
+  objective              MarchObjective @default(CITY_ATTACK)
   state                  MarchState   @default(ENROUTE)
+  supportBonusPct        Float        @default(0)
   infantryCount          Int
   archerCount            Int
   cavalryCount           Int
+  cargoResourceType      PoiResourceType?
+  cargoAmount            Int          @default(0)
   attackerPowerSnapshot  Int
   defenderPowerSnapshot  Int?
   battleResult           BattleResult?
   startsAt               DateTime     @default(now())
   etaAt                  DateTime
+  gatherStartedAt        DateTime?
+  returnEtaAt            DateTime?
   resolvedAt             DateTime?
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
   ownerUser              User         @relation("OwnerMarches", fields: [ownerUserId], references: [id], onDelete: Cascade)
   ownerCity              City         @relation("OriginCityMarches", fields: [ownerCityId], references: [id], onDelete: Cascade)
-  targetCity             City         @relation("TargetCityMarches", fields: [targetCityId], references: [id], onDelete: Cascade)
+  targetCity             City?        @relation("TargetCityMarches", fields: [targetCityId], references: [id], onDelete: Cascade)
+  targetPoi              MapPoi?      @relation("PoiTargetMarches", fields: [targetPoiId], references: [id], onDelete: Cascade)
+  battleWindow           BattleWindow? @relation(fields: [battleWindowId], references: [id], onDelete: SetNull)
   commander              Commander    @relation(fields: [commanderId], references: [id], onDelete: Cascade)
+  rallyLaunches          Rally[]      @relation("LaunchedRallyMarch")
 
   @@index([ownerUserId, state])
   @@index([targetCityId, state])
+  @@index([targetPoiId, state])
+  @@index([battleWindowId, state])
   @@index([etaAt, state])
+  @@index([returnEtaAt, state])
+}
+
+model MarchReport {
+  id                    String           @id @default(cuid())
+  marchId               String?
+  kind                  MarchReportKind
+  ownerUserId           String
+  ownerCityId           String
+  poiId                 String
+  poiKind               PoiKind
+  poiName               String
+  poiLevel              Int
+  resourceType          PoiResourceType?
+  resourceAmount        Int              @default(0)
+  result                BattleResult?
+  attackerPower         Int?
+  defenderPower         Int?
+  infantryCount         Int              @default(0)
+  archerCount           Int              @default(0)
+  cavalryCount          Int              @default(0)
+  lootWood              Int              @default(0)
+  lootStone             Int              @default(0)
+  lootFood              Int              @default(0)
+  lootGold              Int              @default(0)
+  attackerLossInfantry  Int              @default(0)
+  attackerLossArcher    Int              @default(0)
+  attackerLossCavalry   Int              @default(0)
+  defenderLossInfantry  Int              @default(0)
+  defenderLossArcher    Int              @default(0)
+  defenderLossCavalry   Int              @default(0)
+  fromX                 Int
+  fromY                 Int
+  toX                   Int
+  toY                   Int
+  distance              Int
+  createdAt             DateTime         @default(now())
+  ownerUser             User             @relation("OwnerMarchReports", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerCity             City             @relation("OwnerCityMarchReports", fields: [ownerCityId], references: [id], onDelete: Cascade)
+  poi                   MapPoi           @relation("PoiMarchReports", fields: [poiId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, createdAt])
+  @@index([poiId, createdAt])
 }
 
 model BattleReport {
@@ -359,4 +572,278 @@ model BattleReport {
   defenderUser          User         @relation("DefenderReports", fields: [defenderUserId], references: [id], onDelete: Cascade)
   attackerCity          City         @relation("OriginCityReports", fields: [attackerCityId], references: [id], onDelete: Cascade)
   defenderCity          City         @relation("TargetCityReports", fields: [defenderCityId], references: [id], onDelete: Cascade)
+}
+
+model TutorialProgress {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  currentStep Int       @default(0)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PlayerTask {
+  id          String    @id @default(cuid())
+  userId      String
+  taskKey     String
+  kind        TaskKind
+  title       String
+  description String
+  progress    Int       @default(0)
+  target      Int
+  cycleKey    String    @default("permanent")
+  completedAt DateTime?
+  claimedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskKey, cycleKey])
+  @@index([userId, kind, claimedAt])
+}
+
+model InventoryItem {
+  id        String   @id @default(cuid())
+  userId    String
+  itemKey   String
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemKey])
+}
+
+model ScoutMission {
+  id           String          @id @default(cuid())
+  ownerUserId  String
+  ownerCityId  String
+  originX      Int
+  originY      Int
+  targetKind   ScoutTargetKind
+  targetCityId String?
+  targetPoiId  String?
+  state        ScoutState      @default(ENROUTE)
+  startedAt    DateTime        @default(now())
+  etaAt        DateTime
+  resolvedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  ownerUser    User            @relation("OwnerScoutMissions", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerCity    City            @relation("OriginCityScoutMissions", fields: [ownerCityId], references: [id], onDelete: Cascade)
+  targetCity   City?           @relation("TargetCityScoutMissions", fields: [targetCityId], references: [id], onDelete: Cascade)
+  targetPoi    MapPoi?         @relation("TargetPoiScoutMissions", fields: [targetPoiId], references: [id], onDelete: Cascade)
+  report       ScoutReport?
+
+  @@index([ownerUserId, state])
+  @@index([etaAt, state])
+}
+
+model ScoutReport {
+  id           String          @id @default(cuid())
+  scoutMissionId String        @unique
+  ownerUserId  String
+  ownerCityId  String
+  targetKind   ScoutTargetKind
+  targetCityId String?
+  targetPoiId  String?
+  title        String
+  summary      String
+  payload      Json
+  createdAt    DateTime        @default(now())
+  scoutMission ScoutMission    @relation(fields: [scoutMissionId], references: [id], onDelete: Cascade)
+  ownerUser    User            @relation("OwnerScoutReports", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerCity    City            @relation("OwnerCityScoutReports", fields: [ownerCityId], references: [id], onDelete: Cascade)
+  targetCity   City?           @relation("TargetCityScoutReports", fields: [targetCityId], references: [id], onDelete: Cascade)
+  targetPoi    MapPoi?         @relation("TargetPoiScoutReports", fields: [targetPoiId], references: [id], onDelete: Cascade)
+  mailboxEntries MailboxEntry[]
+
+  @@index([ownerUserId, createdAt])
+}
+
+model Rally {
+  id             String         @id @default(cuid())
+  allianceId     String
+  leaderUserId   String
+  leaderCityId   String
+  targetCityId   String?
+  targetPoiId    String?
+  commanderId    String
+  objective      MarchObjective @default(CITY_ATTACK)
+  state          RallyState     @default(OPEN)
+  supportBonusPct Float         @default(0)
+  opensAt        DateTime       @default(now())
+  launchAt       DateTime
+  launchedMarchId String?       @unique
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  alliance       Alliance       @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  leaderUser     User           @relation("RallyLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
+  leaderCity     City           @relation("RallyLeaderCity", fields: [leaderCityId], references: [id], onDelete: Cascade)
+  targetCity     City?          @relation("RallyTargetCity", fields: [targetCityId], references: [id], onDelete: Cascade)
+  targetPoi      MapPoi?        @relation("RallyTargetPoi", fields: [targetPoiId], references: [id], onDelete: Cascade)
+  commander      Commander      @relation(fields: [commanderId], references: [id], onDelete: Cascade)
+  launchedMarch  March?         @relation("LaunchedRallyMarch", fields: [launchedMarchId], references: [id], onDelete: SetNull)
+  members        RallyMember[]
+
+  @@index([allianceId, state, launchAt])
+}
+
+model RallyMember {
+  id            String   @id @default(cuid())
+  rallyId       String
+  userId        String
+  cityId        String
+  infantryCount Int      @default(0)
+  archerCount   Int      @default(0)
+  cavalryCount  Int      @default(0)
+  joinedAt      DateTime @default(now())
+  rally         Rally    @relation(fields: [rallyId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city          City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([rallyId, userId])
+}
+
+model AllianceMarker {
+  id         String    @id @default(cuid())
+  allianceId String
+  userId     String
+  label      String
+  x          Int
+  y          Int
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  alliance   Alliance  @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([allianceId, createdAt])
+}
+
+model AllianceAnnouncement {
+  id              String    @id @default(cuid())
+  allianceId      String    @unique
+  content         String
+  updatedByUserId String
+  updatedAt       DateTime  @updatedAt
+  alliance        Alliance  @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  updatedByUser   User      @relation("AllianceAnnouncementUpdater", fields: [updatedByUserId], references: [id], onDelete: Cascade)
+}
+
+model AllianceLogEntry {
+  id          String    @id @default(cuid())
+  allianceId  String
+  actorUserId String?
+  kind        String
+  body        String
+  createdAt   DateTime  @default(now())
+  alliance    Alliance  @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  actorUser   User?     @relation("AllianceActorLogs", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([allianceId, createdAt])
+}
+
+model AllianceContribution {
+  id         String    @id @default(cuid())
+  allianceId String
+  userId     String
+  points     Int       @default(0)
+  updatedAt  DateTime  @updatedAt
+  alliance   Alliance  @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([allianceId, userId])
+}
+
+model MailboxEntry {
+  id            String      @id @default(cuid())
+  userId        String
+  kind          MailboxKind
+  title         String
+  body          String
+  reward        Json?
+  scoutReportId String?     @unique
+  claimedAt     DateTime?
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scoutReport   ScoutReport? @relation(fields: [scoutReportId], references: [id], onDelete: SetNull)
+
+  @@index([userId, claimedAt, createdAt])
+}
+
+model Purchase {
+  id            String         @id @default(cuid())
+  userId        String
+  platform      String
+  productId     String
+  purchaseToken String         @unique
+  rawReceipt    String
+  status        PurchaseStatus
+  createdAt     DateTime       @default(now())
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Entitlement {
+  id             String    @id @default(cuid())
+  userId         String
+  entitlementKey String
+  productId      String
+  status         String
+  grantedAt      DateTime  @default(now())
+  consumedAt     DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entitlementKey])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
+}
+
+model SeasonPassProgress {
+  id                  String   @id @default(cuid())
+  userId              String
+  seasonKey           String
+  xp                  Int      @default(0)
+  premiumUnlocked     Boolean  @default(false)
+  claimedFreeTiers    Int[]    @default([])
+  claimedPremiumTiers Int[]    @default([])
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonKey])
+}
+
+model LiveEventScore {
+  id                 String   @id @default(cuid())
+  userId             String
+  eventKey           String
+  score              Int      @default(0)
+  claimedRewardTiers Int[]    @default([])
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventKey])
+}
+
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  userId    String
+  scope     String
+  key       String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scope, key])
 }

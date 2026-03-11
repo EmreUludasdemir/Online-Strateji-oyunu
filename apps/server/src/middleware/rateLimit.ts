@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { writeAuditEntry } from "../lib/audit";
 import { HttpError } from "../lib/http";
+import { incrementCounter } from "../lib/metrics";
 
 interface RateLimitOptions {
   max: number;
@@ -18,11 +20,24 @@ export function createRateLimit(options: RateLimitOptions) {
 
     if (!current || current.resetAt <= now) {
       buckets.set(key, { count: 1, resetAt: now + options.windowMs });
+      incrementCounter("rate_limit_allowed_total", {
+        method: request.method,
+        path: request.path,
+      });
       next();
       return;
     }
 
     if (current.count >= options.max) {
+      incrementCounter("rate_limit_blocked_total", {
+        method: request.method,
+        path: request.path,
+      });
+      writeAuditEntry("rate_limit.blocked", {
+        ip,
+        method: request.method,
+        path: request.path,
+      });
       next(
         new HttpError(
           429,
@@ -34,6 +49,10 @@ export function createRateLimit(options: RateLimitOptions) {
     }
 
     current.count += 1;
+    incrementCounter("rate_limit_allowed_total", {
+      method: request.method,
+      path: request.path,
+    });
     next();
   };
 }

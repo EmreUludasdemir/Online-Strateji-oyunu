@@ -7,6 +7,10 @@ import type {
   BuildingType,
   CityState,
   MarchCommandResponse,
+  MarchObjective,
+  RallyMutationResponse,
+  ScoutMutationResponse,
+  PoiKind,
   ResearchType,
   TroopType,
   TroopStock,
@@ -26,16 +30,19 @@ import {
   emitMarchUpdated,
 } from "./events";
 import {
+  addResources,
   addTroops,
   canAdvanceResearch,
   getAttackPower,
   getBuildingLevels,
+  getCarryCapacity,
   getDefensePower,
   getMarchDurationMs,
   getResearchCost,
   getResearchDurationMs,
   getResearchLevels,
   getTrainingDurationMs,
+  getTroopDefensePower,
   getTroopTrainingCost,
   getUpgradeCost,
   getUpgradeDurationMs,
@@ -50,35 +57,73 @@ import {
   ALLIANCE_HELP_MAX_RESPONSES,
   ALLIANCE_HELP_REDUCTION_MS,
   ALLIANCE_MAX_MEMBERS,
+  BARBARIAN_CAMP_RESPAWN_MS,
+  BATTLE_WINDOW_DURATION_MS,
   MAX_MARCH_DISTANCE,
+  RESOURCE_GATHER_DURATION_MS,
+  RESOURCE_NODE_RESPAWN_MS,
   STARTING_BUILDING_LEVEL,
   STARTING_RESOURCES,
   STARTING_TROOPS,
 } from "./constants";
 import { reconcileWorld, refreshFogOfWar, syncCityStateTx } from "./reconcile";
 import {
+  claimMailboxEntryTx,
+  claimTaskTx,
+  createMailboxEntryTx,
+  ensureCommanderCollectionTx,
+  ensureRetentionStateTx,
+  getTasksViewTx,
+  grantRewardBundleTx,
+  progressGameTriggerTx,
+  upgradeCommanderTx,
+  useInventoryItemTx,
+} from "./progression";
+import {
   allianceStateInclude,
   buildCityName,
   ensureCityInfrastructureTx,
   getAllianceMembershipTx,
+  getBarbarianCampTroops,
   getPrimaryCommander,
+  getPoiResourceKey,
   getResourceLedger,
   getTroopLedger,
   getUserWithCityOrThrow,
   loadCityStateRecordOrThrow,
+  loadMapPoiRecordOrThrow,
   mapAllianceView,
+  mapMarchView,
   mapCityState,
   resourceLedgerToCityUpdate,
   toAuthUser,
   toCommanderBonuses,
 } from "./shared";
-import { findOpenCoordinate } from "./world";
+import { addAllianceContributionTx, appendAllianceLogTx, getAllianceMemberIdsTx } from "./allianceUtils";
+import { ensureWorldPoisTx, findOpenCoordinate } from "./world";
 
 interface InternalMarchResult {
   response: MarchCommandResponse;
   originCityId: string;
-  targetCityId: string;
+  targetCityId: string | null;
+  targetPoiId: string | null;
 }
+
+type CreateMarchPayload =
+  | ({
+      objective?: "CITY_ATTACK";
+      targetCityId: string;
+      commanderId: string;
+      troops: TroopStock;
+      supportBonusPct?: number;
+    })
+  | ({
+      objective: "BARBARIAN_ATTACK" | "RESOURCE_GATHER";
+      targetPoiId: string;
+      commanderId: string;
+      troops: TroopStock;
+      supportBonusPct?: number;
+    });
 
 async function createStarterCityTx(
   tx: Prisma.TransactionClient,
@@ -92,28 +137,49 @@ async function createStarterCityTx(
   let coordinate = options.coordinate;
 
   if (!coordinate) {
-    const takenCoordinates = await tx.city.findMany({
-      select: {
-        x: true,
-        y: true,
-      },
-    });
-
-    coordinate = findOpenCoordinate(takenCoordinates);
-  } else {
-    const occupied = await tx.city.findUnique({
-      where: {
-        x_y: {
-          x: coordinate.x,
-          y: coordinate.y,
+    const [takenCoordinates, takenPoiCoordinates] = await Promise.all([
+      tx.city.findMany({
+        select: {
+          x: true,
+          y: true,
         },
-      },
-      select: {
-        id: true,
-      },
-    });
+      }),
+      tx.mapPoi.findMany({
+        select: {
+          x: true,
+          y: true,
+        },
+      }),
+    ]);
 
-    if (occupied) {
+    coordinate = findOpenCoordinate([...takenCoordinates, ...takenPoiCoordinates]);
+  } else {
+    const [occupied, occupiedPoi] = await Promise.all([
+      tx.city.findUnique({
+        where: {
+          x_y: {
+            x: coordinate.x,
+            y: coordinate.y,
+          },
+        },
+        select: {
+          id: true,
+        },
+      }),
+      tx.mapPoi.findUnique({
+        where: {
+          x_y: {
+            x: coordinate.x,
+            y: coordinate.y,
+          },
+        },
+        select: {
+          id: true,
+        },
+      }),
+    ]);
+
+    if (occupied || occupiedPoi) {
       throw new HttpError(409, "MAP_TILE_OCCUPIED", "That map coordinate is already occupied.");
     }
   }
@@ -157,28 +223,20 @@ async function createStarterCityTx(
     })),
   });
 
-  await tx.commander.create({
-    data: {
-      userId: options.userId,
-      name: `${options.username} Vanguard`,
-      templateKey: "VANGUARD_MARSHAL",
-      level: 1,
-      attackBonus: 0.08,
-      defenseBonus: 0.08,
-      marchSpeedBonus: 0.1,
-      carryBonus: 0.15,
-      isPrimary: true,
-    },
-  });
+  await ensureCommanderCollectionTx(tx, options.userId, options.username);
+  await ensureRetentionStateTx(tx, options.userId, now);
 }
 
 async function snapshotCityTx(tx: Prisma.TransactionClient, userId: string, now: Date) {
+  await ensureWorldPoisTx(tx);
   const user = await getUserWithCityOrThrow(tx, userId);
   await ensureCityInfrastructureTx(tx, {
     cityId: user.city!.id,
     userId: user.id,
     username: user.username,
   });
+  await ensureCommanderCollectionTx(tx, user.id, user.username);
+  await ensureRetentionStateTx(tx, user.id, now);
   const synced = await syncCityStateTx(tx, user.city!.id, now);
   await refreshFogOfWar(tx, synced.city, now);
 
@@ -212,34 +270,21 @@ function buildCompatibilityTroopPayload(troops: TroopStock): TroopStock {
   };
 }
 
+function getMarchLimit(city: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>) {
+  const townHallLevel = city.buildings.find((entry) => entry.buildingType === "TOWN_HALL")?.level ?? 1;
+  return Math.max(1, Math.ceil(townHallLevel / 2));
+}
+
 async function createMarchTx(
   tx: Prisma.TransactionClient,
   userId: string,
   now: Date,
-  payload: {
-    targetCityId: string;
-    commanderId: string;
-    troops: TroopStock;
-  },
+  payload: CreateMarchPayload,
 ): Promise<InternalMarchResult> {
   const { city } = await snapshotCityTx(tx, userId, now);
-  const targetCity = await loadCityStateRecordOrThrow(tx, payload.targetCityId);
-
-  if (targetCity.ownerId === userId) {
-    throw new HttpError(400, "INVALID_TARGET", "You cannot send a march to your own city.");
-  }
-
   const commander = city.owner.commanders.find((entry) => entry.id === payload.commanderId);
   if (!commander) {
     throw new HttpError(404, "COMMANDER_NOT_FOUND", "That commander is not owned by the current player.");
-  }
-
-  const distance = manhattanDistance(
-    { x: city.x, y: city.y },
-    { x: targetCity.x, y: targetCity.y },
-  );
-  if (distance > MAX_MARCH_DISTANCE) {
-    throw new HttpError(400, "TARGET_OUT_OF_RANGE", "That target is outside the current command range.");
   }
 
   const garrison = getTroopLedger(
@@ -252,68 +297,143 @@ async function createMarchTx(
     throw new HttpError(400, "INSUFFICIENT_TROOPS", "Not enough troops are available for that march.");
   }
 
-  const townHallLevel = city.buildings.find((entry) => entry.buildingType === "TOWN_HALL")?.level ?? 1;
-  const marchLimit = Math.max(1, Math.ceil(townHallLevel / 2));
-  if (city.outgoingMarches.length >= marchLimit) {
+  if (city.outgoingMarches.length >= getMarchLimit(city)) {
     throw new HttpError(409, "MARCH_LIMIT_REACHED", "Current command capacity is already fully committed.");
   }
 
+  const objective: MarchObjective = payload.objective ?? "CITY_ATTACK";
   const attackerResearch = getResearchLevels(
     city.researchLevels.map((research) => ({
       researchType: research.researchType as ResearchType,
       level: research.level,
     })),
   );
-  const defenderResearch = getResearchLevels(
-    targetCity.researchLevels.map((research) => ({
-      researchType: research.researchType as ResearchType,
-      level: research.level,
-    })),
-  );
-  const defenderBuildings = getBuildingLevels(
-    targetCity.buildings.map((building) => ({
-      buildingType: building.buildingType as BuildingType,
-      level: building.level,
-    })),
-  );
-  const defenderTroops = getTroopLedger(
-    targetCity.troopGarrisons.map((troop) => ({
-      troopType: troop.troopType as TroopType,
-      quantity: troop.quantity,
-    })),
-  );
-  const attackerPower = getAttackPower(payload.troops, toCommanderBonuses(commander), attackerResearch);
-  const defenderPower = getDefensePower(
-    defenderTroops,
-    defenderBuildings,
-    toCommanderBonuses(getPrimaryCommander(targetCity)),
-    defenderResearch,
+  let distance = 0;
+  let targetCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>> | null = null;
+  let targetPoi: Awaited<ReturnType<typeof loadMapPoiRecordOrThrow>> | null = null;
+  let defenderPowerSnapshot: number | null = null;
+  let cargoResourceType: "WOOD" | "STONE" | "FOOD" | "GOLD" | null = null;
+
+  if (objective === "CITY_ATTACK" && "targetCityId" in payload) {
+    targetCity = await loadCityStateRecordOrThrow(tx, payload.targetCityId);
+
+    if (targetCity.ownerId === userId) {
+      throw new HttpError(400, "INVALID_TARGET", "You cannot send a march to your own city.");
+    }
+
+    if (targetCity.peaceShieldUntil && targetCity.peaceShieldUntil > now) {
+      throw new HttpError(409, "TARGET_SHIELDED", "That city is currently protected by a peace shield.");
+    }
+
+    distance = manhattanDistance(
+      { x: city.x, y: city.y },
+      { x: targetCity.x, y: targetCity.y },
+    );
+    if (distance > MAX_MARCH_DISTANCE) {
+      throw new HttpError(400, "TARGET_OUT_OF_RANGE", "That target is outside the current command range.");
+    }
+
+    const defenderResearch = getResearchLevels(
+      targetCity.researchLevels.map((research) => ({
+        researchType: research.researchType as ResearchType,
+        level: research.level,
+      })),
+    );
+    const defenderBuildings = getBuildingLevels(
+      targetCity.buildings.map((building) => ({
+        buildingType: building.buildingType as BuildingType,
+        level: building.level,
+      })),
+    );
+    const defenderTroops = getTroopLedger(
+      targetCity.troopGarrisons.map((troop) => ({
+        troopType: troop.troopType as TroopType,
+        quantity: troop.quantity,
+      })),
+    );
+    defenderPowerSnapshot = getDefensePower(
+      defenderTroops,
+      defenderBuildings,
+      toCommanderBonuses(getPrimaryCommander(targetCity)),
+      defenderResearch,
+    );
+  } else if ("targetPoiId" in payload) {
+    targetPoi = await loadMapPoiRecordOrThrow(tx, payload.targetPoiId);
+    if (targetPoi.targetMarches.length > 0 || targetPoi.state !== "ACTIVE") {
+      throw new HttpError(409, "POI_OCCUPIED", "That point of interest is already occupied.");
+    }
+
+    distance = manhattanDistance(
+      { x: city.x, y: city.y },
+      { x: targetPoi.x, y: targetPoi.y },
+    );
+    if (distance > MAX_MARCH_DISTANCE) {
+      throw new HttpError(400, "TARGET_OUT_OF_RANGE", "That target is outside the current command range.");
+    }
+
+    if (objective === "BARBARIAN_ATTACK") {
+      if (targetPoi.kind !== "BARBARIAN_CAMP") {
+        throw new HttpError(400, "INVALID_POI_TARGET", "Only barbarian camps can receive an assault march.");
+      }
+
+      defenderPowerSnapshot = getTroopDefensePower(getBarbarianCampTroops(targetPoi.level));
+    } else {
+      if (targetPoi.kind !== "RESOURCE_NODE" || !targetPoi.resourceType) {
+        throw new HttpError(400, "INVALID_POI_TARGET", "Only resource nodes can receive a gather march.");
+      }
+      if ((targetPoi.remainingAmount ?? 0) <= 0) {
+        throw new HttpError(409, "POI_DEPLETED", "That resource node has already been depleted.");
+      }
+
+      cargoResourceType = targetPoi.resourceType;
+    }
+  } else {
+    throw new HttpError(400, "INVALID_MARCH_TARGET", "The march target is invalid.");
+  }
+
+  const attackerPower = Math.round(
+    getAttackPower(payload.troops, toCommanderBonuses(commander), attackerResearch) * (1 + (payload.supportBonusPct ?? 0)),
   );
   const etaAt = new Date(
     now.getTime() + getMarchDurationMs(distance, payload.troops, toCommanderBonuses(commander), attackerResearch),
   );
 
-  await tx.march.create({
+  const createdMarch = await tx.march.create({
     data: {
       ownerUserId: userId,
       ownerCityId: city.id,
-      targetCityId: targetCity.id,
+      originX: city.x,
+      originY: city.y,
+      targetCityId: targetCity?.id ?? null,
+      targetPoiId: targetPoi?.id ?? null,
       commanderId: commander.id,
+      objective,
+      supportBonusPct: payload.supportBonusPct ?? 0,
       infantryCount: payload.troops.INFANTRY,
       archerCount: payload.troops.ARCHER,
       cavalryCount: payload.troops.CAVALRY,
+      cargoResourceType,
       attackerPowerSnapshot: attackerPower,
-      defenderPowerSnapshot: defenderPower,
+      defenderPowerSnapshot,
       etaAt,
     },
   });
+
+  if (targetPoi) {
+    await tx.mapPoi.update({
+      where: { id: targetPoi.id },
+      data: {
+        state: "OCCUPIED",
+      },
+    });
+  }
 
   await updateTroopGarrisonTx(tx, city.id, spendTroops(garrison, payload.troops));
 
   const updated = await loadCityStateRecordOrThrow(tx, city.id);
   await refreshFogOfWar(tx, updated, now);
   const latestState = mapCityState(updated, now);
-  const march = latestState.activeMarches[0];
+  const march = latestState.activeMarches.find((entry) => entry.id === createdMarch.id);
   if (!march) {
     throw new HttpError(500, "MARCH_CREATE_FAILED", "The march could not be created.");
   }
@@ -321,7 +441,8 @@ async function createMarchTx(
   return {
     response: { march },
     originCityId: city.id,
-    targetCityId: targetCity.id,
+    targetCityId: targetCity?.id ?? null,
+    targetPoiId: targetPoi?.id ?? null,
   };
 }
 
@@ -460,6 +581,7 @@ export async function registerPlayer(input: {
       userId: createdUser.id,
       username: createdUser.username,
     });
+    await ensureWorldPoisTx(tx);
 
     return getUserWithCityOrThrow(tx, createdUser.id);
   });
@@ -535,6 +657,7 @@ export async function startBuildingUpgrade(userId: string, buildingType: Buildin
         completesAt: new Date(now.getTime() + getUpgradeDurationMs(buildingType, targetLevel)),
       },
     });
+    await progressGameTriggerTx(tx, userId, "building_upgrade_started", 1, now);
 
     const updated = await loadCityStateRecordOrThrow(tx, city.id);
     await refreshFogOfWar(tx, updated, now);
@@ -584,6 +707,7 @@ export async function trainTroops(userId: string, troopType: TroopType, quantity
         completesAt: new Date(now.getTime() + getTrainingDurationMs(troopType, quantity, barracksLevel)),
       },
     });
+    await progressGameTriggerTx(tx, userId, "troop_train_started", 1, now);
 
     return mapCityState(await loadCityStateRecordOrThrow(tx, city.id), now);
   });
@@ -634,6 +758,7 @@ export async function startResearch(userId: string, researchType: ResearchType):
         completesAt: new Date(now.getTime() + getResearchDurationMs(researchType, nextLevel)),
       },
     });
+    await progressGameTriggerTx(tx, userId, "research_started", 1, now);
 
     const updated = await loadCityStateRecordOrThrow(tx, city.id);
     await refreshFogOfWar(tx, updated, now);
@@ -648,7 +773,7 @@ export async function startResearch(userId: string, researchType: ResearchType):
 
 export async function createMarch(
   userId: string,
-  payload: { targetCityId: string; commanderId: string; troops: TroopStock },
+  payload: CreateMarchPayload,
 ): Promise<MarchCommandResponse> {
   await reconcileWorld();
   const now = new Date();
@@ -656,13 +781,20 @@ export async function createMarch(
 
   writeAuditEntry("game.march.create", {
     userId,
-    targetCityId: payload.targetCityId,
+    objective: payload.objective ?? "CITY_ATTACK",
+    targetCityId: "targetCityId" in payload ? payload.targetCityId : null,
+    targetPoiId: "targetPoiId" in payload ? payload.targetPoiId : null,
     commanderId: payload.commanderId,
     troops: payload.troops,
   });
   emitMarchCreated([userId], result.originCityId, result.response.march.id);
   emitCityUpdated([userId], result.originCityId);
-  emitMapUpdated(result.targetCityId);
+  if (result.targetCityId) {
+    emitMapUpdated(result.targetCityId);
+  }
+  if (result.targetPoiId) {
+    emitMapUpdated(result.originCityId);
+  }
   return result.response;
 }
 
@@ -697,7 +829,9 @@ export async function createMarchFromAttack(userId: string, targetCityId: string
   writeAuditEntry("game.attack.compat", { userId, targetCityId });
   emitMarchCreated([userId], result.originCityId, result.response.march.id);
   emitCityUpdated([userId], result.originCityId);
-  emitMapUpdated(result.targetCityId);
+  if (result.targetCityId) {
+    emitMapUpdated(result.targetCityId);
+  }
   return result.response;
 }
 
@@ -718,18 +852,64 @@ export async function recallMarch(userId: string, marchId: string): Promise<City
         quantity: troop.quantity,
       })),
     );
-    await updateTroopGarrisonTx(tx, city.id, addTroops(garrison, {
+    const returningTroops = {
       INFANTRY: march.infantryCount,
       ARCHER: march.archerCount,
       CAVALRY: march.cavalryCount,
-    }));
+    };
+    await updateTroopGarrisonTx(tx, city.id, addTroops(garrison, returningTroops));
+
+    const cargoKey = march.cargoResourceType ? getPoiResourceKey(march.cargoResourceType) : null;
+    if (march.state === "RETURNING" && cargoKey && march.cargoAmount > 0) {
+      const nextResources = addResources(getResourceLedger(city), {
+        wood: cargoKey === "wood" ? march.cargoAmount : 0,
+        stone: cargoKey === "stone" ? march.cargoAmount : 0,
+        food: cargoKey === "food" ? march.cargoAmount : 0,
+        gold: cargoKey === "gold" ? march.cargoAmount : 0,
+      });
+
+      await tx.city.update({
+        where: { id: city.id },
+        data: resourceLedgerToCityUpdate(nextResources, now),
+      });
+    }
+
+    if (march.targetPoiId && march.state !== "RETURNING" && march.targetPoi) {
+      await tx.mapPoi.update({
+        where: { id: march.targetPoiId },
+        data: {
+          state: "ACTIVE",
+        },
+      });
+    }
+
     await tx.march.update({
       where: { id: marchId },
       data: {
         state: "RECALLED",
+        battleWindowId: null,
+        cargoAmount: 0,
         resolvedAt: now,
       },
     });
+
+    if (march.battleWindowId) {
+      const remainingWindowMarches = await tx.march.count({
+        where: {
+          battleWindowId: march.battleWindowId,
+          state: "STAGING",
+        },
+      });
+
+      if (remainingWindowMarches === 0) {
+        await tx.battleWindow.update({
+          where: { id: march.battleWindowId },
+          data: {
+            resolvedAt: now,
+          },
+        });
+      }
+    }
 
     const updated = await loadCityStateRecordOrThrow(tx, city.id);
     await refreshFogOfWar(tx, updated, now);
@@ -770,6 +950,8 @@ export async function createAlliance(
         role: "LEADER",
       },
     });
+    await appendAllianceLogTx(tx, alliance.id, "ALLIANCE_CREATED", `Alliance ${payload.name.trim()} was founded.`, userId);
+    await progressGameTriggerTx(tx, userId, "alliance_joined", 1);
 
     const membership = await getAllianceForMemberTx(tx, userId);
     return {
@@ -812,6 +994,8 @@ export async function joinAlliance(userId: string, allianceId: string): Promise<
         role: "MEMBER",
       },
     });
+    await appendAllianceLogTx(tx, allianceId, "MEMBER_JOINED", `A new member joined the alliance.`, userId);
+    await progressGameTriggerTx(tx, userId, "alliance_joined", 1);
 
     const membership = await getAllianceForMemberTx(tx, userId);
     return {
@@ -846,6 +1030,7 @@ export async function leaveAlliance(userId: string): Promise<void> {
         userId,
       },
     });
+    await appendAllianceLogTx(tx, membership.allianceId, "MEMBER_LEFT", "A member departed the alliance.", userId);
 
     if (remainingMembers.length === 0) {
       await tx.alliance.delete({
@@ -887,6 +1072,7 @@ export async function sendAllianceChatMessage(userId: string, content: string): 
         content: content.trim(),
       },
     });
+    await appendAllianceLogTx(tx, membership.allianceId, "CHAT_MESSAGE", "Alliance channel updated.", userId);
 
     const overflow = await tx.allianceChatMessage.findMany({
       where: {
@@ -1017,6 +1203,9 @@ export async function respondAllianceHelp(userId: string, helpRequestId: string)
         helperUserId: userId,
       },
     });
+    await addAllianceContributionTx(tx, membership.allianceId, userId, 5);
+    await appendAllianceLogTx(tx, membership.allianceId, "HELP_RESPONSE", "An alliance help request was answered.", userId);
+    await progressGameTriggerTx(tx, userId, "alliance_help_responded", 1, now);
 
     const nextHelpCount = helpRequest.helpCount + 1;
     await tx.allianceHelpRequest.update({
@@ -1070,6 +1259,13 @@ export async function donateAllianceResources(
         gold: { increment: donation.gold },
       },
     });
+    await addAllianceContributionTx(
+      tx,
+      membership.allianceId,
+      userId,
+      Math.max(1, Math.floor((donation.wood + donation.stone + donation.food + donation.gold) / 100)),
+    );
+    await appendAllianceLogTx(tx, membership.allianceId, "TREASURY_DONATION", "Alliance treasury received a donation.", userId);
 
     const refreshed = await getAllianceForMemberTx(tx, userId);
     return {
@@ -1143,6 +1339,7 @@ export async function updateAllianceMemberRole(
 
 export async function getSessionUser(userId: string): Promise<AuthUser> {
   const user = await prisma.$transaction(async (tx) => {
+    await ensureWorldPoisTx(tx);
     const found = await getUserWithCityOrThrow(tx, userId);
     await ensureCityInfrastructureTx(tx, {
       cityId: found.city!.id,
@@ -1174,6 +1371,7 @@ export async function seedDemoPlayer(input: {
         userId: user.id,
         username: user.username,
       });
+      await ensureWorldPoisTx(tx);
     });
     return;
   }
@@ -1194,5 +1392,6 @@ export async function seedDemoPlayer(input: {
       cityName: input.cityName,
       coordinate: input.coordinate,
     });
+    await ensureWorldPoisTx(tx);
   });
 }
