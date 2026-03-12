@@ -7,15 +7,19 @@ import {
 
 import { prisma } from "../lib/prisma";
 import { incrementCounter, observeDuration } from "../lib/metrics";
+import { HttpError } from "../lib/http";
 import {
   emitBattleResolved,
   emitCityUpdated,
   emitFogUpdated,
+  emitMailboxUpdated,
   emitMapUpdated,
   emitMarchUpdated,
   emitPoiUpdated,
+  emitRallyUpdated,
   emitReportCreated,
   emitResearchCompleted,
+  emitScoutCompleted,
   emitTrainingCompleted,
   emitUpgradeCompleted,
 } from "./events";
@@ -23,12 +27,15 @@ import {
   addResources,
   addTroops,
   applyProduction,
+  getAttackPower,
   getBuildingLevels,
   getCarryCapacity,
+  getMarchDurationMs,
   getMarchPosition,
   getResearchLevels,
   getTroopDefensePower,
   getVisionRadius,
+  manhattanDistance,
   resolveBattle,
   spendResources,
   spendTroops,
@@ -50,9 +57,11 @@ import {
   getTroopLedger,
   loadCityStateRecordOrThrow,
   loadMapPoiRecordOrThrow,
+  rallyInclude,
   resourceLedgerToCityUpdate,
   toCommanderBonuses,
 } from "./shared";
+import { createMailboxEntryTx, progressGameTriggerTx } from "./progression";
 
 interface WorldEvents {
   upgradeCompletions: Array<{ userId: string; cityId: string }>;
@@ -71,6 +80,20 @@ interface WorldEvents {
     reportId: string;
     poiId: string | null;
     notifyBattleResolved: boolean;
+  }>;
+  scoutCompletions: Array<{
+    userId: string;
+    cityId: string;
+    scoutId: string;
+  }>;
+  mailboxUpdates: Array<{
+    userId: string;
+  }>;
+  rallyUpdates: Array<{
+    userIds: string[];
+    rallyId: string;
+    cityId: string | null;
+    marchId: string | null;
   }>;
   poiUpdates: string[];
 }
@@ -118,6 +141,18 @@ function pushUniquePoi(events: string[], poiId: string | null) {
   if (poiId && !events.includes(poiId)) {
     events.push(poiId);
   }
+}
+
+function mergeCommanderSupport(
+  commander: ReturnType<typeof toCommanderBonuses>,
+  supportBonusPct: number,
+) {
+  return {
+    attackBonus: commander.attackBonus + supportBonusPct,
+    defenseBonus: commander.defenseBonus + supportBonusPct * 0.4,
+    marchSpeedBonus: commander.marchSpeedBonus,
+    carryBonus: commander.carryBonus,
+  };
 }
 
 async function upsertTroopLedgerTx(
@@ -418,6 +453,7 @@ async function reconcileCityBattleTx(
   );
   const attackerCommander = attackerCity.owner.commanders.find((entry) => entry.id === march.commanderId);
   const defenderCommander = getPrimaryCommander(defenderCity);
+  const attackerCommanderBonuses = mergeCommanderSupport(toCommanderBonuses(attackerCommander), march.supportBonusPct);
   const attackerTroops = {
     INFANTRY: march.infantryCount,
     ARCHER: march.archerCount,
@@ -433,7 +469,7 @@ async function reconcileCityBattleTx(
   const battle = resolveBattle(
     attackerTroops,
     defenderTroops,
-    toCommanderBonuses(attackerCommander),
+    attackerCommanderBonuses,
     toCommanderBonuses(defenderCommander),
     attackerResearch,
     defenderResearch,
@@ -497,6 +533,14 @@ async function reconcileCityBattleTx(
       resolvedAt: now,
       defenderPowerSnapshot: battle.defenderPower,
       battleResult: battle.result,
+    },
+  });
+  await tx.rally.updateMany({
+    where: {
+      launchedMarchId: march.id,
+    },
+    data: {
+      state: "RESOLVED",
     },
   });
 
@@ -571,6 +615,7 @@ async function reconcileBarbarianBattleTx(
     })),
   );
   const attackerCommander = attackerCity.owner.commanders.find((entry) => entry.id === march.commanderId);
+  const attackerCommanderBonuses = mergeCommanderSupport(toCommanderBonuses(attackerCommander), march.supportBonusPct);
   const attackerTroops = {
     INFANTRY: march.infantryCount,
     ARCHER: march.archerCount,
@@ -580,7 +625,7 @@ async function reconcileBarbarianBattleTx(
   const baseBattle = resolveBattle(
     attackerTroops,
     defenderTroops,
-    toCommanderBonuses(attackerCommander),
+    attackerCommanderBonuses,
     toCommanderBonuses(null),
     attackerResearch,
     createEmptyResearchLevels(),
@@ -652,6 +697,17 @@ async function reconcileBarbarianBattleTx(
       battleResult: baseBattle.result,
     },
   });
+  await tx.rally.updateMany({
+    where: {
+      launchedMarchId: march.id,
+    },
+    data: {
+      state: "RESOLVED",
+    },
+  });
+  if (baseBattle.result === "ATTACKER_WIN") {
+    await progressGameTriggerTx(tx, attackerCity.ownerId, "barbarian_battle_won", 1, now);
+  }
 
   worldEvents.resolvedMarches.push({
     userIds: [attackerCity.ownerId],
@@ -802,6 +858,18 @@ async function reconcileGatherReturnTx(
       resolvedAt: now,
     },
   });
+  await tx.rally.updateMany({
+    where: {
+      launchedMarchId: march.id,
+    },
+    data: {
+      state: "RESOLVED",
+    },
+  });
+  await progressGameTriggerTx(tx, attackerCity.ownerId, "gather_completed", 1, now);
+  if (march.cargoAmount > 0) {
+    await progressGameTriggerTx(tx, attackerCity.ownerId, "gather_score", march.cargoAmount, now);
+  }
 
   worldEvents.resolvedMarches.push({
     userIds: [attackerCity.ownerId],
@@ -811,6 +879,326 @@ async function reconcileGatherReturnTx(
     poiId: poi.id,
     notifyBattleResolved: false,
   });
+}
+
+async function reconcileScoutMissionTx(
+  tx: Prisma.TransactionClient,
+  scout: {
+    id: string;
+    ownerUserId: string;
+    ownerCityId: string;
+    targetKind: "CITY" | "POI";
+    targetCityId: string | null;
+    targetPoiId: string | null;
+  },
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  await syncCityStateTx(tx, scout.ownerCityId, now);
+  const ownerCity = await loadCityStateRecordOrThrow(tx, scout.ownerCityId);
+
+  let title = "Scout report";
+  let summary = "A scout mission returned with new frontier intelligence.";
+  let payload: {
+    cityIntel: Record<string, unknown> | null;
+    poiIntel: Record<string, unknown> | null;
+  } = {
+    cityIntel: null,
+    poiIntel: null,
+  };
+
+  if (scout.targetKind === "CITY" && scout.targetCityId) {
+    await syncCityStateTx(tx, scout.targetCityId, now);
+    const targetCity = await loadCityStateRecordOrThrow(tx, scout.targetCityId);
+    const defenderResearch = getResearchLevels(
+      targetCity.researchLevels.map((research) => ({
+        researchType: research.researchType,
+        level: research.level,
+      })),
+    );
+    const defenderBuildings = getBuildingLevels(
+      targetCity.buildings.map((building) => ({
+        buildingType: building.buildingType,
+        level: building.level,
+      })),
+    );
+    title = `Scout report: ${targetCity.name}`;
+    summary = `${targetCity.owner.username}'s city shows ${targetCity.troopGarrisons.reduce((sum, troop) => sum + troop.quantity, 0)} visible troops.`;
+    payload = {
+      cityIntel: {
+        cityId: targetCity.id,
+        cityName: targetCity.name,
+        ownerName: targetCity.owner.username,
+        resources: getResourceLedger(targetCity),
+        troops: getTroopLedger(
+          targetCity.troopGarrisons.map((troop) => ({
+            troopType: troop.troopType,
+            quantity: troop.quantity,
+          })),
+        ),
+        defensePower: getTroopDefensePower(
+          getTroopLedger(
+            targetCity.troopGarrisons.map((troop) => ({
+              troopType: troop.troopType,
+              quantity: troop.quantity,
+            })),
+          ),
+        ) + Object.values(defenderBuildings).reduce((sum, level) => sum + level, 0) * 5 + Object.values(defenderResearch).reduce((sum, level) => sum + level, 0) * 4,
+        peaceShieldUntil: targetCity.peaceShieldUntil?.toISOString() ?? null,
+      },
+      poiIntel: null,
+    };
+  } else if (scout.targetPoiId) {
+    const poi = await loadMapPoiRecordOrThrow(tx, scout.targetPoiId);
+    title = `Scout report: ${poi.label}`;
+    summary = `${poi.label} remains ${poi.state.toLowerCase()} on the frontier.`;
+    payload = {
+      cityIntel: null,
+      poiIntel: {
+        poiId: poi.id,
+        poiName: poi.label,
+        poiKind: poi.kind,
+        state: poi.state,
+        level: poi.level,
+        resourceType: poi.resourceType,
+        remainingAmount: poi.remainingAmount,
+      },
+    };
+  }
+
+  const report = await tx.scoutReport.create({
+    data: {
+      scoutMissionId: scout.id,
+      ownerUserId: scout.ownerUserId,
+      ownerCityId: scout.ownerCityId,
+      targetKind: scout.targetKind,
+      targetCityId: scout.targetCityId,
+      targetPoiId: scout.targetPoiId,
+      title,
+      summary,
+      payload: payload as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  await tx.scoutMission.update({
+    where: { id: scout.id },
+    data: {
+      state: "RESOLVED",
+      resolvedAt: now,
+    },
+  });
+
+  await createMailboxEntryTx(tx, {
+    userId: scout.ownerUserId,
+    kind: "SCOUT_REPORT",
+    title,
+    body: summary,
+    scoutReportId: report.id,
+  });
+
+  worldEvents.scoutCompletions.push({
+    userId: scout.ownerUserId,
+    cityId: ownerCity.id,
+    scoutId: scout.id,
+  });
+  worldEvents.mailboxUpdates.push({
+    userId: scout.ownerUserId,
+  });
+}
+
+async function reconcileScoutsTx(
+  tx: Prisma.TransactionClient,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const dueScouts = await tx.scoutMission.findMany({
+    where: {
+      state: "ENROUTE",
+      etaAt: {
+        lte: now,
+      },
+    },
+    orderBy: {
+      etaAt: "asc",
+    },
+  });
+
+  for (const scout of dueScouts) {
+    await reconcileScoutMissionTx(tx, scout, now, worldEvents);
+  }
+}
+
+async function reconcileOpenRalliesTx(
+  tx: Prisma.TransactionClient,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const dueRallies = await tx.rally.findMany({
+    where: {
+      state: "OPEN",
+      launchAt: {
+        lte: now,
+      },
+    },
+    include: rallyInclude,
+    orderBy: {
+      launchAt: "asc",
+    },
+  });
+
+  for (const rally of dueRallies) {
+    try {
+      const leaderCity = await loadCityStateRecordOrThrow(tx, rally.leaderCityId);
+      const commander = leaderCity.owner.commanders.find((entry) => entry.id === rally.commanderId);
+      if (!commander) {
+        throw new HttpError(404, "COMMANDER_NOT_FOUND", "The rally commander is no longer available.");
+      }
+
+      let targetCoordinates = { x: leaderCity.x, y: leaderCity.y };
+      let defenderPowerSnapshot: number | null = null;
+
+      if (rally.objective === "CITY_ATTACK" && rally.targetCityId) {
+        const targetCity = await loadCityStateRecordOrThrow(tx, rally.targetCityId);
+        if (targetCity.peaceShieldUntil && targetCity.peaceShieldUntil > now) {
+          throw new HttpError(409, "TARGET_SHIELDED", "That city is currently protected by a peace shield.");
+        }
+        targetCoordinates = { x: targetCity.x, y: targetCity.y };
+        const defenderResearch = getResearchLevels(
+          targetCity.researchLevels.map((research) => ({
+            researchType: research.researchType,
+            level: research.level,
+          })),
+        );
+        defenderPowerSnapshot = getTroopDefensePower(
+          getTroopLedger(
+            targetCity.troopGarrisons.map((troop) => ({
+              troopType: troop.troopType,
+              quantity: troop.quantity,
+            })),
+          ),
+        ) + Object.values(defenderResearch).reduce((sum, level) => sum + level, 0) * 4;
+      } else if (rally.objective === "BARBARIAN_ATTACK" && rally.targetPoiId) {
+        const targetPoi = await loadMapPoiRecordOrThrow(tx, rally.targetPoiId);
+        if (targetPoi.kind !== "BARBARIAN_CAMP" || targetPoi.state !== "ACTIVE") {
+          throw new HttpError(409, "RALLY_TARGET_INVALID", "That barbarian camp is no longer available.");
+        }
+        targetCoordinates = { x: targetPoi.x, y: targetPoi.y };
+        defenderPowerSnapshot = getTroopDefensePower(getBarbarianCampTroops(targetPoi.level));
+        await tx.mapPoi.update({
+          where: { id: targetPoi.id },
+          data: {
+            state: "OCCUPIED",
+          },
+        });
+      } else {
+        throw new HttpError(409, "RALLY_TARGET_INVALID", "That rally no longer has a valid target.");
+      }
+
+      const pledgedTroops = rally.members.map((member) => ({
+        INFANTRY: member.infantryCount,
+        ARCHER: member.archerCount,
+        CAVALRY: member.cavalryCount,
+      }));
+      const totalTroops = pledgedTroops.reduce(
+        (sum, troops) => ({
+          INFANTRY: sum.INFANTRY + troops.INFANTRY,
+          ARCHER: sum.ARCHER + troops.ARCHER,
+          CAVALRY: sum.CAVALRY + troops.CAVALRY,
+        }),
+        { INFANTRY: 0, ARCHER: 0, CAVALRY: 0 },
+      );
+      if (totalTroops.INFANTRY + totalTroops.ARCHER + totalTroops.CAVALRY <= 0) {
+        throw new HttpError(409, "RALLY_EMPTY", "A rally requires troops before it can launch.");
+      }
+
+      for (const member of rally.members) {
+        await syncCityStateTx(tx, member.cityId, now);
+        const memberCity = await loadCityStateRecordOrThrow(tx, member.cityId);
+        const available = getTroopLedger(
+          memberCity.troopGarrisons.map((troop) => ({
+            troopType: troop.troopType,
+            quantity: troop.quantity,
+          })),
+        );
+        const pledged = {
+          INFANTRY: member.infantryCount,
+          ARCHER: member.archerCount,
+          CAVALRY: member.cavalryCount,
+        };
+        if (
+          available.INFANTRY < pledged.INFANTRY ||
+          available.ARCHER < pledged.ARCHER ||
+          available.CAVALRY < pledged.CAVALRY
+        ) {
+          throw new HttpError(409, "RALLY_MEMBER_TROOPS_UNAVAILABLE", "A rally member no longer has the pledged troops available.");
+        }
+        await upsertTroopLedgerTx(tx, member.cityId, spendTroops(available, pledged));
+      }
+
+      const leaderResearch = getResearchLevels(
+        leaderCity.researchLevels.map((research) => ({
+          researchType: research.researchType,
+          level: research.level,
+        })),
+      );
+      const durationMs = getMarchDurationMs(
+        manhattanDistance({ x: leaderCity.x, y: leaderCity.y }, targetCoordinates),
+        totalTroops,
+        toCommanderBonuses(commander),
+        leaderResearch,
+      );
+
+      const launchedMarch = await tx.march.create({
+        data: {
+          ownerUserId: rally.leaderUserId,
+          ownerCityId: rally.leaderCityId,
+          originX: leaderCity.x,
+          originY: leaderCity.y,
+          targetCityId: rally.targetCityId,
+          targetPoiId: rally.targetPoiId,
+          commanderId: rally.commanderId,
+          objective: rally.objective,
+          state: "ENROUTE",
+          supportBonusPct: rally.supportBonusPct,
+          infantryCount: totalTroops.INFANTRY,
+          archerCount: totalTroops.ARCHER,
+          cavalryCount: totalTroops.CAVALRY,
+          attackerPowerSnapshot: getAttackPower(totalTroops, toCommanderBonuses(commander), leaderResearch),
+          defenderPowerSnapshot,
+          startsAt: now,
+          etaAt: new Date(now.getTime() + durationMs),
+        },
+      });
+
+      await tx.rally.update({
+        where: { id: rally.id },
+        data: {
+          state: "LAUNCHED",
+          launchedMarchId: launchedMarch.id,
+        },
+      });
+
+      worldEvents.rallyUpdates.push({
+        userIds: rally.members.map((member) => member.userId),
+        rallyId: rally.id,
+        cityId: leaderCity.id,
+        marchId: launchedMarch.id,
+      });
+    } catch {
+      await tx.rally.update({
+        where: { id: rally.id },
+        data: {
+          state: "CANCELLED",
+        },
+      });
+      worldEvents.rallyUpdates.push({
+        userIds: rally.members.map((member) => member.userId),
+        rallyId: rally.id,
+        cityId: rally.leaderCityId,
+        marchId: null,
+      });
+    }
+  }
 }
 
 async function reconcileBattleWindowsTx(
@@ -1001,6 +1389,9 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
       researchCompletions: [],
       marchTransitions: [],
       resolvedMarches: [],
+      scoutCompletions: [],
+      mailboxUpdates: [],
+      rallyUpdates: [],
       poiUpdates: [],
     };
 
@@ -1056,7 +1447,9 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
     }
 
     await reconcilePoiRespawnsTx(tx, now, events);
+    await reconcileOpenRalliesTx(tx, now, events);
     await reconcileMarchesTx(tx, now, events);
+    await reconcileScoutsTx(tx, now, events);
     return events;
   });
 
@@ -1104,6 +1497,26 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
     }
     if (item.poiId) {
       emitPoiUpdated(item.poiId);
+    }
+  }
+
+  for (const item of worldEvents.scoutCompletions) {
+    emitScoutCompleted([item.userId], item.scoutId);
+    emitCityUpdated([item.userId], item.cityId);
+  }
+
+  for (const item of worldEvents.mailboxUpdates) {
+    emitMailboxUpdated([item.userId]);
+  }
+
+  for (const item of worldEvents.rallyUpdates) {
+    emitRallyUpdated(item.userIds, item.rallyId);
+    if (item.cityId) {
+      emitCityUpdated(item.userIds, item.cityId);
+      emitMapUpdated(item.cityId);
+    }
+    if (item.marchId && item.cityId) {
+      emitMarchUpdated(item.userIds, item.cityId, item.marchId);
     }
   }
 

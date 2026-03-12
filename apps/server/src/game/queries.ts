@@ -48,6 +48,8 @@ import {
   mapMarchView,
   mapPoiInclude,
   mapPoiView,
+  mapRallyView,
+  rallyInclude,
 } from "./shared";
 import { ensureWorldPoisTx } from "./world";
 
@@ -441,20 +443,7 @@ export async function getRallies(userId: string): Promise<RalliesResponse> {
           in: ["OPEN", "LAUNCHED"],
         },
       },
-      include: {
-        leaderUser: true,
-        commander: true,
-        targetCity: true,
-        targetPoi: true,
-        members: {
-          include: {
-            user: true,
-          },
-          orderBy: {
-            joinedAt: "asc",
-          },
-        },
-      },
+      include: rallyInclude,
       orderBy: {
         launchAt: "asc",
       },
@@ -462,33 +451,7 @@ export async function getRallies(userId: string): Promise<RalliesResponse> {
     });
 
     return {
-      rallies: rallies.map((rally) => ({
-        id: rally.id,
-        state: rally.state,
-        objective: rally.objective,
-        targetCityId: rally.targetCityId,
-        targetCityName: rally.targetCity?.name ?? null,
-        targetPoiId: rally.targetPoiId,
-        targetPoiName: rally.targetPoi?.label ?? null,
-        leaderUserId: rally.leaderUserId,
-        leaderName: rally.leaderUser.username,
-        leaderCommanderId: rally.commanderId,
-        leaderCommanderName: rally.commander.name,
-        supportBonusPct: Math.round(rally.supportBonusPct * 100),
-        launchAt: rally.launchAt.toISOString(),
-        remainingSeconds: Math.max(0, Math.ceil((rally.launchAt.getTime() - now.getTime()) / 1000)),
-        launchedMarchId: rally.launchedMarchId,
-        members: rally.members.map((member) => ({
-          userId: member.userId,
-          username: member.user.username,
-          pledgedTroops: {
-            INFANTRY: member.infantryCount,
-            ARCHER: member.archerCount,
-            CAVALRY: member.cavalryCount,
-          },
-          joinedAt: member.joinedAt.toISOString(),
-        })),
-      })),
+      rallies: rallies.map((rally) => mapRallyView(rally, now)),
     };
   });
 }

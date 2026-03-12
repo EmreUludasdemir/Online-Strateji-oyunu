@@ -6,12 +6,15 @@ import type {
   AuthUser,
   BuildingType,
   CityState,
+  ItemKey,
+  ItemTargetKind,
   MarchCommandResponse,
   MarchObjective,
-  RallyMutationResponse,
-  ScoutMutationResponse,
+  PurchaseVerifyResponse,
   PoiKind,
+  RallyMutationResponse,
   ResearchType,
+  ScoutMutationResponse,
   TroopType,
   TroopStock,
 } from "@frontier/shared";
@@ -21,13 +24,22 @@ import { hashPassword, verifyPassword } from "../lib/auth";
 import { writeAuditEntry } from "../lib/audit";
 import { HttpError } from "../lib/http";
 import { prisma } from "../lib/prisma";
+import { storeValidationPort } from "../lib/storeValidation";
 import {
   emitAllianceUpdated,
   emitCityUpdated,
+  emitCommanderUpdated,
   emitFogUpdated,
+  emitInventoryUpdated,
+  emitEventUpdated,
+  emitLeaderboardUpdated,
   emitMapUpdated,
+  emitMailboxUpdated,
   emitMarchCreated,
   emitMarchUpdated,
+  emitRallyUpdated,
+  emitStoreUpdated,
+  emitTaskUpdated,
 } from "./events";
 import {
   addResources,
@@ -38,6 +50,7 @@ import {
   getCarryCapacity,
   getDefensePower,
   getMarchDurationMs,
+  getMarchPosition,
   getResearchCost,
   getResearchDurationMs,
   getResearchLevels,
@@ -51,6 +64,7 @@ import {
   manhattanDistance,
   spendResources,
   spendTroops,
+  sumTroops,
 } from "./engine";
 import {
   ALLIANCE_CHAT_HISTORY_LIMIT,
@@ -73,11 +87,16 @@ import {
   createMailboxEntryTx,
   ensureCommanderCollectionTx,
   ensureRetentionStateTx,
-  getTasksViewTx,
+  getCommanderProgressViewTx,
   grantRewardBundleTx,
+  getEntitlementsViewTx,
   progressGameTriggerTx,
+  getMailboxViewTx,
+  getStoreCatalogViewTx,
+  getStoreOffersViewTx,
   upgradeCommanderTx,
   useInventoryItemTx,
+  verifySandboxPurchaseToken,
 } from "./progression";
 import {
   allianceStateInclude,
@@ -85,6 +104,7 @@ import {
   ensureCityInfrastructureTx,
   getAllianceMembershipTx,
   getBarbarianCampTroops,
+  getMarchTargetCoordinates,
   getPrimaryCommander,
   getPoiResourceKey,
   getResourceLedger,
@@ -94,7 +114,9 @@ import {
   loadMapPoiRecordOrThrow,
   mapAllianceView,
   mapMarchView,
+  mapRallyView,
   mapCityState,
+  rallyInclude,
   resourceLedgerToCityUpdate,
   toAuthUser,
   toCommanderBonuses,
@@ -1335,6 +1357,794 @@ export async function updateAllianceMemberRole(
   writeAuditEntry("alliance.role.update", { userId, targetUserId, role, allianceId: result.alliance.id });
   emitAllianceUpdated(result.memberIds, result.alliance.id);
   return result.alliance;
+}
+
+function buildRallySupportBonus(troops: TroopStock): number {
+  return Math.min(0.18, sumTroops(troops) / 1200);
+}
+
+const RALLY_PREP_DURATION_MS = 5 * 60 * 1000;
+const RALLY_MAX_PARTICIPANTS = 3;
+
+function mergeTroops(parts: TroopStock[]): TroopStock {
+  return parts.reduce<TroopStock>(
+    (sum, troops) => ({
+      INFANTRY: sum.INFANTRY + troops.INFANTRY,
+      ARCHER: sum.ARCHER + troops.ARCHER,
+      CAVALRY: sum.CAVALRY + troops.CAVALRY,
+    }),
+    { INFANTRY: 0, ARCHER: 0, CAVALRY: 0 },
+  );
+}
+
+function mapScoutMissionView(
+  scout: {
+    id: string;
+    state: "ENROUTE" | "RESOLVED" | "RECALLED";
+    targetKind: "CITY" | "POI";
+    targetCityId: string | null;
+    targetPoiId: string | null;
+    etaAt: Date;
+  },
+  now: Date,
+) {
+  return {
+    id: scout.id,
+    state: scout.state,
+    targetKind: scout.targetKind,
+    targetCityId: scout.targetCityId,
+    targetPoiId: scout.targetPoiId,
+    etaAt: scout.etaAt.toISOString(),
+    remainingSeconds: Math.max(0, Math.ceil((scout.etaAt.getTime() - now.getTime()) / 1000)),
+  };
+}
+
+export async function claimTaskReward(userId: string, taskId: string) {
+  await reconcileWorld();
+  const now = new Date();
+  await prisma.$transaction((tx) => claimTaskTx(tx, userId, taskId, now));
+  writeAuditEntry("game.task.claim", { userId, taskId });
+}
+
+export async function useInventoryItem(userId: string, payload: { itemKey: ItemKey; targetKind?: ItemTargetKind; targetId?: string }) {
+  await reconcileWorld();
+  const now = new Date();
+  const cityId = await prisma.$transaction(async (tx) => {
+    await useInventoryItemTx(tx, userId, payload, now);
+    const city = await tx.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { city: { select: { id: true } } },
+    });
+    return city.city?.id ?? null;
+  });
+  writeAuditEntry("game.inventory.use", { userId, itemKey: payload.itemKey, targetKind: payload.targetKind ?? null });
+  if (cityId) {
+    emitCityUpdated([userId], cityId);
+  }
+}
+
+export async function upgradeCommander(userId: string, commanderId: string) {
+  await reconcileWorld();
+  const now = new Date();
+  const response = await prisma.$transaction(async (tx) => {
+    await upgradeCommanderTx(tx, userId, commanderId, now);
+    return getCommanderProgressViewTx(tx, userId);
+  });
+  writeAuditEntry("game.commander.upgrade", { userId, commanderId });
+  return { commanders: response };
+}
+
+export async function createScout(
+  userId: string,
+  payload: { targetCityId?: string; targetPoiId?: string },
+): Promise<ScoutMutationResponse> {
+  await reconcileWorld();
+  const now = new Date();
+  const scout = await prisma.$transaction(async (tx) => {
+    const { city } = await snapshotCityTx(tx, userId, now);
+    const targetKind = payload.targetCityId ? "CITY" : "POI";
+    const targetCity = payload.targetCityId ? await loadCityStateRecordOrThrow(tx, payload.targetCityId) : null;
+    const targetPoi = payload.targetPoiId ? await loadMapPoiRecordOrThrow(tx, payload.targetPoiId) : null;
+
+    if (!targetCity && !targetPoi) {
+      throw new HttpError(400, "SCOUT_TARGET_REQUIRED", "A scout target is required.");
+    }
+
+    const distance = manhattanDistance(
+      { x: city.x, y: city.y },
+      targetCity ? { x: targetCity.x, y: targetCity.y } : { x: targetPoi!.x, y: targetPoi!.y },
+    );
+    if (distance > MAX_MARCH_DISTANCE) {
+      throw new HttpError(400, "TARGET_OUT_OF_RANGE", "That scout target is outside the current command range.");
+    }
+
+    const scoutMission = await tx.scoutMission.create({
+      data: {
+        ownerUserId: userId,
+        ownerCityId: city.id,
+        originX: city.x,
+        originY: city.y,
+        targetKind,
+        targetCityId: targetCity?.id ?? null,
+        targetPoiId: targetPoi?.id ?? null,
+        etaAt: new Date(now.getTime() + Math.max(8_000, distance * 12_000)),
+      },
+    });
+
+    return mapScoutMissionView(scoutMission, now);
+  });
+
+  await prisma.$transaction((tx) => progressGameTriggerTx(tx, userId, "power_gain", 1, now));
+  writeAuditEntry("game.scout.create", { userId, targetCityId: payload.targetCityId ?? null, targetPoiId: payload.targetPoiId ?? null });
+  return { scout };
+}
+
+export async function retargetMarch(
+  userId: string,
+  marchId: string,
+  payload: { targetCityId?: string; targetPoiId?: string },
+): Promise<MarchCommandResponse> {
+  await reconcileWorld();
+  const now = new Date();
+
+  const march = await prisma.$transaction(async (tx) => {
+    const { city } = await snapshotCityTx(tx, userId, now);
+    const currentMarch = city.outgoingMarches.find((entry) => entry.id === marchId);
+    if (!currentMarch || currentMarch.state !== "ENROUTE") {
+      throw new HttpError(409, "MARCH_RETARGET_BLOCKED", "Only enroute marches can be retargeted.");
+    }
+
+    const oldTarget = getMarchTargetCoordinates(currentMarch);
+    const currentPosition = getMarchPosition(
+      { x: currentMarch.originX, y: currentMarch.originY },
+      oldTarget,
+      currentMarch.startsAt,
+      currentMarch.etaAt,
+      now,
+    );
+
+    let targetCityId: string | null = null;
+    let targetPoiId: string | null = null;
+    let targetCoordinates = oldTarget;
+    let defenderPowerSnapshot = currentMarch.defenderPowerSnapshot;
+
+    if (currentMarch.objective === "CITY_ATTACK") {
+      if (!payload.targetCityId) {
+        throw new HttpError(400, "RETARGET_CITY_REQUIRED", "A city target is required for this march.");
+      }
+      const targetCity = await loadCityStateRecordOrThrow(tx, payload.targetCityId);
+      if (targetCity.peaceShieldUntil && targetCity.peaceShieldUntil > now) {
+        throw new HttpError(409, "TARGET_SHIELDED", "That city is currently protected by a peace shield.");
+      }
+      targetCityId = targetCity.id;
+      targetCoordinates = { x: targetCity.x, y: targetCity.y };
+
+      const defenderResearch = getResearchLevels(
+        targetCity.researchLevels.map((research) => ({
+          researchType: research.researchType as ResearchType,
+          level: research.level,
+        })),
+      );
+      const defenderBuildings = getBuildingLevels(
+        targetCity.buildings.map((building) => ({
+          buildingType: building.buildingType as BuildingType,
+          level: building.level,
+        })),
+      );
+      const defenderTroops = getTroopLedger(
+        targetCity.troopGarrisons.map((troop) => ({
+          troopType: troop.troopType as TroopType,
+          quantity: troop.quantity,
+        })),
+      );
+      defenderPowerSnapshot = getDefensePower(
+        defenderTroops,
+        defenderBuildings,
+        toCommanderBonuses(getPrimaryCommander(targetCity)),
+        defenderResearch,
+      );
+    } else {
+      if (!payload.targetPoiId) {
+        throw new HttpError(400, "RETARGET_POI_REQUIRED", "A POI target is required for this march.");
+      }
+      const targetPoi = await loadMapPoiRecordOrThrow(tx, payload.targetPoiId);
+      if (targetPoi.state !== "ACTIVE" || targetPoi.targetMarches.some((entry) => entry.id !== marchId)) {
+        throw new HttpError(409, "POI_OCCUPIED", "That point of interest is not available.");
+      }
+      targetPoiId = targetPoi.id;
+      targetCoordinates = { x: targetPoi.x, y: targetPoi.y };
+      defenderPowerSnapshot = currentMarch.objective === "BARBARIAN_ATTACK" ? getTroopDefensePower(getBarbarianCampTroops(targetPoi.level)) : null;
+    }
+
+    if (currentMarch.targetPoiId && currentMarch.targetPoiId !== targetPoiId) {
+      await tx.mapPoi.update({
+        where: { id: currentMarch.targetPoiId },
+        data: {
+          state: "ACTIVE",
+        },
+      });
+    }
+
+    if (targetPoiId && targetPoiId !== currentMarch.targetPoiId) {
+      await tx.mapPoi.update({
+        where: { id: targetPoiId },
+        data: {
+          state: "OCCUPIED",
+        },
+      });
+    }
+
+    const commander = city.owner.commanders.find((entry) => entry.id === currentMarch.commanderId) ?? getPrimaryCommander(city);
+    const researchLevels = getResearchLevels(
+      city.researchLevels.map((research) => ({
+        researchType: research.researchType as ResearchType,
+        level: research.level,
+      })),
+    );
+    const durationMs = getMarchDurationMs(
+      manhattanDistance(currentPosition, targetCoordinates),
+      {
+        INFANTRY: currentMarch.infantryCount,
+        ARCHER: currentMarch.archerCount,
+        CAVALRY: currentMarch.cavalryCount,
+      },
+      toCommanderBonuses(commander),
+      researchLevels,
+    );
+
+    const updatedMarch = await tx.march.update({
+      where: { id: marchId },
+      data: {
+        originX: currentPosition.x,
+        originY: currentPosition.y,
+        targetCityId,
+        targetPoiId,
+        etaAt: new Date(now.getTime() + durationMs),
+        defenderPowerSnapshot,
+      },
+      include: {
+        commander: true,
+        targetCity: {
+          include: {
+            owner: true,
+          },
+        },
+        targetPoi: true,
+        battleWindow: true,
+      },
+    });
+
+    return mapMarchView(updatedMarch, { x: city.x, y: city.y }, now);
+  });
+
+  writeAuditEntry("game.march.retarget", { userId, marchId, targetCityId: payload.targetCityId ?? null, targetPoiId: payload.targetPoiId ?? null });
+  return { march };
+}
+
+export async function createRally(
+  userId: string,
+  payload:
+    | { objective?: "CITY_ATTACK"; targetCityId: string; commanderId: string; troops: TroopStock }
+    | { objective: "BARBARIAN_ATTACK"; targetPoiId: string; commanderId: string; troops: TroopStock },
+): Promise<RallyMutationResponse> {
+  await reconcileWorld();
+  const now = new Date();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const membership = await getAllianceMembershipTx(tx, userId);
+    if (!membership?.alliance) {
+      throw new HttpError(409, "ALLIANCE_REQUIRED", "Only alliance members can open rallies.");
+    }
+
+    const { city } = await snapshotCityTx(tx, userId, now);
+    const commander = city.owner.commanders.find((entry) => entry.id === payload.commanderId);
+    if (!commander) {
+      throw new HttpError(404, "COMMANDER_NOT_FOUND", "That commander is not owned by the current player.");
+    }
+
+    const currentTroops = getTroopLedger(
+      city.troopGarrisons.map((troop) => ({
+        troopType: troop.troopType as TroopType,
+        quantity: troop.quantity,
+      })),
+    );
+    if (!hasEnoughTroops(currentTroops, payload.troops)) {
+      throw new HttpError(409, "INSUFFICIENT_TROOPS", "Not enough troops are available for that rally.");
+    }
+
+    const objective: MarchObjective = payload.objective ?? "CITY_ATTACK";
+    let targetCityId: string | null = null;
+    let targetPoiId: string | null = null;
+    let targetCoordinates = { x: city.x, y: city.y };
+
+    if (objective === "CITY_ATTACK" && "targetCityId" in payload) {
+      const targetCity = await loadCityStateRecordOrThrow(tx, payload.targetCityId);
+      if (targetCity.ownerId === userId) {
+        throw new HttpError(409, "TARGET_CITY_INVALID", "A rally cannot target the current city.");
+      }
+      if (targetCity.peaceShieldUntil && targetCity.peaceShieldUntil > now) {
+        throw new HttpError(409, "TARGET_SHIELDED", "That city is currently protected by a peace shield.");
+      }
+      targetCityId = targetCity.id;
+      targetCoordinates = { x: targetCity.x, y: targetCity.y };
+    } else if ("targetPoiId" in payload) {
+      const targetPoi = await loadMapPoiRecordOrThrow(tx, payload.targetPoiId);
+      if (targetPoi.kind !== "BARBARIAN_CAMP" || targetPoi.state !== "ACTIVE") {
+        throw new HttpError(409, "RALLY_TARGET_INVALID", "Rallies currently support active barbarian camps only.");
+      }
+      targetPoiId = targetPoi.id;
+      targetCoordinates = { x: targetPoi.x, y: targetPoi.y };
+    } else {
+      throw new HttpError(400, "RALLY_TARGET_REQUIRED", "A rally target is required.");
+    }
+
+    if (manhattanDistance({ x: city.x, y: city.y }, targetCoordinates) > MAX_MARCH_DISTANCE) {
+      throw new HttpError(400, "TARGET_OUT_OF_RANGE", "That rally target is outside the current command range.");
+    }
+
+    const rally = await tx.rally.create({
+      data: {
+        allianceId: membership.alliance.id,
+        leaderUserId: userId,
+        leaderCityId: city.id,
+        targetCityId,
+        targetPoiId,
+        commanderId: commander.id,
+        objective,
+        launchAt: new Date(now.getTime() + RALLY_PREP_DURATION_MS),
+        members: {
+          create: {
+            userId,
+            cityId: city.id,
+            infantryCount: payload.troops.INFANTRY,
+            archerCount: payload.troops.ARCHER,
+            cavalryCount: payload.troops.CAVALRY,
+          },
+        },
+      },
+      include: rallyInclude,
+    });
+
+    await appendAllianceLogTx(tx, membership.alliance.id, "RALLY_CREATED", `${city.owner.username} opened a rally.`, userId);
+    await addAllianceContributionTx(tx, membership.alliance.id, userId, 5);
+
+    return {
+      rally: mapRallyView(rally, now),
+      memberIds: membership.alliance.members.map((member) => member.userId),
+      allianceId: membership.alliance.id,
+    };
+  });
+
+  writeAuditEntry("game.rally.create", {
+    userId,
+    objective: payload.objective ?? "CITY_ATTACK",
+    targetCityId: "targetCityId" in payload ? payload.targetCityId : null,
+    targetPoiId: "targetPoiId" in payload ? payload.targetPoiId : null,
+  });
+  emitRallyUpdated(result.memberIds, result.rally.id);
+  emitAllianceUpdated(result.memberIds, result.allianceId);
+  emitLeaderboardUpdated(result.memberIds);
+  return { rally: result.rally };
+}
+
+export async function joinRally(
+  userId: string,
+  rallyId: string,
+  payload: { troops: TroopStock },
+): Promise<RallyMutationResponse> {
+  await reconcileWorld();
+  const now = new Date();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const membership = await getAllianceMembershipTx(tx, userId);
+    if (!membership?.alliance) {
+      throw new HttpError(409, "ALLIANCE_REQUIRED", "Only alliance members can join rallies.");
+    }
+
+    const rally = await tx.rally.findFirst({
+      where: {
+        id: rallyId,
+        allianceId: membership.alliance.id,
+      },
+      include: rallyInclude,
+    });
+    if (!rally) {
+      throw new HttpError(404, "RALLY_NOT_FOUND", "That rally could not be found.");
+    }
+    if (rally.state !== "OPEN" || rally.launchAt <= now) {
+      throw new HttpError(409, "RALLY_JOIN_BLOCKED", "That rally is no longer accepting members.");
+    }
+
+    const { city } = await snapshotCityTx(tx, userId, now);
+    const currentTroops = getTroopLedger(
+      city.troopGarrisons.map((troop) => ({
+        troopType: troop.troopType as TroopType,
+        quantity: troop.quantity,
+      })),
+    );
+    if (!hasEnoughTroops(currentTroops, payload.troops)) {
+      throw new HttpError(409, "INSUFFICIENT_TROOPS", "Not enough troops are available for that rally.");
+    }
+
+    const existingMember = rally.members.find((member) => member.userId === userId);
+    if (!existingMember && rally.members.length >= RALLY_MAX_PARTICIPANTS) {
+      throw new HttpError(409, "RALLY_FULL", "That rally already has the maximum number of participants.");
+    }
+
+    if (existingMember) {
+      await tx.rallyMember.update({
+        where: { id: existingMember.id },
+        data: {
+          infantryCount: payload.troops.INFANTRY,
+          archerCount: payload.troops.ARCHER,
+          cavalryCount: payload.troops.CAVALRY,
+        },
+      });
+    } else {
+      await tx.rallyMember.create({
+        data: {
+          rallyId,
+          userId,
+          cityId: city.id,
+          infantryCount: payload.troops.INFANTRY,
+          archerCount: payload.troops.ARCHER,
+          cavalryCount: payload.troops.CAVALRY,
+        },
+      });
+    }
+
+    const refreshed = await tx.rally.findUniqueOrThrow({
+      where: { id: rallyId },
+      include: rallyInclude,
+    });
+    const supportTroops = mergeTroops(
+      refreshed.members
+        .filter((member) => member.userId !== refreshed.leaderUserId)
+        .map((member) => ({
+          INFANTRY: member.infantryCount,
+          ARCHER: member.archerCount,
+          CAVALRY: member.cavalryCount,
+        })),
+    );
+    const updated = await tx.rally.update({
+      where: { id: rallyId },
+      data: {
+        supportBonusPct: buildRallySupportBonus(supportTroops),
+      },
+      include: rallyInclude,
+    });
+
+    await appendAllianceLogTx(tx, membership.alliance.id, "RALLY_JOINED", `${city.owner.username} joined a rally.`, userId);
+    await addAllianceContributionTx(tx, membership.alliance.id, userId, 3);
+
+    return {
+      rally: mapRallyView(updated, now),
+      memberIds: membership.alliance.members.map((member) => member.userId),
+      allianceId: membership.alliance.id,
+    };
+  });
+
+  writeAuditEntry("game.rally.join", { userId, rallyId });
+  emitRallyUpdated(result.memberIds, result.rally.id);
+  emitAllianceUpdated(result.memberIds, result.allianceId);
+  emitLeaderboardUpdated(result.memberIds);
+  return { rally: result.rally };
+}
+
+export async function launchRally(userId: string, rallyId: string): Promise<RallyMutationResponse> {
+  await reconcileWorld();
+  const now = new Date();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const membership = await getAllianceMembershipTx(tx, userId);
+    if (!membership?.alliance) {
+      throw new HttpError(409, "ALLIANCE_REQUIRED", "Only alliance members can launch rallies.");
+    }
+
+    const rally = await tx.rally.findFirst({
+      where: {
+        id: rallyId,
+        allianceId: membership.alliance.id,
+      },
+      include: rallyInclude,
+    });
+    if (!rally) {
+      throw new HttpError(404, "RALLY_NOT_FOUND", "That rally could not be found.");
+    }
+    if (rally.leaderUserId !== userId) {
+      throw new HttpError(403, "RALLY_FORBIDDEN", "Only the rally leader can launch this rally.");
+    }
+    if (rally.state !== "OPEN") {
+      throw new HttpError(409, "RALLY_LAUNCH_BLOCKED", "That rally has already launched.");
+    }
+
+    const leaderCity = await loadCityStateRecordOrThrow(tx, rally.leaderCityId);
+    const commander = leaderCity.owner.commanders.find((entry) => entry.id === rally.commanderId);
+    if (!commander) {
+      throw new HttpError(404, "COMMANDER_NOT_FOUND", "The rally commander is no longer available.");
+    }
+
+    let targetCoordinates = { x: leaderCity.x, y: leaderCity.y };
+    let defenderPowerSnapshot: number | null = null;
+
+    if (rally.objective === "CITY_ATTACK") {
+      if (!rally.targetCityId) {
+        throw new HttpError(409, "RALLY_TARGET_INVALID", "This rally is missing a city target.");
+      }
+      const targetCity = await loadCityStateRecordOrThrow(tx, rally.targetCityId);
+      if (targetCity.peaceShieldUntil && targetCity.peaceShieldUntil > now) {
+        throw new HttpError(409, "TARGET_SHIELDED", "That city is currently protected by a peace shield.");
+      }
+      targetCoordinates = { x: targetCity.x, y: targetCity.y };
+      const defenderResearch = getResearchLevels(
+        targetCity.researchLevels.map((research) => ({
+          researchType: research.researchType as ResearchType,
+          level: research.level,
+        })),
+      );
+      const defenderBuildings = getBuildingLevels(
+        targetCity.buildings.map((building) => ({
+          buildingType: building.buildingType as BuildingType,
+          level: building.level,
+        })),
+      );
+      defenderPowerSnapshot = getDefensePower(
+        getTroopLedger(
+          targetCity.troopGarrisons.map((troop) => ({
+            troopType: troop.troopType as TroopType,
+            quantity: troop.quantity,
+          })),
+        ),
+        defenderBuildings,
+        toCommanderBonuses(getPrimaryCommander(targetCity)),
+        defenderResearch,
+      );
+    } else {
+      if (!rally.targetPoiId) {
+        throw new HttpError(409, "RALLY_TARGET_INVALID", "This rally is missing a POI target.");
+      }
+      const targetPoi = await loadMapPoiRecordOrThrow(tx, rally.targetPoiId);
+      if (targetPoi.kind !== "BARBARIAN_CAMP" || targetPoi.state !== "ACTIVE") {
+        throw new HttpError(409, "RALLY_TARGET_INVALID", "That barbarian camp is no longer available.");
+      }
+      targetCoordinates = { x: targetPoi.x, y: targetPoi.y };
+      defenderPowerSnapshot = getTroopDefensePower(getBarbarianCampTroops(targetPoi.level));
+      await tx.mapPoi.update({
+        where: { id: targetPoi.id },
+        data: {
+          state: "OCCUPIED",
+        },
+      });
+    }
+
+    const memberTroops: TroopStock[] = [];
+    for (const member of rally.members) {
+      const memberCity = await loadCityStateRecordOrThrow(tx, member.cityId);
+      const available = getTroopLedger(
+        memberCity.troopGarrisons.map((troop) => ({
+          troopType: troop.troopType as TroopType,
+          quantity: troop.quantity,
+        })),
+      );
+      const pledged = {
+        INFANTRY: member.infantryCount,
+        ARCHER: member.archerCount,
+        CAVALRY: member.cavalryCount,
+      };
+      if (!hasEnoughTroops(available, pledged)) {
+        throw new HttpError(409, "RALLY_MEMBER_TROOPS_UNAVAILABLE", "A rally member no longer has the pledged troops available.");
+      }
+      await updateTroopGarrisonTx(tx, member.cityId, spendTroops(available, pledged));
+      memberTroops.push(pledged);
+    }
+
+    const totalTroops = mergeTroops(memberTroops);
+    if (sumTroops(totalTroops) <= 0) {
+      throw new HttpError(409, "RALLY_EMPTY", "A rally requires troops before it can launch.");
+    }
+
+    const leaderResearch = getResearchLevels(
+      leaderCity.researchLevels.map((research) => ({
+        researchType: research.researchType as ResearchType,
+        level: research.level,
+      })),
+    );
+    const durationMs = getMarchDurationMs(
+      manhattanDistance({ x: leaderCity.x, y: leaderCity.y }, targetCoordinates),
+      totalTroops,
+      toCommanderBonuses(commander),
+      leaderResearch,
+    );
+
+    const attackPowerSnapshot = getAttackPower(totalTroops, toCommanderBonuses(commander), leaderResearch);
+    const launchedMarch = await tx.march.create({
+      data: {
+        ownerUserId: rally.leaderUserId,
+        ownerCityId: rally.leaderCityId,
+        originX: leaderCity.x,
+        originY: leaderCity.y,
+        targetCityId: rally.targetCityId,
+        targetPoiId: rally.targetPoiId,
+        commanderId: rally.commanderId,
+        objective: rally.objective,
+        state: "ENROUTE",
+        supportBonusPct: rally.supportBonusPct,
+        infantryCount: totalTroops.INFANTRY,
+        archerCount: totalTroops.ARCHER,
+        cavalryCount: totalTroops.CAVALRY,
+        attackerPowerSnapshot: attackPowerSnapshot,
+        defenderPowerSnapshot,
+        startsAt: now,
+        etaAt: new Date(now.getTime() + durationMs),
+      },
+      include: {
+        commander: true,
+        targetCity: {
+          include: {
+            owner: true,
+          },
+        },
+        targetPoi: true,
+        battleWindow: true,
+      },
+    });
+
+    const updated = await tx.rally.update({
+      where: { id: rally.id },
+      data: {
+        state: "LAUNCHED",
+        launchAt: now,
+        launchedMarchId: launchedMarch.id,
+      },
+      include: rallyInclude,
+    });
+
+    await appendAllianceLogTx(tx, membership.alliance.id, "RALLY_LAUNCHED", `${leaderCity.owner.username} launched a rally.`, userId);
+    await addAllianceContributionTx(tx, membership.alliance.id, userId, 8);
+
+    return {
+      rally: mapRallyView(updated, now),
+      march: mapMarchView(launchedMarch, { x: leaderCity.x, y: leaderCity.y }, now),
+      cityId: leaderCity.id,
+      memberIds: membership.alliance.members.map((member) => member.userId),
+      allianceId: membership.alliance.id,
+    };
+  });
+
+  writeAuditEntry("game.rally.launch", { userId, rallyId });
+  emitRallyUpdated(result.memberIds, result.rally.id);
+  emitAllianceUpdated(result.memberIds, result.allianceId);
+  emitMarchCreated(result.memberIds, result.cityId, result.march.id);
+  emitMapUpdated(result.cityId);
+  emitCityUpdated(result.memberIds, result.cityId);
+  emitLeaderboardUpdated(result.memberIds);
+  return { rally: result.rally };
+}
+
+export async function updateAllianceAnnouncement(userId: string, content: string): Promise<AllianceView> {
+  await reconcileWorld();
+  const now = new Date();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const membership = await getAllianceMembershipTx(tx, userId);
+    if (!membership?.alliance) {
+      throw new HttpError(409, "ALLIANCE_REQUIRED", "Only alliance members can post announcements.");
+    }
+    if (membership.role === "MEMBER") {
+      throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Only officers can update alliance announcements.");
+    }
+
+    await tx.allianceAnnouncement.upsert({
+      where: { allianceId: membership.alliance.id },
+      create: {
+        allianceId: membership.alliance.id,
+        content,
+        updatedByUserId: userId,
+        updatedAt: now,
+      },
+      update: {
+        content,
+        updatedByUserId: userId,
+        updatedAt: now,
+      },
+    });
+    await appendAllianceLogTx(tx, membership.alliance.id, "ANNOUNCEMENT_UPDATED", "Alliance announcement updated.", userId);
+
+    const refreshed = await getAllianceMembershipTx(tx, userId);
+    return {
+      alliance: mapAllianceView(refreshed!.alliance, userId),
+      memberIds: refreshed!.alliance.members.map((member) => member.userId),
+    };
+  });
+
+  writeAuditEntry("alliance.announcement.update", { userId });
+  emitAllianceUpdated(result.memberIds, result.alliance.id);
+  return result.alliance;
+}
+
+export async function createAllianceMarker(userId: string, payload: { label: string; x: number; y: number }): Promise<AllianceView> {
+  await reconcileWorld();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const membership = await getAllianceMembershipTx(tx, userId);
+    if (!membership?.alliance) {
+      throw new HttpError(409, "ALLIANCE_REQUIRED", "Only alliance members can place markers.");
+    }
+
+    const user = await tx.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { username: true },
+    });
+
+    await tx.allianceMarker.create({
+      data: {
+        allianceId: membership.alliance.id,
+        userId,
+        label: payload.label,
+        x: payload.x,
+        y: payload.y,
+      },
+    });
+    await appendAllianceLogTx(tx, membership.alliance.id, "MARKER_CREATED", `${user.username} placed a frontier marker.`, userId);
+    await addAllianceContributionTx(tx, membership.alliance.id, userId, 1);
+
+    const refreshed = await getAllianceMembershipTx(tx, userId);
+    return {
+      alliance: mapAllianceView(refreshed!.alliance, userId),
+      memberIds: refreshed!.alliance.members.map((member) => member.userId),
+    };
+  });
+
+  writeAuditEntry("alliance.marker.create", { userId, ...payload });
+  emitAllianceUpdated(result.memberIds, result.alliance.id);
+  emitLeaderboardUpdated(result.memberIds);
+  return result.alliance;
+}
+
+export async function claimMailboxReward(userId: string, mailboxId: string) {
+  await reconcileWorld();
+  const now = new Date();
+  await prisma.$transaction((tx) => claimMailboxEntryTx(tx, userId, mailboxId, now));
+  writeAuditEntry("game.mailbox.claim", { userId, mailboxId });
+  emitMailboxUpdated([userId], mailboxId);
+  emitInventoryUpdated([userId]);
+  emitCityUpdated([userId], (await getSessionUser(userId)).cityId);
+}
+
+export async function verifyStorePurchase(
+  userId: string,
+  payload: { platform: "APPLE_APP_STORE" | "GOOGLE_PLAY"; productId: string; purchaseToken: string },
+): Promise<PurchaseVerifyResponse> {
+  await reconcileWorld();
+  const now = new Date();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const validated =
+      payload.purchaseToken.startsWith(`sandbox:${payload.productId}:`)
+        ? await verifySandboxPurchaseToken(tx, userId, payload.productId, payload.purchaseToken, payload.platform, now)
+        : await storeValidationPort.validatePurchase({
+            ...payload,
+            userId,
+          }).then((response) => (response.ok ? "VALIDATED" : "REJECTED"));
+
+    if (validated === "REJECTED") {
+      throw new HttpError(400, "PURCHASE_INVALID", "The purchase receipt could not be validated.");
+    }
+
+    const entitlements = await getEntitlementsViewTx(tx, userId);
+    return {
+      status: validated,
+      entitlements,
+    };
+  });
+
+  writeAuditEntry("store.purchase.verify", { userId, productId: payload.productId, platform: payload.platform, status: result.status });
+  emitStoreUpdated([userId]);
+  emitMailboxUpdated([userId]);
+  emitInventoryUpdated([userId]);
+  emitEventUpdated([userId]);
+  emitCityUpdated([userId], (await getSessionUser(userId)).cityId);
+  return result;
 }
 
 export async function getSessionUser(userId: string): Promise<AuthUser> {

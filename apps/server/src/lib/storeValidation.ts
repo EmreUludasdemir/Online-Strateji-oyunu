@@ -9,11 +9,11 @@ export interface StoreValidationRequest {
 
 export interface StoreValidationResult {
   ok: boolean;
-  status: "NOT_CONFIGURED" | "VALID";
+  status: "NOT_CONFIGURED" | "VALID" | "INVALID";
 }
 
 export interface StoreValidationPort {
-  readonly mode: "noop";
+  readonly mode: "noop" | "sandbox";
   validatePurchase(request: StoreValidationRequest): Promise<StoreValidationResult>;
 }
 
@@ -28,4 +28,17 @@ class NoopStoreValidationPort implements StoreValidationPort {
   }
 }
 
-export const storeValidationPort: StoreValidationPort = new NoopStoreValidationPort();
+class SandboxStoreValidationPort implements StoreValidationPort {
+  readonly mode = "sandbox" as const;
+
+  async validatePurchase(request: StoreValidationRequest): Promise<StoreValidationResult> {
+    const expectedPrefix = `sandbox:${request.productId}:`;
+    return {
+      ok: request.purchaseToken.startsWith(expectedPrefix),
+      status: request.purchaseToken.startsWith(expectedPrefix) ? "VALID" : "INVALID",
+    };
+  }
+}
+
+export const storeValidationPort: StoreValidationPort =
+  process.env.STORE_VALIDATION_MODE === "sandbox" ? new SandboxStoreValidationPort() : new NoopStoreValidationPort();

@@ -4,11 +4,24 @@ import type {
   AnalyticsEventRequest,
   AuthResponse,
   BattleReportsResponse,
+  EntitlementsResponse,
+  GameEventsResponse,
   GameStateResponse,
+  InventoryResponse,
+  ItemUseRequest,
+  LeaderboardResponse,
+  MailboxResponse,
   MarchObjective,
   MarchCommandResponse,
   OkResponse,
+  PurchaseVerifyRequest,
+  PurchaseVerifyResponse,
+  RallyMutationResponse,
+  RalliesResponse,
+  ScoutMutationResponse,
   StartResearchResponse,
+  StoreCatalogResponse,
+  TasksResponse,
   TrainTroopsResponse,
   TroopStock,
   TroopType,
@@ -118,8 +131,33 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  retargetMarch: (marchId: string, body: { targetCityId?: string; targetPoiId?: string }) =>
+    apiRequest<MarchCommandResponse>(`/api/game/marches/${marchId}/retarget`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   recallMarch: (marchId: string) =>
     apiRequest<{ city: GameStateResponse["city"] }>(`/api/game/marches/${marchId}/recall`, {
+      method: "POST",
+    }),
+  createScout: (body: { targetCityId?: string; targetPoiId?: string }) =>
+    apiRequest<ScoutMutationResponse>("/api/game/scouts", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  rallies: () => apiRequest<RalliesResponse>("/api/game/rallies"),
+  createRally: (body: { objective?: "CITY_ATTACK"; targetCityId?: string; targetPoiId?: string; commanderId: string; troops: TroopStock }) =>
+    apiRequest<RallyMutationResponse>("/api/game/rallies", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  joinRally: (rallyId: string, troops: TroopStock) =>
+    apiRequest<RallyMutationResponse>(`/api/game/rallies/${rallyId}/join`, {
+      method: "POST",
+      body: JSON.stringify({ troops }),
+    }),
+  launchRally: (rallyId: string) =>
+    apiRequest<RallyMutationResponse>(`/api/game/rallies/${rallyId}/launch`, {
       method: "POST",
     }),
   attack: (targetCityId: string) =>
@@ -128,6 +166,31 @@ export const api = {
       body: JSON.stringify({ targetCityId }),
     }),
   reports: () => apiRequest<BattleReportsResponse>("/api/game/reports"),
+  tasks: () => apiRequest<TasksResponse>("/api/game/tasks"),
+  claimTask: (taskId: string) =>
+    apiRequest<OkResponse>(`/api/game/tasks/${taskId}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ taskId }),
+    }),
+  inventory: () => apiRequest<InventoryResponse>("/api/game/inventory"),
+  useInventoryItem: (body: ItemUseRequest) =>
+    apiRequest<OkResponse>("/api/game/inventory/use", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  upgradeCommander: (commanderId: string) =>
+    apiRequest<{ commanders: GameStateResponse["city"]["commanders"] }>(`/api/game/commanders/${commanderId}/upgrade`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  mailbox: () => apiRequest<MailboxResponse>("/api/game/mailbox"),
+  claimMailbox: (mailboxId: string) =>
+    apiRequest<OkResponse>(`/api/game/mailbox/${mailboxId}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ mailboxId }),
+    }),
+  events: () => apiRequest<GameEventsResponse>("/api/game/events"),
+  leaderboard: (leaderboardId: string) => apiRequest<LeaderboardResponse>(`/api/game/leaderboards/${leaderboardId}`),
   allianceState: () => apiRequest<AllianceStateResponse>("/api/game/alliance"),
   createAlliance: (body: { name: string; tag: string; description?: string }) =>
     apiRequest<AllianceMutationResponse>("/api/game/alliances", {
@@ -146,6 +209,16 @@ export const api = {
     apiRequest<AllianceMutationResponse>("/api/game/alliance/chat", {
       method: "POST",
       body: JSON.stringify({ content }),
+    }),
+  updateAllianceAnnouncement: (content: string) =>
+    apiRequest<AllianceMutationResponse>("/api/game/alliance/announcement", {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
+  createAllianceMarker: (body: { label: string; x: number; y: number }) =>
+    apiRequest<AllianceMutationResponse>("/api/game/alliance/markers", {
+      method: "POST",
+      body: JSON.stringify(body),
     }),
   donateAllianceResources: (body: { wood: number; stone: number; food: number; gold: number }) =>
     apiRequest<AllianceMutationResponse>("/api/game/alliance/donate", {
@@ -168,6 +241,14 @@ export const api = {
     }),
   trackAnalytics: (body: AnalyticsEventRequest) =>
     apiRequest<OkResponse>("/api/game/analytics", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  storeCatalog: () => apiRequest<StoreCatalogResponse>("/api/store/catalog"),
+  storeOffers: () => apiRequest<{ offers: StoreCatalogResponse["catalog"]["offers"] }>("/api/store/offers"),
+  entitlements: () => apiRequest<EntitlementsResponse>("/api/store/entitlements"),
+  verifyPurchase: (body: PurchaseVerifyRequest) =>
+    apiRequest<PurchaseVerifyResponse>("/api/store/verify", {
       method: "POST",
       body: JSON.stringify(body),
     }),

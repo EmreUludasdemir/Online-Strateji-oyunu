@@ -8,6 +8,7 @@ import { getRealtimeAdapterDiagnostics } from "./lib/notifications";
 import { storeValidationPort } from "./lib/storeValidation";
 import { authRouter } from "./routes/auth";
 import { gameRouter } from "./routes/game";
+import { storeRouter } from "./routes/store";
 
 function getStatusClass(statusCode: number): string {
   return `${Math.floor(statusCode / 100)}xx`;
@@ -57,6 +58,16 @@ export function createApp() {
     response.json({ ok: true });
   });
 
+  app.get("/api/ops/health", (_request, response) => {
+    response.json({
+      ok: true,
+      realtime: getRealtimeAdapterDiagnostics(),
+      storeValidation: {
+        mode: storeValidationPort.mode,
+      },
+    });
+  });
+
   app.get("/api/ops/metrics", (request, response) => {
     if (!canAccessOps(request)) {
       throw new HttpError(403, "OPS_FORBIDDEN", "Metrics access is not allowed from this client.");
@@ -73,6 +84,7 @@ export function createApp() {
 
   app.use("/api/auth", authRouter);
   app.use("/api/game", gameRouter);
+  app.use("/api/store", storeRouter);
 
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
     const statusCode = error instanceof HttpError ? error.statusCode : 500;

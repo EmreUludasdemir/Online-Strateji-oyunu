@@ -1,0 +1,217 @@
+.button,
+.iconButton,
+.sectionCard,
+.resourcePill,
+.badge,
+.timerChip,
+.emptyState {
+  border: 1px solid var(--color-panel-edge);
+  box-shadow: var(--shadow-soft);
+}
+
+.button,
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  transition:
+    transform var(--motion-fast),
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    opacity var(--motion-fast);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled),
+.iconButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.button:disabled,
+.iconButton:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.button {
+  min-height: var(--touch-target);
+  padding: 0 1.1rem;
+  font-size: 0.98rem;
+}
+
+.primary {
+  background:
+    linear-gradient(180deg, rgba(226, 187, 114, 0.92), rgba(164, 111, 52, 0.95)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
+  color: #26140d;
+}
+
+.secondary {
+  background:
+    linear-gradient(180deg, rgba(76, 158, 160, 0.28), rgba(51, 32, 24, 0.92)),
+    linear-gradient(90deg, rgba(255, 244, 220, 0.03), transparent);
+  color: var(--color-ink-100);
+}
+
+.ghost {
+  background: rgba(255, 244, 220, 0.03);
+  color: var(--color-ink-100);
+}
+
+.danger {
+  background:
+    linear-gradient(180deg, rgba(212, 100, 79, 0.88), rgba(132, 53, 38, 0.94)),
+    linear-gradient(90deg, rgba(255, 244, 220, 0.04), transparent);
+  color: #fff8f4;
+}
+
+.small {
+  min-height: 40px;
+  padding: 0 0.95rem;
+  font-size: 0.88rem;
+}
+
+.large {
+  min-height: 54px;
+  padding: 0 1.35rem;
+}
+
+.iconButton {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: 0;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(76, 45, 27, 0.9), rgba(34, 19, 13, 0.95)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
+  color: var(--color-ink-100);
+}
+
+.badge,
+.timerChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 0.8rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-100);
+  background:
+    linear-gradient(180deg, rgba(81, 48, 30, 0.9), rgba(37, 21, 15, 0.96)),
+    linear-gradient(90deg, rgba(255, 244, 220, 0.05), transparent);
+}
+
+.badgeInfo {
+  border-color: rgba(75, 158, 160, 0.34);
+}
+
+.badgeSuccess {
+  border-color: rgba(65, 168, 119, 0.34);
+}
+
+.badgeWarning {
+  border-color: rgba(226, 187, 114, 0.34);
+}
+
+.badgeDanger {
+  border-color: rgba(212, 100, 79, 0.34);
+}
+
+.timerChip {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionCard,
+.resourcePill,
+.emptyState {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(87, 52, 34, 0.42), rgba(37, 21, 15, 0.92)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent 72%);
+}
+
+.sectionCard {
+  padding: 1.1rem;
+  border-radius: var(--radius-md);
+}
+
+.sectionCard::after,
+.resourcePill::after,
+.emptyState::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: inherit;
+  border: 1px solid var(--color-panel-line);
+  pointer-events: none;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.sectionKicker {
+  color: var(--color-gold-200);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.sectionTitle {
+  margin-top: 0.18rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.sectionBody {
+  color: var(--color-ink-200);
+}
+
+.resourcePill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border-radius: 22px;
+}
+
+.resourceLabel {
+  color: var(--color-ink-300);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.resourceValue {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyState {
+  padding: 1.2rem;
+  border-radius: var(--radius-md);
+  color: var(--color-ink-200);
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.emptyBody {
+  margin-top: 0.45rem;
+  color: var(--color-ink-300);
+}

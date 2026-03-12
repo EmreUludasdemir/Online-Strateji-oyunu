@@ -1,5 +1,7 @@
+import { DEFAULT_LOCALE } from "./i18n";
+
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(DEFAULT_LOCALE, {
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -15,8 +17,14 @@ export function formatRelativeTimer(isoTime: string, now: number): string {
 }
 
 export function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(DEFAULT_LOCALE, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+export function formatPercent(value: number): string {
+  return new Intl.NumberFormat(DEFAULT_LOCALE, {
+    maximumFractionDigits: 0,
+  }).format(value);
 }

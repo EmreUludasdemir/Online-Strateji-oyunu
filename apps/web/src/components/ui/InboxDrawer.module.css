@@ -1,0 +1,52 @@
+.list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.entry {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-panel-edge);
+  background:
+    linear-gradient(180deg, rgba(81, 48, 30, 0.44), rgba(32, 18, 13, 0.94)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.1), transparent 70%);
+}
+
+.entryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.entryTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.entryBody {
+  margin-top: 0.45rem;
+  color: var(--color-ink-200);
+}
+
+.meta {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: var(--color-ink-300);
+  font-size: 0.86rem;
+}
+
+.rewardList {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-ink-200);
+}
+
+.actionRow {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: flex-end;
+}

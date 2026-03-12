@@ -70,9 +70,24 @@ function useSocketNotifications(
           payload.type === "city.updated" ||
           payload.type === "upgrade.completed" ||
           payload.type === "training.completed" ||
-          payload.type === "research.completed"
+          payload.type === "research.completed" ||
+          payload.type === "inventory.updated" ||
+          payload.type === "commander.updated"
         ) {
           queryClient.invalidateQueries({ queryKey: ["game-state"] });
+        }
+
+        if (payload.type === "task.updated") {
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["events"] });
+        }
+
+        if (payload.type === "inventory.updated") {
+          queryClient.invalidateQueries({ queryKey: ["inventory"] });
+        }
+
+        if (payload.type === "commander.updated") {
+          queryClient.invalidateQueries({ queryKey: ["commanders"] });
         }
 
         if (
@@ -80,7 +95,8 @@ function useSocketNotifications(
           payload.type === "fog.updated" ||
           payload.type === "poi.updated" ||
           payload.type === "march.created" ||
-          payload.type === "march.updated"
+          payload.type === "march.updated" ||
+          payload.type === "rally.updated"
         ) {
           queryClient.invalidateQueries({ queryKey: ["world-chunk"] });
         }
@@ -89,6 +105,24 @@ function useSocketNotifications(
           queryClient.invalidateQueries({ queryKey: ["battle-reports"] });
           queryClient.invalidateQueries({ queryKey: ["game-state"] });
           queryClient.invalidateQueries({ queryKey: ["world-chunk"] });
+        }
+
+        if (payload.type === "mailbox.updated" || payload.type === "scout.completed") {
+          queryClient.invalidateQueries({ queryKey: ["mailbox"] });
+        }
+
+        if (payload.type === "rally.updated") {
+          queryClient.invalidateQueries({ queryKey: ["rallies"] });
+          queryClient.invalidateQueries({ queryKey: ["alliance-state"] });
+        }
+
+        if (payload.type === "store.updated") {
+          queryClient.invalidateQueries({ queryKey: ["store-catalog"] });
+          queryClient.invalidateQueries({ queryKey: ["entitlements"] });
+        }
+
+        if (payload.type === "event.updated" || payload.type === "leaderboard.updated") {
+          queryClient.invalidateQueries({ queryKey: ["events"] });
         }
 
         if (payload.type === "alliance.updated") {
@@ -105,6 +139,9 @@ function useSocketNotifications(
           onNotice("A research order completed at the academy.");
         }
         if (payload.type === "battle.resolved") onNotice("A march resolved on the frontier.");
+        if (payload.type === "scout.completed") onNotice("A scout returned with new intelligence.");
+        if (payload.type === "mailbox.updated") onNotice("New dispatches arrived in the imperial mailbox.");
+        if (payload.type === "rally.updated") onNotice("Alliance rally status changed.");
       });
     }, 300);
 

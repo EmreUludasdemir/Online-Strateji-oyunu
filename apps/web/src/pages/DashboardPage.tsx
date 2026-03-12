@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type BuildingType, type ResearchType, type TroopType } from "@frontier/shared";
 
+import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { trackAnalyticsOnce } from "../lib/analytics";
 import styles from "../components/GameLayout.module.css";
@@ -21,6 +23,7 @@ const BUILDING_STAMPS: Record<BuildingType, string> = {
 export function DashboardPage() {
   const now = useNow();
   const { state, upgrade, train, research, isUpgrading, isTraining, isResearching } = useGameLayoutContext();
+  const queryClient = useQueryClient();
   const [selectedTroopType, setSelectedTroopType] = useState<TroopType>("INFANTRY");
   const [trainingQuantity, setTrainingQuantity] = useState(12);
 
@@ -41,6 +44,73 @@ export function DashboardPage() {
         .sort((left, right) => left.level - right.level)[0] ?? null,
     [state.city.research],
   );
+  const tasksQuery = useQuery({
+    queryKey: ["tasks"],
+    queryFn: api.tasks,
+  });
+  const inventoryQuery = useQuery({
+    queryKey: ["inventory"],
+    queryFn: api.inventory,
+  });
+  const mailboxQuery = useQuery({
+    queryKey: ["mailbox"],
+    queryFn: api.mailbox,
+  });
+  const eventsQuery = useQuery({
+    queryKey: ["events"],
+    queryFn: api.events,
+  });
+  const storeCatalogQuery = useQuery({
+    queryKey: ["store-catalog"],
+    queryFn: api.storeCatalog,
+  });
+  const claimTaskMutation = useMutation({
+    mutationFn: (taskId: string) => api.claimTask(taskId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+        queryClient.invalidateQueries({ queryKey: ["mailbox"] }),
+        queryClient.invalidateQueries({ queryKey: ["events"] }),
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+      ]);
+    },
+  });
+  const useItemMutation = useMutation({
+    mutationFn: api.useInventoryItem,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+      ]);
+    },
+  });
+  const upgradeCommanderMutation = useMutation({
+    mutationFn: (commanderId: string) => api.upgradeCommander(commanderId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+        queryClient.invalidateQueries({ queryKey: ["commanders"] }),
+      ]);
+    },
+  });
+  const claimMailboxMutation = useMutation({
+    mutationFn: (mailboxId: string) => api.claimMailbox(mailboxId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["mailbox"] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+      ]);
+    },
+  });
+  const tutorialTasks = tasksQuery.data?.tutorial ?? [];
+  const dailyTasks = tasksQuery.data?.daily ?? [];
+  const inventoryItems = inventoryQuery.data?.items ?? [];
+  const mailboxEntries = mailboxQuery.data?.entries ?? [];
+  const seasonPass = eventsQuery.data?.seasonPass ?? null;
+  const liveEvents = eventsQuery.data?.events ?? [];
+  const storeOffers = storeCatalogQuery.data?.catalog.offers ?? [];
 
   useEffect(() => {
     trackAnalyticsOnce(`tutorial_started:${state.player.id}`, "tutorial_started", {
@@ -217,6 +287,173 @@ export function DashboardPage() {
           ) : (
             <p className={styles.buildingText}>Research queue is idle. Pick a doctrine lane to keep momentum.</p>
           )}
+        </article>
+      </section>
+
+      <section className={styles.cardGrid}>
+        <article className={styles.buildingCard}>
+          <div className={styles.buildingHeader}>
+            <div>
+              <p className={styles.sectionKicker}>Quests</p>
+              <h3>Tutorial and daily orders</h3>
+            </div>
+            <span className={styles.levelBadge}>{tasksQuery.data?.tutorialCompleted ? "sealed" : "active"}</span>
+          </div>
+          <div className={styles.cardStack}>
+            {[...tutorialTasks.slice(0, 3), ...dailyTasks.slice(0, 2)].map((task) => (
+              <button
+                key={task.id}
+                className={styles.subtleButton}
+                type="button"
+                disabled={task.isClaimed || !task.isCompleted || claimTaskMutation.isPending}
+                onClick={() => claimTaskMutation.mutate(task.id)}
+              >
+                <span>{task.title}</span>
+                <small>
+                  {task.progress}/{task.target}
+                  {task.isClaimed ? " claimed" : task.isCompleted ? " ready" : ""}
+                </small>
+              </button>
+            ))}
+          </div>
+          <p className={styles.buildingText}>
+            {tasksQuery.data
+              ? `${tutorialTasks.filter((task) => task.isClaimed).length}/${tutorialTasks.length || 1} tutorial objectives sealed.`
+              : "Task board is loading."}
+          </p>
+        </article>
+
+        <article className={styles.buildingCard}>
+          <div className={styles.buildingHeader}>
+            <div>
+              <p className={styles.sectionKicker}>Inventory</p>
+              <h3>Field items and accelerants</h3>
+            </div>
+            <span className={styles.levelBadge}>{inventoryItems.length} lots</span>
+          </div>
+          <div className={styles.cardStack}>
+            {inventoryItems.slice(0, 5).map((item) => (
+              <button
+                key={item.itemKey}
+                className={styles.subtleButton}
+                type="button"
+                disabled={useItemMutation.isPending}
+                onClick={() => useItemMutation.mutate({ itemKey: item.itemKey })}
+              >
+                <span>{item.label}</span>
+                <small>x{item.quantity}</small>
+              </button>
+            ))}
+          </div>
+          <p className={styles.buildingText}>
+            Resource chests, speedups and tomes can be used directly from the estate ledger.
+          </p>
+        </article>
+
+        <article className={styles.buildingCard}>
+          <div className={styles.buildingHeader}>
+            <div>
+              <p className={styles.sectionKicker}>Commander progression</p>
+              <h3>War council roster</h3>
+            </div>
+            <span className={styles.levelBadge}>{state.city.commanders.length} officers</span>
+          </div>
+          <div className={styles.cardStack}>
+            {state.city.commanders.slice(0, 4).map((commander) => (
+              <button
+                key={commander.id}
+                className={styles.subtleButton}
+                type="button"
+                disabled={upgradeCommanderMutation.isPending || commander.xp < commander.xpToNextLevel}
+                onClick={() => upgradeCommanderMutation.mutate(commander.id)}
+              >
+                <span>
+                  {commander.name} L{commander.level}
+                </span>
+                <small>
+                  XP {commander.xp}/{commander.xpToNextLevel} · stars {commander.starLevel}
+                </small>
+              </button>
+            ))}
+          </div>
+          <p className={styles.buildingText}>
+            Promotion costs gold but raises stars, talent depth and front-line pressure.
+          </p>
+        </article>
+      </section>
+
+      <section className={styles.cardGrid}>
+        <article className={styles.buildingCard}>
+          <div className={styles.buildingHeader}>
+            <div>
+              <p className={styles.sectionKicker}>Mailbox</p>
+              <h3>Imperial dispatches</h3>
+            </div>
+            <span className={styles.levelBadge}>{mailboxQuery.data?.unreadCount ?? 0} unread</span>
+          </div>
+          <div className={styles.cardStack}>
+            {mailboxEntries.slice(0, 4).map((entry) => (
+              <button
+                key={entry.id}
+                className={styles.subtleButton}
+                type="button"
+                disabled={!entry.canClaim || claimMailboxMutation.isPending}
+                onClick={() => entry.canClaim && claimMailboxMutation.mutate(entry.id)}
+              >
+                <span>{entry.title}</span>
+                <small>{entry.canClaim ? "claim reward" : entry.scoutReport ? "read report" : "archived"}</small>
+              </button>
+            ))}
+          </div>
+          <p className={styles.buildingText}>
+            Scout reports, season rewards and purchase grants now arrive through a single inbox.
+          </p>
+        </article>
+
+        <article className={styles.buildingCard}>
+          <div className={styles.buildingHeader}>
+            <div>
+              <p className={styles.sectionKicker}>Season table</p>
+              <h3>Live events and pass</h3>
+            </div>
+            <span className={styles.levelBadge}>{seasonPass?.xp ?? 0} xp</span>
+          </div>
+          <div className={styles.cardStack}>
+            {liveEvents.slice(0, 3).map((event) => (
+              <div key={event.eventKey} className={styles.subtleButton}>
+                <span>{event.label}</span>
+                <small>
+                  {event.score}/{event.target}
+                </small>
+              </div>
+            ))}
+          </div>
+          <p className={styles.buildingText}>
+            {seasonPass
+              ? `${seasonPass.tiers.filter((tier) => tier.claimedFree).length} free pass tiers are already unlocked.`
+              : "Season board is loading."}
+          </p>
+        </article>
+
+        <article className={styles.buildingCard}>
+          <div className={styles.buildingHeader}>
+            <div>
+              <p className={styles.sectionKicker}>Store caravan</p>
+              <h3>Rotating offers</h3>
+            </div>
+            <span className={styles.levelBadge}>{storeOffers.length} offers</span>
+          </div>
+          <div className={styles.cardStack}>
+            {storeOffers.slice(0, 3).map((offer) => (
+              <div key={offer.offerId} className={styles.subtleButton}>
+                <span>{offer.title}</span>
+                <small>{offer.productIds.length} products</small>
+              </div>
+            ))}
+          </div>
+          <p className={styles.buildingText}>
+            Offer rotation now reacts to player segments and exposed catalog state.
+          </p>
         </article>
       </section>
 

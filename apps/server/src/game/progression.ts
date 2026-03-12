@@ -9,6 +9,7 @@ import type {
   LeaderboardEntryView,
   MailboxEntryView,
   RewardBundleView,
+  ScoutReportView,
   TaskView,
 } from "@frontier/shared";
 import { type LiveEventKey, type ResourceStock } from "@frontier/shared";
@@ -57,7 +58,7 @@ function rewardToJson(reward: RewardBundleView | null): Prisma.InputJsonValue | 
     return undefined;
   }
 
-  return reward as Prisma.InputJsonValue;
+  return reward as unknown as Prisma.InputJsonValue;
 }
 
 function getCommanderBonusDelta(level: number, starLevel: number, talentTrack: CommanderTalentTrack, talentPoints: number) {
@@ -853,8 +854,8 @@ export async function getMailboxViewTx(tx: Prisma.TransactionClient, userId: str
             createdAt: entry.scoutReport.createdAt.toISOString(),
             title: entry.scoutReport.title,
             summary: entry.scoutReport.summary,
-            cityIntel: ((entry.scoutReport.payload as Record<string, unknown>).cityIntel ?? null) as MailboxEntryView["scoutReport"]["cityIntel"],
-            poiIntel: ((entry.scoutReport.payload as Record<string, unknown>).poiIntel ?? null) as MailboxEntryView["scoutReport"]["poiIntel"],
+            cityIntel: ((entry.scoutReport.payload as Record<string, unknown>).cityIntel ?? null) as ScoutReportView["cityIntel"],
+            poiIntel: ((entry.scoutReport.payload as Record<string, unknown>).poiIntel ?? null) as ScoutReportView["poiIntel"],
           }
         : null,
     })),

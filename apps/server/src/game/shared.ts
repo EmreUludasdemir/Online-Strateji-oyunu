@@ -28,6 +28,7 @@ import {
   type MapCity,
   type PoiView,
   type PoiResourceType,
+  type RallyView,
   type ReportEntryView,
   type ResearchType,
   type ResearchView,
@@ -208,6 +209,21 @@ export const mapPoiInclude = Prisma.validator<Prisma.MapPoiInclude>()({
   },
 });
 
+export const rallyInclude = Prisma.validator<Prisma.RallyInclude>()({
+  leaderUser: true,
+  commander: true,
+  targetCity: true,
+  targetPoi: true,
+  members: {
+    include: {
+      user: true,
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+  },
+});
+
 export const allianceStateInclude = Prisma.validator<Prisma.AllianceInclude>()({
   members: {
     include: {
@@ -274,6 +290,7 @@ export type MarchReportRecord = Prisma.MarchReportGetPayload<{ include: typeof m
 export type AllianceStateRecord = Prisma.AllianceGetPayload<{ include: typeof allianceStateInclude }>;
 export type MapPoiRecord = Prisma.MapPoiGetPayload<{ include: typeof mapPoiInclude }>;
 export type BattleWindowRecord = Prisma.BattleWindowGetPayload<{ include: typeof battleWindowInclude }>;
+export type RallyRecord = Prisma.RallyGetPayload<{ include: typeof rallyInclude }>;
 
 export function getResourceLedger(city: {
   wood: number;
@@ -889,6 +906,36 @@ export function mapPoiView(
       (poi.remainingAmount ?? 0) > 0,
     projectedOutcome,
     projectedLoad: getCarryCapacity(currentTroops, currentCommanderBonuses),
+  };
+}
+
+export function mapRallyView(rally: RallyRecord, now: Date = new Date()): RallyView {
+  return {
+    id: rally.id,
+    state: rally.state,
+    objective: rally.objective,
+    targetCityId: rally.targetCityId,
+    targetCityName: rally.targetCity?.name ?? null,
+    targetPoiId: rally.targetPoiId,
+    targetPoiName: rally.targetPoi?.label ?? null,
+    leaderUserId: rally.leaderUserId,
+    leaderName: rally.leaderUser.username,
+    leaderCommanderId: rally.commanderId,
+    leaderCommanderName: rally.commander.name,
+    supportBonusPct: Math.round(rally.supportBonusPct * 100),
+    launchAt: rally.launchAt.toISOString(),
+    remainingSeconds: Math.max(0, Math.ceil((rally.launchAt.getTime() - now.getTime()) / 1000)),
+    launchedMarchId: rally.launchedMarchId,
+    members: rally.members.map((member) => ({
+      userId: member.userId,
+      username: member.user.username,
+      pledgedTroops: {
+        INFANTRY: member.infantryCount,
+        ARCHER: member.archerCount,
+        CAVALRY: member.cavalryCount,
+      },
+      joinedAt: member.joinedAt.toISOString(),
+    })),
   };
 }
 

@@ -125,6 +125,7 @@ export type LiveEventKey = (typeof LIVE_EVENT_KEYS)[number];
 
 export const ANALYTICS_EVENT_TYPES = [
   "tutorial_started",
+  "tutorial_step_seen",
   "first_upgrade",
   "first_troop_train",
   "first_march",
@@ -139,6 +140,11 @@ export const ANALYTICS_EVENT_TYPES = [
   "rally_joined",
   "purchase_verified",
   "event_reward_claimed",
+  "hud_tab_opened",
+  "target_sheet_opened",
+  "march_confirmed",
+  "inbox_opened",
+  "store_opened",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

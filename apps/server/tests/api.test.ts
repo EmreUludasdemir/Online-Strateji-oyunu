@@ -646,4 +646,96 @@ describe("API smoke", () => {
       ),
     ).toBe(true);
   });
+
+  it("progresses tutorial tasks, resolves a scout report, and validates a sandbox purchase", async () => {
+    const app = createApp();
+    const actor = request.agent(app);
+    const defender = request.agent(app);
+
+    await actor.post("/api/auth/register").send({
+      username: "retention_actor",
+      password: "passphrase1",
+    });
+    await defender.post("/api/auth/register").send({
+      username: "retention_target",
+      password: "passphrase1",
+    });
+
+    const actorState = await actor.get("/api/game/state");
+    await actor.post("/api/game/buildings/FARM/upgrade");
+    await actor.post("/api/game/troops/train").send({
+      troopType: "INFANTRY",
+      quantity: 8,
+    });
+    await actor.post("/api/game/research/start").send({
+      researchType: "LOGISTICS",
+    });
+    await actor.post("/api/game/alliances").send({
+      name: "Retention League",
+      tag: "RLG",
+      description: "retention flow",
+    });
+
+    const tasksResponse = await actor.get("/api/game/tasks");
+    expect(tasksResponse.status).toBe(200);
+    const completedTask = tasksResponse.body.tutorial.find(
+      (task: { taskKey: string; isCompleted: boolean; isClaimed: boolean }) =>
+        task.taskKey === "tutorial_first_train" && task.isCompleted && !task.isClaimed,
+    );
+    expect(completedTask).toBeTruthy();
+
+    const claimResponse = await actor.post(`/api/game/tasks/${completedTask.id}/claim`).send({
+      taskId: completedTask.id,
+    });
+    expect(claimResponse.status).toBe(200);
+
+    const inventoryResponse = await actor.get("/api/game/inventory");
+    expect(inventoryResponse.status).toBe(200);
+    expect(
+      inventoryResponse.body.items.some(
+        (item: { itemKey: string; quantity: number }) => item.itemKey === "TRAINING_SPEEDUP_5M" && item.quantity > 0,
+      ),
+    ).toBe(true);
+
+    const useItemResponse = await actor.post("/api/game/inventory/use").send({
+      itemKey: "TRAINING_SPEEDUP_5M",
+      targetKind: "TRAINING",
+    });
+    expect(useItemResponse.status).toBe(200);
+
+    const defenderState = await defender.get("/api/game/state");
+    const scoutResponse = await actor.post("/api/game/scouts").send({
+      targetCityId: defenderState.body.city.cityId,
+    });
+    expect(scoutResponse.status).toBe(202);
+
+    await prisma.scoutMission.update({
+      where: { id: scoutResponse.body.scout.id },
+      data: {
+        etaAt: new Date(Date.now() - 1_000),
+      },
+    });
+
+    const mailboxResponse = await actor.get("/api/game/mailbox");
+    expect(mailboxResponse.status).toBe(200);
+    expect(
+      mailboxResponse.body.entries.some(
+        (entry: { scoutReport: { targetKind: string } | null }) => entry.scoutReport?.targetKind === "CITY",
+      ),
+    ).toBe(true);
+
+    const purchaseResponse = await actor.post("/api/store/verify").send({
+      platform: "GOOGLE_PLAY",
+      productId: "season_pass_premium",
+      purchaseToken: "sandbox:season_pass_premium:retention-actor",
+    });
+    expect(purchaseResponse.status).toBe(200);
+    expect(purchaseResponse.body.status).toBe("VALIDATED");
+    expect(
+      purchaseResponse.body.entitlements.some(
+        (entry: { entitlementKey: string }) => entry.entitlementKey === "season_pass_premium",
+      ),
+    ).toBe(true);
+    expect(actorState.status).toBe(200);
+  });
 });
