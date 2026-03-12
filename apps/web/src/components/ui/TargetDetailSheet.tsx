@@ -41,8 +41,8 @@ export function TargetDetailSheet({
   const title = target.kind === "CITY" ? target.city.cityName : target.poi.label;
   const subtitle =
     target.kind === "CITY"
-      ? `${target.city.ownerName} · ${target.city.x}, ${target.city.y}`
-      : `${target.poi.kind.replaceAll("_", " ")} · ${target.poi.x}, ${target.poi.y}`;
+      ? `${target.city.ownerName} | ${target.city.x}, ${target.city.y}`
+      : `${target.poi.kind.replaceAll("_", " ")} | ${target.poi.x}, ${target.poi.y}`;
 
   return (
     <BottomSheet
@@ -60,16 +60,20 @@ export function TargetDetailSheet({
             </Button>
           ) : null}
           <Button type="button" variant="primary" onClick={onProceed}>
-            İlerlet
+            Ilerle
           </Button>
         </>
       }
     >
-      <SectionCard kicker="Hedef özeti" title={title} aside={<Badge tone={projectedOutcome === "ATTACKER_WIN" ? "success" : "warning"}>{projectedOutcome === "ATTACKER_WIN" ? "Elverişli" : "Dirençli"}</Badge>}>
+      <SectionCard
+        kicker="Hedef ozeti"
+        title={title}
+        aside={<Badge tone={projectedOutcome === "ATTACKER_WIN" ? "success" : "warning"}>{projectedOutcome === "ATTACKER_WIN" ? "Elverisli" : "Direncli"}</Badge>}
+      >
         <p>{subtitle}</p>
         {target.kind === "CITY" ? (
           <div style={{ marginTop: "0.85rem", display: "grid", gap: "0.4rem" }}>
-            <span>Savunma gücü: {formatNumber(target.city.defensePower)}</span>
+            <span>Savunma gucu: {formatNumber(target.city.defensePower)}</span>
             <span>Mesafe: {target.city.distance != null ? `${formatNumber(target.city.distance)} kare` : "-"}</span>
             <span>Sis durumu: {target.city.fogState.toLowerCase()}</span>
           </div>

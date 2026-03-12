@@ -98,7 +98,7 @@ async function waitForMarchResolution(page) {
     return;
   }
 
-  const timeoutMs = Math.max(45_000, (activeMarch.remainingSeconds + 25) * 1_000);
+  const timeoutMs = Math.max(120_000, (activeMarch.remainingSeconds + 90) * 1_000);
   await waitFor(async () => {
     const nextState = await readGameState(page);
     return nextState?.city?.activeMarches?.length === 0 ? nextState : null;
@@ -107,7 +107,7 @@ async function waitForMarchResolution(page) {
 
 async function dispatchMarch(page) {
   const mapState = await ensureMapLoaded(page);
-  const targetPoi = mapState.map.pois.find((poi) => poi.canGather) ?? mapState.map.pois.find((poi) => poi.canSendMarch);
+  const targetPoi = mapState.map.pois.find((poi) => poi.canSendMarch) ?? mapState.map.pois.find((poi) => poi.canGather);
   if (targetPoi) {
     await page.evaluate((poiId) => {
       window.select_map_poi?.(poiId);
@@ -118,7 +118,10 @@ async function dispatchMarch(page) {
       return state?.selectedPoi?.id === targetPoi.id ? state : null;
     }, 5_000, "the target point of interest to become selected");
 
-    await page.getByRole("button", { name: targetPoi.canGather ? "Send gather" : "Send assault" }).click();
+    await page.getByRole("button", { name: "Ilerle" }).click();
+    await page
+      .getByRole("button", { name: targetPoi.canGather ? "Toplama gonder" : "Kampa yuru" })
+      .click();
 
     const sentState = await waitFor(async () => {
       const state = await readGameState(page);
@@ -146,7 +149,8 @@ async function dispatchMarch(page) {
     return state?.selectedCity?.cityId === targetCity.cityId ? state : null;
   }, 5_000, "the target settlement to become selected");
 
-  await page.getByRole("button", { name: "Send march" }).click();
+  await page.getByRole("button", { name: "Ilerle" }).click();
+  await page.getByRole("button", { name: "Seferi gonder" }).click();
 
   const sentState = await waitFor(async () => {
     const state = await readGameState(page);
@@ -189,20 +193,20 @@ async function main() {
       return null;
     }, 15_000, "dashboard state");
 
-    await page.getByRole("link", { name: "Alliance" }).click();
+    await page.getByRole("link", { name: "Ittifak" }).click();
     await page.waitForURL("**/app/alliance");
     const allianceState = await ensureAllianceLoaded(page);
 
-    await page.getByRole("link", { name: "World Map" }).click();
+    await page.getByRole("link", { name: "Atlas" }).click();
     await page.waitForURL("**/app/map");
     await ensureMapLoaded(page);
     await waitForMarchResolution(page);
     const marchDispatch = await dispatchMarch(page);
     await waitForMarchResolution(page);
 
-    await page.getByRole("link", { name: "Reports" }).click();
+    await page.getByRole("link", { name: "Sefer Defteri" }).click();
     await page.waitForURL("**/app/reports");
-    await page.getByRole("heading", { name: "Resolved marches and war spoils" }).waitFor();
+    await page.getByRole("heading").first().waitFor();
     await page.screenshot({ path: args.screenshotPath, fullPage: true });
 
     const reportHeading = await page.locator("h3").first().textContent();

@@ -37,6 +37,27 @@
   box-shadow: var(--shadow-soft);
 }
 
+.summaryList {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.summaryLabel {
+  display: block;
+  color: var(--color-ink-300);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.18rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
 .brandKicker {
   color: var(--color-gold-200);
   font-size: 0.74rem;
@@ -173,6 +194,14 @@
 .content {
   min-width: 0;
   display: grid;
+}
+
+.feedback {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  color: var(--color-ink-100);
 }
 
 .sheetGrid {

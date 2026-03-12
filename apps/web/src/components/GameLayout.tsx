@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AllianceStateResponse,
   BuildingType,
+  EntitlementsResponse,
   GameStateResponse,
   ResearchType,
+  StoreCatalogResponse,
   TroopStock,
   TroopType,
   WorldChunkResponse,
@@ -15,10 +17,31 @@ import { api, ApiClientError } from "../api";
 import type { CreateMarchPayload } from "../api";
 import { trackAnalyticsEvent, trackAnalyticsOnce } from "../lib/analytics";
 import { formatNumber } from "../lib/formatters";
-import styles from "./GameLayout.module.css";
+import { copy } from "../lib/i18n";
+import { getInvalidationKeys, getSocketToast, parseSocketEvent } from "../lib/socketEvents";
+import styles from "./GameLayoutShell.module.css";
+import { MobileBottomNav } from "./hud/MobileBottomNav";
+import { QuickActions } from "./hud/QuickActions";
+import { TopHud, type QueueSummaryItem } from "./hud/TopHud";
+import { Badge } from "./ui/Badge";
+import { BottomSheet } from "./ui/BottomSheet";
+import { Button } from "./ui/Button";
+import { InboxDrawer } from "./ui/InboxDrawer";
+import { SectionCard } from "./ui/SectionCard";
+import { ToastStack, type ToastItem } from "./ui/ToastStack";
+
+interface HudState {
+  activeRoute: "dashboard" | "map" | "reports" | "alliance";
+  queueItems: QueueSummaryItem[];
+}
 
 export interface GameLayoutContext {
   state: GameStateResponse;
+  hud: HudState;
+  notifications: {
+    unreadMailboxCount: number;
+    toastCount: number;
+  };
   selectedCityId: string | null;
   selectedPoiId: string | null;
   selectCity: (cityId: string | null) => void;
@@ -33,8 +56,9 @@ export interface GameLayoutContext {
   isResearching: boolean;
   isSendingMarch: boolean;
   isRecallingMarch: boolean;
-  notice: string | null;
-  clearNotice: () => void;
+  openInbox: () => void;
+  openStorePreview: () => void;
+  openCommanderPanel: (commanderId?: string) => void;
 }
 
 declare global {
@@ -46,11 +70,64 @@ declare global {
   }
 }
 
-function useSocketNotifications(
-  enabled: boolean,
-  analyticsUserId: string | null,
-  onNotice: (message: string) => void,
-): void {
+function getHudRoute(pathname: string): HudState["activeRoute"] {
+  if (pathname.includes("/map")) {
+    return "map";
+  }
+  if (pathname.includes("/reports")) {
+    return "reports";
+  }
+  if (pathname.includes("/alliance")) {
+    return "alliance";
+  }
+  return "dashboard";
+}
+
+function createQueueItems(state: GameStateResponse["city"]): QueueSummaryItem[] {
+  return [
+    state.activeUpgrade
+      ? {
+          id: "upgrade",
+          label: "Insa",
+          value: `L${state.activeUpgrade.toLevel}`,
+          hint: `${state.activeUpgrade.buildingType.replaceAll("_", " ")} calisiyor`,
+        }
+      : {
+          id: "upgrade",
+          label: "Insa",
+          value: "Bos",
+          hint: "Yeni yukseltme bekliyor",
+        },
+    state.activeTraining
+      ? {
+          id: "training",
+          label: "Kisla",
+          value: `${formatNumber(state.activeTraining.quantity)}`,
+          hint: `${state.activeTraining.troopType.toLowerCase()} talimi`,
+        }
+      : {
+          id: "training",
+          label: "Kisla",
+          value: "Hazir",
+          hint: "Yeni talim icin acik",
+        },
+    state.activeResearch
+      ? {
+          id: "research",
+          label: "Akademi",
+          value: `L${state.activeResearch.toLevel}`,
+          hint: state.activeResearch.researchType.replaceAll("_", " ").toLowerCase(),
+        }
+      : {
+          id: "research",
+          label: "Sefer",
+          value: formatNumber(state.openMarchCount),
+          hint: "Acik march sayisi",
+        },
+  ];
+}
+
+function useSocketNotifications(enabled: boolean, onToast: (toast: Omit<ToastItem, "id">) => void): void {
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -64,84 +141,24 @@ function useSocketNotifications(
       socket = new WebSocket(`${protocol}://${window.location.hostname}:3101/ws`);
 
       socket.addEventListener("message", (event) => {
-        const payload = JSON.parse(event.data) as { type: string };
-
-        if (
-          payload.type === "city.updated" ||
-          payload.type === "upgrade.completed" ||
-          payload.type === "training.completed" ||
-          payload.type === "research.completed" ||
-          payload.type === "inventory.updated" ||
-          payload.type === "commander.updated"
-        ) {
-          queryClient.invalidateQueries({ queryKey: ["game-state"] });
+        const parsed = parseSocketEvent(JSON.parse(event.data) as unknown);
+        if (!parsed) {
+          console.warn("Unknown socket event payload", event.data);
+          return;
         }
 
-        if (payload.type === "task.updated") {
-          queryClient.invalidateQueries({ queryKey: ["tasks"] });
-          queryClient.invalidateQueries({ queryKey: ["events"] });
+        for (const queryKey of getInvalidationKeys(parsed.type)) {
+          queryClient.invalidateQueries({ queryKey });
         }
 
-        if (payload.type === "inventory.updated") {
-          queryClient.invalidateQueries({ queryKey: ["inventory"] });
+        if (parsed.type === "research.completed") {
+          trackAnalyticsEvent("research_completed");
         }
 
-        if (payload.type === "commander.updated") {
-          queryClient.invalidateQueries({ queryKey: ["commanders"] });
+        const toast = getSocketToast(parsed.type);
+        if (toast) {
+          onToast(toast);
         }
-
-        if (
-          payload.type === "map.updated" ||
-          payload.type === "fog.updated" ||
-          payload.type === "poi.updated" ||
-          payload.type === "march.created" ||
-          payload.type === "march.updated" ||
-          payload.type === "rally.updated"
-        ) {
-          queryClient.invalidateQueries({ queryKey: ["world-chunk"] });
-        }
-
-        if (payload.type === "report.created" || payload.type === "battle.resolved") {
-          queryClient.invalidateQueries({ queryKey: ["battle-reports"] });
-          queryClient.invalidateQueries({ queryKey: ["game-state"] });
-          queryClient.invalidateQueries({ queryKey: ["world-chunk"] });
-        }
-
-        if (payload.type === "mailbox.updated" || payload.type === "scout.completed") {
-          queryClient.invalidateQueries({ queryKey: ["mailbox"] });
-        }
-
-        if (payload.type === "rally.updated") {
-          queryClient.invalidateQueries({ queryKey: ["rallies"] });
-          queryClient.invalidateQueries({ queryKey: ["alliance-state"] });
-        }
-
-        if (payload.type === "store.updated") {
-          queryClient.invalidateQueries({ queryKey: ["store-catalog"] });
-          queryClient.invalidateQueries({ queryKey: ["entitlements"] });
-        }
-
-        if (payload.type === "event.updated" || payload.type === "leaderboard.updated") {
-          queryClient.invalidateQueries({ queryKey: ["events"] });
-        }
-
-        if (payload.type === "alliance.updated") {
-          queryClient.invalidateQueries({ queryKey: ["alliance-state"] });
-          queryClient.invalidateQueries({ queryKey: ["game-state"] });
-        }
-
-        if (payload.type === "upgrade.completed") onNotice("A building upgrade completed.");
-        if (payload.type === "training.completed") onNotice("Fresh troops completed their drill cycle.");
-        if (payload.type === "research.completed") {
-          if (analyticsUserId) {
-            trackAnalyticsEvent("research_completed");
-          }
-          onNotice("A research order completed at the academy.");
-        }
-        if (payload.type === "battle.resolved") onNotice("A march resolved on the frontier.");
-        if (payload.type === "scout.completed") onNotice("A scout returned with new intelligence.");
-        if (payload.type === "mailbox.updated") onNotice("New dispatches arrived in the imperial mailbox.");
-        if (payload.type === "rally.updated") onNotice("Alliance rally status changed.");
       });
     }, 300);
 
@@ -149,7 +166,7 @@ function useSocketNotifications(
       window.clearTimeout(timer);
       socket?.close();
     };
-  }, [analyticsUserId, enabled, onNotice, queryClient]);
+  }, [enabled, onToast, queryClient]);
 }
 
 export function GameLayout() {
@@ -158,7 +175,18 @@ export function GameLayout() {
   const queryClient = useQueryClient();
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [storePreviewOpen, setStorePreviewOpen] = useState(false);
+  const [commanderPanelOpen, setCommanderPanelOpen] = useState(false);
+  const [commanderPanelId, setCommanderPanelId] = useState<string | null>(null);
+  const enqueueToast = useCallback((toast: Omit<ToastItem, "id">) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setToasts((current) => [...current.slice(-3), { id, ...toast }]);
+  }, []);
+  const dismissToast = useCallback((toastId: string) => {
+    setToasts((current) => current.filter((toast) => toast.id !== toastId));
+  }, []);
   const selectCity = useCallback((cityId: string | null) => {
     setSelectedCityId(cityId);
     setSelectedPoiId(null);
@@ -181,6 +209,24 @@ export function GameLayout() {
     refetchInterval: 10_000,
   });
 
+  const mailboxQuery = useQuery({
+    queryKey: ["mailbox"],
+    queryFn: api.mailbox,
+    enabled: Boolean(sessionQuery.data?.user),
+  });
+
+  const storeCatalogQuery = useQuery({
+    queryKey: ["store-catalog"],
+    queryFn: api.storeCatalog,
+    enabled: Boolean(sessionQuery.data?.user),
+  });
+
+  const entitlementsQuery = useQuery({
+    queryKey: ["entitlements"],
+    queryFn: api.entitlements,
+    enabled: Boolean(sessionQuery.data?.user),
+  });
+
   const logoutMutation = useMutation({
     mutationFn: api.logout,
     onSuccess: async () => {
@@ -198,7 +244,11 @@ export function GameLayout() {
           buildingType,
         });
       }
-      setNotice("Construction order accepted.");
+      enqueueToast({
+        tone: "success",
+        title: "Yukseltme basladi",
+        body: "Yeni insa emri sehir sirasina alindi.",
+      });
     },
   });
 
@@ -212,7 +262,11 @@ export function GameLayout() {
           quantity: payload.quantity,
         });
       }
-      setNotice("Training order posted to the barracks.");
+      enqueueToast({
+        tone: "success",
+        title: "Talim emri verildi",
+        body: "Kislada yeni birlikler kayda girdi.",
+      });
     },
   });
 
@@ -224,7 +278,11 @@ export function GameLayout() {
       trackAnalyticsEvent("research_started", {
         researchType: payload.researchType,
       });
-      setNotice("Research order accepted by the academy.");
+      enqueueToast({
+        tone: "info",
+        title: "Arastirma basladi",
+        body: "Akademi yeni doktrini isleme aldi.",
+      });
     },
   });
 
@@ -241,9 +299,17 @@ export function GameLayout() {
           targetType: "targetCityId" in payload ? "CITY" : "POI",
         });
       }
+      trackAnalyticsEvent("march_confirmed", {
+        objective: march.objective,
+        target: march.targetPoiName ?? march.targetCityName ?? "unknown",
+      });
       const targetName = march.targetPoiName ?? march.targetCityName ?? "target";
-      const missionLabel = march.objective === "RESOURCE_GATHER" ? "Gathering march" : "March";
-      setNotice(`${missionLabel} dispatched toward ${targetName}. ETA ${march.remainingSeconds}s.`);
+      const missionLabel = march.objective === "RESOURCE_GATHER" ? "Toplama seferi" : "Sefer";
+      enqueueToast({
+        tone: "info",
+        title: missionLabel,
+        body: `${targetName} icin cikis yapildi. ETA ${march.remainingSeconds}s.`,
+      });
     },
   });
 
@@ -254,15 +320,61 @@ export function GameLayout() {
         queryClient.invalidateQueries({ queryKey: ["game-state"] }),
         queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
       ]);
-      setNotice("March recalled to the city.");
+      enqueueToast({
+        tone: "warning",
+        title: "Sefer geri cagrildi",
+        body: "Birlikler sehre donus yoluna girdi.",
+      });
     },
   });
 
-  const handleNotice = useCallback((message: string) => {
-    setNotice(message);
+  const upgradeCommanderMutation = useMutation({
+    mutationFn: (commanderId: string) => api.upgradeCommander(commanderId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+        queryClient.invalidateQueries({ queryKey: ["commanders"] }),
+      ]);
+      enqueueToast({
+        tone: "success",
+        title: "Komutan terfi etti",
+        body: "Harp meclisi kayitlari yenilendi.",
+      });
+    },
+  });
+
+  const claimMailboxMutation = useMutation({
+    mutationFn: (mailboxId: string) => api.claimMailbox(mailboxId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["mailbox"] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+      ]);
+      enqueueToast({
+        tone: "success",
+        title: "Ulak odulu alindi",
+        body: "Kaynaklar ve haklar yenilendi.",
+      });
+    },
+  });
+
+  useSocketNotifications(Boolean(stateQuery.data), enqueueToast);
+
+  const openInbox = useCallback(() => {
+    setInboxOpen(true);
+    trackAnalyticsEvent("inbox_opened");
   }, []);
 
-  useSocketNotifications(Boolean(stateQuery.data), stateQuery.data?.player.id ?? null, handleNotice);
+  const openStorePreview = useCallback(() => {
+    setStorePreviewOpen(true);
+    trackAnalyticsEvent("store_opened");
+  }, []);
+
+  const openCommanderPanel = useCallback((commanderId?: string) => {
+    setCommanderPanelId(commanderId ?? null);
+    setCommanderPanelOpen(true);
+  }, []);
 
   const contextValue = useMemo<GameLayoutContext | null>(() => {
     if (!stateQuery.data) {
@@ -271,6 +383,14 @@ export function GameLayout() {
 
     return {
       state: stateQuery.data,
+      hud: {
+        activeRoute: getHudRoute(location.pathname),
+        queueItems: createQueueItems(stateQuery.data.city),
+      },
+      notifications: {
+        unreadMailboxCount: mailboxQuery.data?.unreadCount ?? 0,
+        toastCount: toasts.length,
+      },
       selectedCityId,
       selectedPoiId,
       selectCity,
@@ -295,12 +415,17 @@ export function GameLayout() {
       isResearching: researchMutation.isPending,
       isSendingMarch: marchMutation.isPending,
       isRecallingMarch: recallMutation.isPending,
-      notice,
-      clearNotice: () => setNotice(null),
+      openInbox,
+      openStorePreview,
+      openCommanderPanel,
     };
   }, [
+    location.pathname,
+    mailboxQuery.data?.unreadCount,
     marchMutation,
-    notice,
+    openCommanderPanel,
+    openInbox,
+    openStorePreview,
     recallMutation,
     researchMutation,
     selectCity,
@@ -308,6 +433,7 @@ export function GameLayout() {
     selectedCityId,
     selectedPoiId,
     stateQuery.data,
+    toasts.length,
     trainMutation,
     upgradeMutation,
   ]);
@@ -318,7 +444,11 @@ export function GameLayout() {
     }
 
     window.render_game_to_text = () => {
-      const worldChunk = queryClient.getQueryData<WorldChunkResponse>(["world-chunk"]);
+      const worldChunk =
+        queryClient
+          .getQueriesData<WorldChunkResponse>({ queryKey: ["world-chunk"] })
+          .map(([, payload]) => payload)
+          .find(Boolean) ?? null;
       const allianceState = queryClient.getQueryData<AllianceStateResponse>(["alliance-state"]);
       const selectedCity = worldChunk?.cities.find((city) => city.cityId === selectedCityId) ?? null;
       const selectedPoi = worldChunk?.pois.find((poi) => poi.id === selectedPoiId) ?? null;
@@ -430,8 +560,14 @@ export function GameLayout() {
     };
   }, [location.pathname, queryClient, selectCity, selectPoi, selectedCityId, selectedPoiId, stateQuery.data]);
 
+  useEffect(() => {
+    trackAnalyticsEvent("hud_tab_opened", {
+      tab: getHudRoute(location.pathname),
+    });
+  }, [location.pathname]);
+
   if (sessionQuery.isError) {
-    return <div className={styles.feedback}>Unable to restore the current session.</div>;
+    return <div className={styles.feedback}>Oturum geri yuklenemedi.</div>;
   }
 
   if (sessionQuery.data && !sessionQuery.data.user) {
@@ -444,90 +580,231 @@ export function GameLayout() {
       return <Navigate to="/login" replace />;
     }
 
-    return <div className={styles.feedback}>Unable to load the game state.</div>;
+    return <div className={styles.feedback}>Oyun durumu yuklenemedi.</div>;
   }
 
   if (sessionQuery.isPending || stateQuery.isPending) {
-    return <div className={styles.feedback}>Loading frontier state...</div>;
+    return <div className={styles.feedback}>Hud aciliyor...</div>;
   }
 
   if (!contextValue) {
-    return <div className={styles.feedback}>Loading frontier state...</div>;
+    return <div className={styles.feedback}>Hud aciliyor...</div>;
   }
+
+  const resources = [
+    { label: "Odun", value: contextValue.state.city.resources.wood },
+    { label: "Tas", value: contextValue.state.city.resources.stone },
+    { label: "Yemek", value: contextValue.state.city.resources.food },
+    { label: "Altin", value: contextValue.state.city.resources.gold },
+  ];
+  const mailboxEntries = mailboxQuery.data?.entries ?? [];
+  const storeCatalog = storeCatalogQuery.data?.catalog;
+  const entitlements = entitlementsQuery.data?.entitlements ?? [];
+  const allianceLabel = contextValue.state.alliance
+    ? `[${contextValue.state.alliance.tag}] ${contextValue.state.alliance.name}`
+    : "Bagimsiz sancak";
+  const commanders = contextValue.state.city.commanders;
+  const focusedCommander =
+    commanders.find((commander) => commander.id === commanderPanelId) ?? commanders[0] ?? null;
 
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div>
-          <p className={styles.brandKicker}>Imperial Divan</p>
+        <div className={styles.brandCard}>
+          <p className={styles.brandKicker}>Frontier Dominion</p>
           <h1 className={styles.brandTitle}>{contextValue.state.city.cityName}</h1>
-          <p className={styles.brandMeta}>Governor {contextValue.state.player.username}</p>
-          <p className={styles.brandMeta}>Watch range {formatNumber(contextValue.state.city.visionRadius)} tiles</p>
+          <p className={styles.brandMeta}>Vali {contextValue.state.player.username}</p>
+          <p className={styles.brandMeta}>{allianceLabel}</p>
         </div>
 
         <nav className={styles.nav}>
           <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            Divan
+            {copy.hud.dashboard}
           </NavLink>
           <NavLink to="/app/map" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            Atlas
+            {copy.hud.map}
           </NavLink>
           <NavLink to="/app/reports" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            Ledger
+            {copy.hud.reports}
           </NavLink>
           <NavLink to="/app/alliance" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            Alliance
+            {copy.hud.alliance}
           </NavLink>
         </nav>
 
-        <div className={styles.sidebarSummary}>
-          <span>Open marches</span>
-          <strong>{formatNumber(contextValue.state.city.openMarchCount)}</strong>
+        <div className={styles.summaryCard}>
+          <p className={styles.brandKicker}>Hud ozeti</p>
+          <div className={styles.summaryList}>
+            <div>
+              <span className={styles.summaryLabel}>Gorus</span>
+              <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.visionRadius)} kare</strong>
+            </div>
+            <div>
+              <span className={styles.summaryLabel}>Sefer</span>
+              <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.openMarchCount)}</strong>
+            </div>
+            <div>
+              <span className={styles.summaryLabel}>Ulak</span>
+              <strong className={styles.summaryValue}>{formatNumber(mailboxQuery.data?.unreadCount ?? 0)} yeni</strong>
+            </div>
+          </div>
         </div>
 
-        <button className={styles.logoutButton} type="button" onClick={() => logoutMutation.mutate()}>
-          Log out
-        </button>
+        <div className={styles.sidebarFooter}>
+          <Button type="button" variant="ghost" onClick={() => logoutMutation.mutate()}>
+            Cikis yap
+          </Button>
+        </div>
       </aside>
 
       <div className={styles.main}>
-        <header className={styles.resourceBar}>
-          {Object.entries(contextValue.state.city.resources).map(([key, value]) => (
-            <div key={key} className={styles.resourcePill} data-resource={key}>
-              <span>{key}</span>
-              <strong>{formatNumber(value)}</strong>
+        <TopHud
+          resources={resources}
+          queueItems={contextValue.hud.queueItems}
+          meta={
+            <div className={styles.summaryCard}>
+              <p className={styles.brandKicker}>Muharebe cizgisi</p>
+              <div className={styles.summaryList}>
+                <div>
+                  <span className={styles.summaryLabel}>Saldiri</span>
+                  <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.attackPower)}</strong>
+                </div>
+                <div>
+                  <span className={styles.summaryLabel}>Savunma</span>
+                  <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.defensePower)}</strong>
+                </div>
+              </div>
             </div>
-          ))}
-        </header>
-
-        {contextValue.notice ? (
-          <div className={styles.notice} role="status">
-            <span>{contextValue.notice}</span>
-            <button type="button" onClick={contextValue.clearNotice}>
-              Seal
-            </button>
-          </div>
-        ) : null}
+          }
+          actions={
+            <QuickActions
+              onInbox={openInbox}
+              onStore={openStorePreview}
+              onCommander={() => openCommanderPanel()}
+            />
+          }
+        />
 
         <main className={styles.content}>
           <Outlet context={contextValue} />
         </main>
 
-        <nav className={styles.mobileNav}>
-          <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
-            Divan
-          </NavLink>
-          <NavLink to="/app/map" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
-            Atlas
-          </NavLink>
-          <NavLink to="/app/reports" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
-            Ledger
-          </NavLink>
-          <NavLink to="/app/alliance" className={({ isActive }) => (isActive ? styles.mobileNavLinkActive : styles.mobileNavLink)}>
-            Alliance
-          </NavLink>
-        </nav>
+        <MobileBottomNav />
       </div>
+
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+      <InboxDrawer
+        open={inboxOpen}
+        entries={mailboxEntries}
+        unreadCount={mailboxQuery.data?.unreadCount ?? 0}
+        onClaim={(mailboxId) => claimMailboxMutation.mutate(mailboxId)}
+        onClose={() => setInboxOpen(false)}
+      />
+
+      <BottomSheet
+        open={commanderPanelOpen}
+        title="Harp meclisi"
+        mode="aside"
+        onClose={() => setCommanderPanelOpen(false)}
+      >
+        <div className={styles.sheetGrid}>
+          {focusedCommander ? (
+            <SectionCard
+              kicker="Secili komutan"
+              title={`${focusedCommander.name} L${focusedCommander.level}`}
+              aside={<Badge tone="warning">{focusedCommander.starLevel} yildiz</Badge>}
+            >
+              <div className={styles.sheetList}>
+                <div className={styles.sheetRow}>
+                  <span className={styles.sheetMeta}>XP</span>
+                  <strong>{formatNumber(focusedCommander.xp)} / {formatNumber(focusedCommander.xpToNextLevel)}</strong>
+                </div>
+                <div className={styles.sheetRow}>
+                  <span className={styles.sheetMeta}>Yetenek hatti</span>
+                  <strong>{focusedCommander.talentTrack.toLowerCase()}</strong>
+                </div>
+              </div>
+            </SectionCard>
+          ) : null}
+          {commanders.map((commander) => (
+            <SectionCard
+              key={commander.id}
+              kicker={commander.isPrimary ? "Ana komutan" : "Hazir subay"}
+              title={`${commander.name} L${commander.level}`}
+              aside={<Badge tone="info">{commander.talentTrack.toLowerCase()}</Badge>}
+            >
+              <div className={styles.sheetRow}>
+                <span className={styles.sheetMeta}>
+                  XP {formatNumber(commander.xp)}/{formatNumber(commander.xpToNextLevel)}
+                </span>
+                <Button type="button" variant="secondary" size="small" onClick={() => setCommanderPanelId(commander.id)}>
+                  Detay
+                </Button>
+              </div>
+              <div className={styles.sheetRow}>
+                <span className={styles.sheetMeta}>
+                  +{commander.attackBonusPct}% atk | +{commander.defenseBonusPct}% def
+                </span>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="small"
+                  disabled={upgradeCommanderMutation.isPending || commander.xp < commander.xpToNextLevel}
+                  onClick={() => upgradeCommanderMutation.mutate(commander.id)}
+                >
+                  Terfi et
+                </Button>
+              </div>
+            </SectionCard>
+          ))}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        open={storePreviewOpen}
+        title={copy.store.title}
+        mode="aside"
+        onClose={() => setStorePreviewOpen(false)}
+      >
+        <div className={styles.sheetGrid}>
+          <SectionCard
+            kicker="Teklifler"
+            title={copy.store.offers}
+            aside={<Badge tone="warning">{formatNumber(storeCatalog?.offers.length ?? 0)}</Badge>}
+          >
+            <div className={styles.sheetList}>
+              {(storeCatalog?.offers ?? []).slice(0, 4).map((offer) => (
+                <div key={offer.offerId} className={styles.sheetRow}>
+                  <div>
+                    <strong>{offer.title}</strong>
+                    <p className={styles.sheetMeta}>{offer.description}</p>
+                  </div>
+                  <Badge tone="info">{offer.productIds.length} urun</Badge>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+          <SectionCard
+            kicker="Haklar"
+            title={copy.store.entitlements}
+            aside={<Badge tone="success">{formatNumber(entitlements.length)}</Badge>}
+          >
+            <div className={styles.sheetList}>
+              {entitlements.length === 0 ? (
+                <p className={styles.sheetMeta}>Bu dalgada yalnizca katalog gorunumu acik.</p>
+              ) : (
+                entitlements.slice(0, 5).map((entitlement) => (
+                  <div key={entitlement.id} className={styles.sheetRow}>
+                    <strong>{entitlement.productId}</strong>
+                    <Badge tone="info">{entitlement.status.toLowerCase()}</Badge>
+                  </div>
+                ))
+              )}
+            </div>
+          </SectionCard>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

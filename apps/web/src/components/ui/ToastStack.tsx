@@ -39,7 +39,7 @@ export function ToastStack({
           <div className={styles.header}>
             <strong className={styles.title}>{toast.title}</strong>
             <button className={styles.dismiss} type="button" onClick={() => onDismiss(toast.id)} aria-label="Bildirimi kapat">
-              ×
+              x
             </button>
           </div>
           <p className={styles.body}>{toast.body}</p>

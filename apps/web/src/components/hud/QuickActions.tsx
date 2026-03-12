@@ -13,13 +13,13 @@ export function QuickActions({
   return (
     <>
       <IconButton type="button" aria-label={copy.hud.openInbox} onClick={onInbox}>
-        ✉
+        UL
       </IconButton>
       <IconButton type="button" aria-label={copy.hud.openStore} onClick={onStore}>
-        ₴
+        KV
       </IconButton>
       <IconButton type="button" aria-label={copy.hud.openCommander} onClick={onCommander}>
-        ⚔
+        KM
       </IconButton>
     </>
   );

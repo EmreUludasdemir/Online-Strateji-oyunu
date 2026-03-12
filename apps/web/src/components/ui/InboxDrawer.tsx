@@ -16,14 +16,10 @@ function renderRewardLines(entry: MailboxEntryView): string[] {
   const lines: string[] = [];
   const totalResources = Object.entries(entry.reward.resources).filter(([, value]) => value > 0);
   if (totalResources.length > 0) {
-    lines.push(
-      totalResources
-        .map(([resource, amount]) => `${resource}: ${formatNumber(amount)}`)
-        .join(" · "),
-    );
+    lines.push(totalResources.map(([resource, amount]) => `${resource}: ${formatNumber(amount)}`).join(" | "));
   }
   if (entry.reward.items.length > 0) {
-    lines.push(entry.reward.items.map((item) => `${item.itemKey} x${item.quantity}`).join(" · "));
+    lines.push(entry.reward.items.map((item) => `${item.itemKey} x${item.quantity}`).join(" | "));
   }
   if (entry.reward.commanderXp > 0) {
     lines.push(`Komutan XP: ${formatNumber(entry.reward.commanderXp)}`);
@@ -50,7 +46,7 @@ export function InboxDrawer({
   return (
     <BottomSheet
       open={open}
-      title={`${copy.mailbox.title} · ${formatNumber(unreadCount)} ${copy.hud.unread}`}
+      title={`${copy.mailbox.title} | ${formatNumber(unreadCount)} ${copy.hud.unread}`}
       onClose={onClose}
       mode="aside"
     >
@@ -65,12 +61,12 @@ export function InboxDrawer({
                   <strong className={styles.entryTitle}>{entry.title}</strong>
                   <p className={styles.entryBody}>{entry.body}</p>
                 </div>
-                <Badge tone={entry.claimedAt ? "info" : "warning"}>{entry.claimedAt ? "Arşiv" : "Yeni"}</Badge>
+                <Badge tone={entry.claimedAt ? "info" : "warning"}>{entry.claimedAt ? "Arsiv" : "Yeni"}</Badge>
               </div>
               <div className={styles.meta}>
                 <span>{formatDateTime(entry.createdAt)}</span>
                 <span>{entry.kind.replaceAll("_", " ").toLowerCase()}</span>
-                {entry.scoutReport ? <span>keşif raporu</span> : null}
+                {entry.scoutReport ? <span>kesif raporu</span> : null}
               </div>
               {renderRewardLines(entry).length > 0 ? (
                 <div className={styles.rewardList}>

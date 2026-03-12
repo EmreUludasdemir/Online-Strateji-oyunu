@@ -1,4 +1,28 @@
-import { SOCKET_EVENT_TYPES, type SocketEventType } from "@frontier/shared";
+import type { SocketEventType } from "@frontier/shared";
+
+const SOCKET_EVENT_TYPES: SocketEventType[] = [
+  "city.updated",
+  "upgrade.completed",
+  "training.completed",
+  "research.completed",
+  "march.created",
+  "march.updated",
+  "battle.resolved",
+  "report.created",
+  "fog.updated",
+  "poi.updated",
+  "map.updated",
+  "alliance.updated",
+  "task.updated",
+  "inventory.updated",
+  "commander.updated",
+  "scout.completed",
+  "rally.updated",
+  "mailbox.updated",
+  "store.updated",
+  "event.updated",
+  "leaderboard.updated",
+];
 
 export interface ParsedSocketEvent {
   type: SocketEventType;
@@ -78,44 +102,44 @@ export function getSocketToast(type: SocketEventType): SocketToastDescriptor | n
     case "upgrade.completed":
       return {
         tone: "success",
-        title: "İnşa tamamlandı",
-        body: "Yeni bölge yükseltmesi divanda kullanıma açıldı.",
+        title: "Insa tamamlandi",
+        body: "Yeni bolge yukseltmesi divanda kullanima acildi.",
       };
     case "training.completed":
       return {
         tone: "success",
         title: "Talim bitti",
-        body: "Kışladan yeni birlikler çıktı.",
+        body: "Kisladan yeni birlikler cikti.",
       };
     case "research.completed":
       return {
         tone: "info",
-        title: "Araştırma tamamlandı",
+        title: "Arastirma tamamlandi",
         body: "Akademi yeni doktrini kaydetti.",
       };
     case "battle.resolved":
       return {
         tone: "warning",
-        title: "Sefer çözüldü",
-        body: "Sınırda bir çatışma sonucu raporlara işlendi.",
+        title: "Sefer cozuldu",
+        body: "Sinirda bir catisma sonucu raporlara islendi.",
       };
     case "scout.completed":
       return {
         tone: "info",
-        title: "Keşif döndü",
-        body: "Ulak kutusuna yeni bir keşif raporu geldi.",
+        title: "Kesif dondu",
+        body: "Ulak kutusuna yeni bir kesif raporu geldi.",
       };
     case "mailbox.updated":
       return {
         tone: "info",
-        title: "Yeni ulak kaydı",
-        body: "Ödül veya rapor bekliyor.",
+        title: "Yeni ulak kaydi",
+        body: "Odul veya rapor bekliyor.",
       };
     case "rally.updated":
       return {
         tone: "warning",
-        title: "Ralli durumu güncellendi",
-        body: "İttifak sefer penceresi değişti.",
+        title: "Ralli durumu guncellendi",
+        body: "Ittifak sefer penceresi degisti.",
       };
     default:
       return null;

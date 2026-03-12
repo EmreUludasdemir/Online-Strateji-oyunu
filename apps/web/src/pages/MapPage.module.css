@@ -1,0 +1,134 @@
+.page,
+.summaryGrid,
+.rail,
+.chipRow,
+.detailList,
+.marchList,
+.composerGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.hero,
+.mapFrame,
+.targetCard,
+.marchCard,
+.summaryCard {
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(87, 52, 34, 0.45), rgba(28, 16, 11, 0.96)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.1), transparent 72%);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero,
+.mapFrame {
+  padding: 1rem;
+}
+
+.heroTop,
+.chipRow,
+.targetMeta,
+.marchMeta,
+.actionRow,
+.composerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.heroTitle,
+.sectionTitle {
+  font-family: var(--font-display);
+}
+
+.heroLead,
+.muted,
+.targetMeta,
+.marchMeta {
+  color: var(--color-ink-200);
+}
+
+.summaryGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summaryCard {
+  padding: 0.9rem;
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.mapFrame {
+  position: relative;
+}
+
+.controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 4;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rail {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.targetCard,
+.marchCard {
+  padding: 0.9rem;
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.chipRow button {
+  min-height: 44px;
+}
+
+.composerGrid {
+  margin-top: 0.85rem;
+}
+
+.sliderRow {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sliderRow label {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--color-ink-200);
+}
+
+.sliderRow input,
+.composerRow select {
+  width: 100%;
+}
+
+.composerRow select {
+  min-height: var(--touch-target);
+  padding: 0 0.9rem;
+  border-radius: 18px;
+  border: 1px solid var(--color-panel-edge);
+  background: rgba(25, 14, 10, 0.82);
+  color: var(--color-ink-100);
+}
+
+@media (max-width: 768px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
