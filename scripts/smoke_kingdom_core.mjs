@@ -105,8 +105,19 @@ async function waitForMarchResolution(page) {
   }, timeoutMs, "the active march to resolve");
 }
 
+async function waitForScoutInbox(page, targetName) {
+  const title = `Scout report: ${targetName}`;
+  await page.getByRole("button", { name: "Open Inbox" }).click();
+  await waitFor(async () => {
+    const titleMatch = await page.getByText(title, { exact: true }).count();
+    return titleMatch > 0 ? title : null;
+  }, 60_000, `a scout report for ${targetName}`);
+  return title;
+}
+
 async function dispatchMarch(page) {
   const mapState = await ensureMapLoaded(page);
+  const totalTroops = mapState.city.troops.reduce((sum, troop) => sum + troop.quantity, 0);
   const targetPoi = mapState.map.pois.find((poi) => poi.canSendMarch) ?? mapState.map.pois.find((poi) => poi.canGather);
   if (targetPoi) {
     await page.evaluate((poiId) => {
@@ -118,10 +129,19 @@ async function dispatchMarch(page) {
       return state?.selectedPoi?.id === targetPoi.id ? state : null;
     }, 5_000, "the target point of interest to become selected");
 
+    if (totalTroops <= 0) {
+      await page.getByRole("button", { name: "Send Scout" }).first().click();
+      await page.getByLabel("Scout Mission").getByRole("button", { name: "Send Scout" }).click();
+      return {
+        mission: "SCOUT",
+        targetName: targetPoi.label,
+        march: null,
+      };
+    }
+
     await page.getByRole("button", { name: "Proceed" }).click();
-    await page
-      .getByRole("button", { name: targetPoi.canGather ? "Start Gathering" : "March to Camp" })
-      .click();
+    const actionName = targetPoi.canGather ? "Start Gathering" : "March to Camp";
+    await page.getByRole("button", { name: actionName }).click();
 
     const sentState = await waitFor(async () => {
       const state = await readGameState(page);
@@ -148,6 +168,16 @@ async function dispatchMarch(page) {
     const state = await readGameState(page);
     return state?.selectedCity?.cityId === targetCity.cityId ? state : null;
   }, 5_000, "the target settlement to become selected");
+
+  if (totalTroops <= 0) {
+    await page.getByRole("button", { name: "Send Scout" }).first().click();
+    await page.getByLabel("Scout Mission").getByRole("button", { name: "Send Scout" }).click();
+    return {
+      mission: "SCOUT",
+      targetName: targetCity.cityName,
+      march: null,
+    };
+  }
 
   await page.getByRole("button", { name: "Proceed" }).click();
   await page.getByRole("button", { name: "Send March" }).click();
@@ -202,16 +232,22 @@ async function main() {
     await ensureMapLoaded(page);
     await waitForMarchResolution(page);
     const marchDispatch = await dispatchMarch(page);
-    await waitForMarchResolution(page);
+    let resultHeading;
 
-    await page.getByRole("link", { name: "Reports" }).click();
-    await page.waitForURL("**/app/reports");
-    await page.getByRole("heading").first().waitFor();
-    await page.screenshot({ path: args.screenshotPath, fullPage: true });
+    if (marchDispatch.mission === "SCOUT") {
+      resultHeading = await waitForScoutInbox(page, marchDispatch.targetName);
+      await page.screenshot({ path: args.screenshotPath, fullPage: true });
+    } else {
+      await waitForMarchResolution(page);
+      await page.getByRole("link", { name: "Reports" }).click();
+      await page.waitForURL("**/app/reports");
+      await page.getByRole("heading").first().waitFor();
+      await page.screenshot({ path: args.screenshotPath, fullPage: true });
 
-    const reportHeading = await page.locator("h3").first().textContent();
-    if (!reportHeading) {
-      throw new Error("No report heading was rendered after the march resolved.");
+      resultHeading = await page.locator("h3").first().textContent();
+      if (!resultHeading) {
+        throw new Error("No report heading was rendered after the march resolved.");
+      }
     }
 
     if (consoleErrors.length > 0) {
@@ -227,7 +263,7 @@ async function main() {
           alliance: `${allianceState.alliance.tag}:${allianceState.alliance.memberCount}`,
           mission: marchDispatch.mission,
           marchTarget: marchDispatch.targetName,
-          reportHeading,
+          resultHeading,
         },
         null,
         2,

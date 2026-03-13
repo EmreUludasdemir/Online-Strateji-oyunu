@@ -19,6 +19,7 @@ import { trackAnalyticsEvent, trackAnalyticsOnce } from "../lib/analytics";
 import { formatNumber } from "../lib/formatters";
 import { copy } from "../lib/i18n";
 import { getInvalidationKeys, getSocketToast, parseSocketEvent } from "../lib/socketEvents";
+import type { ActiveMapChunkMeta, MapCameraState } from "./worldMapShared";
 import styles from "./GameLayoutShell.module.css";
 import { MobileBottomNav } from "./hud/MobileBottomNav";
 import { QuickActions } from "./hud/QuickActions";
@@ -67,6 +68,8 @@ declare global {
     advanceTime?: (ms: number) => void;
     select_map_city?: (cityId: string | null) => void;
     select_map_poi?: (poiId: string | null) => void;
+    frontierMapCamera?: MapCameraState | null;
+    frontierActiveChunk?: ActiveMapChunkMeta | null;
   }
 }
 
@@ -444,14 +447,26 @@ export function GameLayout() {
     }
 
     window.render_game_to_text = () => {
+      const cachedChunks = queryClient
+        .getQueriesData<WorldChunkResponse>({ queryKey: ["world-chunk"] })
+        .map(([, payload]) => payload)
+        .filter((payload): payload is WorldChunkResponse => Boolean(payload));
+      const activeChunkMeta = window.frontierActiveChunk ?? null;
       const worldChunk =
-        queryClient
-          .getQueriesData<WorldChunkResponse>({ queryKey: ["world-chunk"] })
-          .map(([, payload]) => payload)
-          .find(Boolean) ?? null;
+        (activeChunkMeta
+          ? cachedChunks.find(
+              (chunk) =>
+                chunk.center.x === activeChunkMeta.centerTileX &&
+                chunk.center.y === activeChunkMeta.centerTileY &&
+                chunk.radius === activeChunkMeta.radius,
+            )
+          : null) ??
+        cachedChunks.at(-1) ??
+        null;
       const allianceState = queryClient.getQueryData<AllianceStateResponse>(["alliance-state"]);
       const selectedCity = worldChunk?.cities.find((city) => city.cityId === selectedCityId) ?? null;
       const selectedPoi = worldChunk?.pois.find((poi) => poi.id === selectedPoiId) ?? null;
+      const cameraView = window.frontierMapCamera ?? null;
 
       return JSON.stringify({
         screen: location.pathname,
@@ -491,7 +506,9 @@ export function GameLayout() {
         selectedPoi,
         map: {
           loaded: Boolean(worldChunk),
+          camera: cameraView,
           center: worldChunk?.center,
+          radius: worldChunk?.radius ?? null,
           tiles: {
             visible: worldChunk?.tiles.filter((tile) => tile.state === "VISIBLE").length ?? 0,
             discovered: worldChunk?.tiles.filter((tile) => tile.state !== "HIDDEN").length ?? 0,

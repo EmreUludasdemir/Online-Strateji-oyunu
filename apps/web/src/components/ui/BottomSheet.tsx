@@ -88,7 +88,7 @@ export function BottomSheet({
 
   return (
     <>
-      <button className={styles.overlay} type="button" aria-label="Katmani kapat" onClick={onClose} />
+      <button className={styles.overlay} type="button" aria-label="Close layer" onClick={onClose} />
       <div
         ref={sheetRef}
         className={[styles.sheet, mode === "aside" ? styles.desktopAside : ""].filter(Boolean).join(" ")}
@@ -101,7 +101,7 @@ export function BottomSheet({
           <h2 id={labelId} className={styles.title}>
             {title}
           </h2>
-          <button className={styles.close} type="button" onClick={onClose} aria-label="Kapat">
+          <button className={styles.close} type="button" onClick={onClose} aria-label="Close">
             x
           </button>
         </header>

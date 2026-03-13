@@ -268,6 +268,9 @@ export async function getWorldChunk(
       pois: visiblePois,
       marches,
     };
+  }, {
+    maxWait: 10_000,
+    timeout: 15_000,
   });
 }
 
