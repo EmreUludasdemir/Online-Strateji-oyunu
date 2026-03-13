@@ -75,6 +75,7 @@ interface AnimatedMarchEntity {
   stagingRing: Phaser.GameObjects.Arc;
   gatherSpinner: Phaser.GameObjects.Arc;
   lastPhase: AnimatedMarchPhase;
+  lastTrailAt: number;
 }
 
 interface ScoutTrailEntity {
@@ -95,6 +96,7 @@ interface ScoutTrailEntity {
   startedAtMs: number;
   durationMs: number;
   arrived: boolean;
+  lastTrailAt: number;
 }
 
 interface DragState {
@@ -551,17 +553,38 @@ class FrontierMapScene extends Phaser.Scene {
 
       const aura = this.add.circle(point.x, point.y, 34, baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
       this.objectLayer.add(aura);
+      this.addAmbientPulse(aura, {
+        minScale: 0.96,
+        maxScale: poi.kind === "BARBARIAN_CAMP" ? 1.18 : 1.1,
+        minAlpha: poi.state === "ACTIVE" ? 0.08 : 0.04,
+        maxAlpha: poi.state === "ACTIVE" ? 0.2 : 0.1,
+        duration: 1800 + (hashCoordinate(poi.x, poi.y) % 5) * 220,
+      });
 
       if (poi.kind === "BARBARIAN_CAMP") {
         const fortOuter = this.add.rectangle(point.x, point.y, 44, 44, baseColor, poi.state === "ACTIVE" ? 0.95 : 0.55).setAngle(45);
         const fortInner = this.add.rectangle(point.x, point.y, 18, 18, 0x2a130e, 0.78).setAngle(45);
         fortOuter.setStrokeStyle(selected ? 4 : 2, selected ? 0xf4d79c : 0xf7edd9, 0.95);
         this.objectLayer.add([fortOuter, fortInner]);
+        this.addAmbientPulse(fortOuter, {
+          minScale: 0.98,
+          maxScale: selected ? 1.09 : 1.04,
+          minAlpha: poi.state === "ACTIVE" ? 0.74 : 0.42,
+          maxAlpha: poi.state === "ACTIVE" ? 0.96 : 0.62,
+          duration: 2000 + (hashCoordinate(poi.x + 7, poi.y) % 5) * 180,
+        });
       } else {
         const marker = this.add.circle(point.x, point.y, 18, baseColor, poi.state === "ACTIVE" ? 0.96 : 0.62);
         const core = this.add.circle(point.x, point.y, 8, 0x1b100b, 0.65);
         marker.setStrokeStyle(selected ? 4 : 2, selected ? 0xf4d79c : 0xf7edd9, 0.95);
         this.objectLayer.add([marker, core]);
+        this.addAmbientPulse(marker, {
+          minScale: 0.98,
+          maxScale: selected ? 1.08 : 1.04,
+          minAlpha: poi.state === "ACTIVE" ? 0.8 : 0.45,
+          maxAlpha: poi.state === "ACTIVE" ? 0.98 : 0.66,
+          duration: 1700 + (hashCoordinate(poi.x, poi.y + 9) % 5) * 200,
+        });
       }
 
       if (showLabels) {
@@ -583,6 +606,7 @@ class FrontierMapScene extends Phaser.Scene {
           })
           .setOrigin(0.5, 0);
         this.uiLayer.add(label);
+        this.addLabelFloat(label, point.y + 26, hashCoordinate(poi.x, poi.y));
       }
     }
 
@@ -605,6 +629,20 @@ class FrontierMapScene extends Phaser.Scene {
       marker.setStrokeStyle(selected ? 4 : 2, selected ? 0xf4d79c : 0xf7edd9, 0.95);
 
       this.objectLayer.add([aura, marker, core]);
+      this.addAmbientPulse(aura, {
+        minScale: 0.96,
+        maxScale: city.isCurrentPlayer ? 1.2 : 1.12,
+        minAlpha: city.isCurrentPlayer ? 0.1 : 0.06,
+        maxAlpha: city.isCurrentPlayer ? 0.22 : 0.16,
+        duration: 2100 + (hashCoordinate(city.x, city.y) % 5) * 180,
+      });
+      this.addAmbientPulse(marker, {
+        minScale: 0.99,
+        maxScale: selected ? 1.08 : 1.04,
+        minAlpha: 0.84,
+        maxAlpha: 1,
+        duration: 1700 + (hashCoordinate(city.x + 11, city.y) % 5) * 160,
+      });
 
       if (showLabels) {
         const label = this.add
@@ -618,6 +656,7 @@ class FrontierMapScene extends Phaser.Scene {
           })
           .setOrigin(0.5, 1);
         this.uiLayer.add(label);
+        this.addLabelFloat(label, point.y - 30, hashCoordinate(city.x, city.y));
 
         if (showNearDetail && city.stagedMarchCount > 0) {
           const staging = this.add
@@ -787,6 +826,7 @@ class FrontierMapScene extends Phaser.Scene {
         stagingRing,
         gatherSpinner,
         lastPhase: getAnimatedPhase(march),
+        lastTrailAt: 0,
       };
       this.marchEntities.set(march.id, entity);
 
@@ -844,6 +884,7 @@ class FrontierMapScene extends Phaser.Scene {
         startedAtMs: Date.parse(trail.startedAt),
         durationMs: trail.durationMs,
         arrived: false,
+        lastTrailAt: 0,
       });
 
       this.spawnPulse(from.x, from.y, 0x7dd3fc, 18);
@@ -946,6 +987,10 @@ class FrontierMapScene extends Phaser.Scene {
         entity.gatherSpinner.rotation += 0.08;
         entity.gatherSpinner.setAlpha(0.86);
       }
+      if ((phase === "moving" || phase === "returning") && this.time.now - entity.lastTrailAt > 130) {
+        entity.lastTrailAt = this.time.now;
+        this.spawnTrailDust(point.x, point.y, getMarchColor(march.objective), direction + Math.PI);
+      }
 
       entity.lastPhase = phase;
     }
@@ -976,6 +1021,11 @@ class FrontierMapScene extends Phaser.Scene {
       if (progress >= 1 && !entity.arrived) {
         entity.arrived = true;
         this.spawnPulse(entity.to.x, entity.to.y, 0xfacc15, 16);
+      }
+
+      if (progress < 1 && this.time.now - entity.lastTrailAt > 120) {
+        entity.lastTrailAt = this.time.now;
+        this.spawnTrailDust(point.x, point.y, 0x7dd3fc, direction + Math.PI, 0.55);
       }
     }
   }
@@ -1016,6 +1066,62 @@ class FrontierMapScene extends Phaser.Scene {
       duration: 420,
       ease: "Sine.easeOut",
       onComplete: () => pulse.destroy(),
+    });
+  }
+
+  private spawnTrailDust(x: number, y: number, color: number, angle: number, scale = 0.8) {
+    if (!this.fxLayer) {
+      return;
+    }
+
+    const offsetX = Math.cos(angle) * Phaser.Math.Between(8, 18);
+    const offsetY = Math.sin(angle) * Phaser.Math.Between(8, 18);
+    const dust = this.add.circle(x + offsetX, y + offsetY, Phaser.Math.FloatBetween(3, 6) * scale, color, 0.3);
+    this.fxLayer.add(dust);
+    this.tweens.add({
+      targets: dust,
+      x: dust.x + Math.cos(angle) * Phaser.Math.Between(12, 22),
+      y: dust.y + Math.sin(angle) * Phaser.Math.Between(12, 22),
+      scale: 1.8,
+      alpha: 0,
+      duration: 320,
+      ease: "Sine.easeOut",
+      onComplete: () => dust.destroy(),
+    });
+  }
+
+  private addAmbientPulse(
+    target: Phaser.GameObjects.Shape,
+    options: {
+      minScale: number;
+      maxScale: number;
+      minAlpha: number;
+      maxAlpha: number;
+      duration: number;
+    },
+  ) {
+    target.setScale(options.minScale);
+    target.setAlpha(options.maxAlpha);
+    this.tweens.add({
+      targets: target,
+      scale: { from: options.minScale, to: options.maxScale },
+      alpha: { from: options.maxAlpha, to: options.minAlpha },
+      duration: options.duration,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  private addLabelFloat(label: Phaser.GameObjects.Text, baseY: number, hash: number) {
+    this.tweens.add({
+      targets: label,
+      y: { from: baseY, to: baseY - 4 },
+      alpha: { from: 0.92, to: 1 },
+      duration: 1800 + (hash % 6) * 150,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: -1,
     });
   }
 

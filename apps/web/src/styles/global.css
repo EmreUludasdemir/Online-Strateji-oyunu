@@ -46,12 +46,14 @@ body::before {
     repeating-linear-gradient(135deg, rgba(255, 244, 217, 0.015) 0 2px, transparent 2px 18px),
     repeating-radial-gradient(circle at center, rgba(255, 244, 217, 0.012) 0 1px, transparent 1px 32px);
   opacity: 0.54;
+  animation: ambientDrift 18s ease-in-out infinite alternate;
 }
 
 body::after {
   background:
     radial-gradient(circle at 50% 50%, transparent 56%, rgba(13, 8, 6, 0.42) 100%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%, rgba(0, 0, 0, 0.1));
+  animation: ambientPulse 12s ease-in-out infinite;
 }
 
 button,
@@ -100,6 +102,17 @@ a {
   from {
     opacity: 0;
     transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
   }
   to {
     opacity: 1;
@@ -180,9 +193,72 @@ a {
   50%        { transform: translateY(-5px); }
 }
 
+@keyframes ambientDrift {
+  0% {
+    transform: translate3d(-1%, -1%, 0) scale(1);
+    opacity: 0.44;
+  }
+  50% {
+    transform: translate3d(1%, 0.5%, 0) scale(1.02);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(0.5%, 1%, 0) scale(1.04);
+    opacity: 0.5;
+  }
+}
+
+@keyframes ambientPulse {
+  0%, 100% {
+    opacity: 0.92;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.88); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes liftIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes softBob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes sheenSweep {
+  from {
+    transform: translateX(-140%) skewX(-20deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.22;
+  }
+  100% {
+    transform: translateX(180%) skewX(-20deg);
+    opacity: 0;
+  }
 }
 
 @keyframes spinSlow {
@@ -198,4 +274,15 @@ a {
 @keyframes progressBar {
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }

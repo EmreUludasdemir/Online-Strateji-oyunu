@@ -24,6 +24,7 @@
   background:
     linear-gradient(180deg, rgba(48, 26, 18, 0.98), rgba(23, 13, 10, 0.99)),
     repeating-linear-gradient(180deg, rgba(255, 244, 220, 0.02) 0 1px, transparent 1px 7px);
+  animation: fadeSlideDown 420ms var(--motion-smooth) both;
 }
 
 .brandCard,
@@ -111,7 +112,29 @@
   transition:
     transform var(--motion-fast),
     border-color var(--motion-fast),
-    background var(--motion-fast);
+    background var(--motion-fast),
+    box-shadow var(--motion-fast);
+  animation: fadeSlideUp 420ms var(--motion-smooth) both;
+}
+
+.navLink:nth-child(1),
+.navLinkActive:nth-child(1) {
+  animation-delay: 60ms;
+}
+
+.navLink:nth-child(2),
+.navLinkActive:nth-child(2) {
+  animation-delay: 110ms;
+}
+
+.navLink:nth-child(3),
+.navLinkActive:nth-child(3) {
+  animation-delay: 160ms;
+}
+
+.navLink:nth-child(4),
+.navLinkActive:nth-child(4) {
+  animation-delay: 210ms;
 }
 
 .navLink {
@@ -142,6 +165,7 @@
   grid-template-rows: auto auto 1fr;
   gap: 1rem;
   padding: 1.2rem 1.2rem 1.8rem;
+  animation: fadeIn 320ms ease both;
 }
 
 .topHud {
@@ -156,6 +180,22 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.7rem;
+}
+
+.resourceRow > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.resourceRow > *:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.resourceRow > *:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.resourceRow > *:nth-child(4) {
+  animation-delay: 190ms;
 }
 
 .metaRow {
@@ -189,12 +229,15 @@
   box-shadow: var(--shadow-soft);
   transition:
     border-color var(--motion-base),
-    box-shadow var(--motion-base);
+    box-shadow var(--motion-base),
+    transform var(--motion-smooth);
+  animation: liftIn 440ms var(--motion-smooth) both;
 }
 
 .queueCard:hover {
   border-color: rgba(244, 215, 156, 0.24);
   box-shadow: var(--shadow-soft), 0 0 18px rgba(75, 158, 160, 0.12);
+  transform: translateY(-2px);
 }
 
 /* Queue card pulses when value is not "Idle" / "Ready" */
@@ -329,6 +372,7 @@
       linear-gradient(180deg, rgba(48, 26, 18, 0.98), rgba(23, 13, 10, 0.99)),
       linear-gradient(90deg, rgba(75, 158, 160, 0.1), transparent);
     box-shadow: var(--shadow-heavy);
+    animation: slideUp 380ms var(--motion-smooth) both;
   }
 
   .mobileLink,
@@ -346,5 +390,6 @@
   .mobileLinkActive {
     background: rgba(226, 187, 114, 0.18);
     border-color: rgba(244, 215, 156, 0.28);
+    animation: pulseGold 2.8s ease-in-out infinite;
   }
 }

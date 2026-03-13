@@ -27,6 +27,7 @@
   transition:
     border-color var(--motion-base),
     box-shadow var(--motion-base);
+  animation: liftIn 420ms var(--motion-smooth) both;
 }
 
 .mapFrame {
@@ -34,7 +35,7 @@
 }
 
 .targetCard {
-  animation: fadeSlideUp 280ms var(--motion-smooth) both;
+  animation: liftIn 360ms var(--motion-smooth) both;
 }
 
 .targetCard:hover,
@@ -89,6 +90,29 @@
 
 .summaryCard {
   padding: 0.9rem;
+}
+
+.summaryGrid > :nth-child(1),
+.rail > :nth-child(1),
+.marchList > :nth-child(1) {
+  animation-delay: 50ms;
+}
+
+.summaryGrid > :nth-child(2),
+.rail > :nth-child(2),
+.marchList > :nth-child(2) {
+  animation-delay: 100ms;
+}
+
+.summaryGrid > :nth-child(3),
+.rail > :nth-child(3),
+.marchList > :nth-child(3) {
+  animation-delay: 150ms;
+}
+
+.rail > :nth-child(4),
+.marchList > :nth-child(4) {
+  animation-delay: 200ms;
 }
 
 .summaryValue {
