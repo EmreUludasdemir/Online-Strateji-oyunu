@@ -9,3 +9,51 @@
 [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
 [2m14:21:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx[22m
 [2m14:21:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx[22m
+[2m14:36:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx, /src/pages/DashboardPage.tsx, /src/components/GameLayout.tsx, /src/components/ui/TimerChip.tsx, /src/components/ui/InboxDrawer.tsx, /src/components/ui/ResourcePill.tsx, /src/pages/AlliancePage.tsx, /src/pages/MapPage.tsx, /src/components/ui/TargetDetailSheet.tsx, /src/pages/ReportsPage.tsx, /src/components/hud/QuickActions.tsx, /src/components/hud/MobileBottomNav.tsx[22m
+[2m14:37:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TargetDetailSheet.tsx[22m
+[2m14:37:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx[22m
+[2m14:37:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/InboxDrawer.tsx[22m
+[2m14:39:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx[22m
+[2m14:41:03[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
+[2m14:42:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m
+[2m14:43:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/ReportsPage.tsx[22m
+[2m14:48:11[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx[22m
+[2m14:50:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/AlliancePage.tsx[22m
+[2m15:05:52[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m15:06:15[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m15:06:47[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/IconButton.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/EmptyState.tsx[22m
+[2m15:06:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/IconButton.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/EmptyState.tsx[22m
+[2m15:07:07[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/IconButton.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/EmptyState.tsx[22m
+[2m15:07:16[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/IconButton.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/EmptyState.tsx[22m
+[2m15:07:26[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/IconButton.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/EmptyState.tsx[22m
+[2m15:07:33[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/IconButton.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/EmptyState.tsx[22m
+[2m15:07:44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/IconButton.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/EmptyState.tsx[22m
+[2m15:08:10[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx, /src/components/hud/TopHud.tsx, /src/components/hud/MobileBottomNav.tsx[22m
+[2m15:08:10[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m15:08:10[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/AlliancePage.tsx, /src/pages/MapPage.tsx, /src/pages/ReportsPage.tsx[22m
+[2m15:08:21[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx, /src/components/hud/TopHud.tsx, /src/components/hud/MobileBottomNav.tsx[22m
+[2m15:08:21[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m15:08:21[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/AlliancePage.tsx, /src/pages/MapPage.tsx, /src/pages/ReportsPage.tsx[22m
+[2m15:08:35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx, /src/components/hud/TopHud.tsx, /src/components/hud/MobileBottomNav.tsx[22m
+[2m15:08:35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m15:08:35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/AlliancePage.tsx, /src/pages/MapPage.tsx, /src/pages/ReportsPage.tsx[22m
+[2m15:08:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx, /src/components/hud/TopHud.tsx, /src/components/hud/MobileBottomNav.tsx[22m
+[2m15:08:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m15:08:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/AlliancePage.tsx, /src/pages/MapPage.tsx, /src/pages/ReportsPage.tsx[22m
+[2m15:09:12[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/GameLayout.tsx, /src/components/hud/TopHud.tsx, /src/components/hud/MobileBottomNav.tsx[22m
+[2m15:09:12[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/components/GameLayout.tsx[22m Could not Fast Refresh ("useGameLayoutContext" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m15:09:12[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/pages/DashboardPage.tsx, /src/pages/AlliancePage.tsx, /src/pages/MapPage.tsx, /src/pages/ReportsPage.tsx[22m
+[2m15:09:31[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
+[2m15:09:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
+[2m15:09:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
+[2m15:10:10[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
+[2m15:10:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/BottomSheet.tsx[22m
+[2m15:10:55[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/BottomSheet.tsx[22m
+[2m15:11:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/BottomSheet.tsx[22m
+[2m15:11:23[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/BottomSheet.tsx[22m
+[2m15:11:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/ToastStack.tsx[22m
+[2m15:12:43[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx[22m
+[2m15:12:53[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx[22m
+[2m15:13:01[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx[22m
+[2m15:13:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m
+[2m15:13:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m

@@ -27,6 +27,7 @@
   justify-content: center;
   gap: 1.25rem;
   color: #fbf1df;
+  animation: fadeSlideUp 560ms var(--motion-smooth) both;
 }
 
 .hero::before {
@@ -144,6 +145,7 @@
     repeating-linear-gradient(135deg, rgba(92, 58, 37, 0.025) 0 2px, transparent 2px 14px);
   box-shadow: 0 24px 80px rgba(20, 10, 7, 0.34);
   color: #392113;
+  animation: scaleIn 440ms var(--motion-spring) both;
 }
 
 .card::before {
@@ -236,7 +238,16 @@
 
 .submitButton:hover:not(:disabled),
 .demoButton:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 226, 0.44),
+    0 16px 36px rgba(118, 67, 29, 0.32),
+    0 0 28px rgba(212, 170, 93, 0.22);
+}
+
+.submitButton:active:not(:disabled),
+.demoButton:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
 }
 
 .submitButton:disabled,

@@ -35,6 +35,11 @@
     linear-gradient(180deg, rgba(81, 48, 30, 0.44), rgba(32, 18, 13, 0.94)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.1), transparent 72%);
   box-shadow: var(--shadow-soft);
+  animation: fadeSlideUp 480ms var(--motion-smooth) both;
+}
+
+.summaryCard {
+  animation-delay: 80ms;
 }
 
 .summaryList {
@@ -70,6 +75,17 @@
   font-family: var(--font-display);
   font-size: clamp(2rem, 2.8vw, 2.7rem);
   line-height: 0.92;
+  background: linear-gradient(
+    90deg,
+    var(--color-ink-100) 20%,
+    var(--color-gold-200) 50%,
+    var(--color-ink-100) 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textShimmer 5s linear infinite;
 }
 
 .brandMeta {
@@ -110,7 +126,8 @@
     linear-gradient(180deg, rgba(226, 187, 114, 0.34), rgba(69, 39, 24, 0.92)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent);
   border-color: rgba(244, 215, 156, 0.34);
-  transform: translateX(2px);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-soft), inset 3px 0 0 rgba(226, 187, 114, 0.6);
 }
 
 .sidebarFooter {
@@ -170,6 +187,19 @@
     linear-gradient(180deg, rgba(81, 48, 30, 0.42), rgba(29, 16, 11, 0.95)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent 75%);
   box-shadow: var(--shadow-soft);
+  transition:
+    border-color var(--motion-base),
+    box-shadow var(--motion-base);
+}
+
+.queueCard:hover {
+  border-color: rgba(244, 215, 156, 0.24);
+  box-shadow: var(--shadow-soft), 0 0 18px rgba(75, 158, 160, 0.12);
+}
+
+/* Queue card pulses when value is not "Idle" / "Ready" */
+.queueCard:has(.queueValue:not(:empty)) {
+  animation: pulseTeal 3.5s ease-in-out infinite;
 }
 
 .queueLabel {
@@ -194,6 +224,7 @@
 .content {
   min-width: 0;
   display: grid;
+  animation: fadeSlideUp var(--motion-slow) var(--motion-smooth) both;
 }
 
 .feedback {

@@ -47,3 +47,5 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
 - 2026-03-13: Re-ran corepack pnpm --filter @frontier/web build, corepack pnpm --filter @frontier/web test, and corepack pnpm smoke:e2e; all passed with the updated English labels and selectors.
 - Note: The latest smoke screenshot shows the refreshed HUD in English; the Reports route still transitions through a visible loading state during capture, but the smoke flow resolved successfully and rendered an English report heading.
 
+- 2026-03-13: Confirmed the live local game is reachable at http://localhost:5173/login. Verified demo login with demo_alpha in a browser session and loaded the refreshed English dashboard/HUD successfully.
+

@@ -4,6 +4,7 @@
   z-index: var(--z-overlay);
   background: var(--color-overlay);
   backdrop-filter: blur(8px);
+  animation: fadeIn 200ms ease both;
 }
 
 .sheet {
@@ -22,6 +23,7 @@
   box-shadow: var(--shadow-heavy);
   display: grid;
   grid-template-rows: auto 1fr auto;
+  animation: slideUp 320ms var(--motion-smooth) both;
 }
 
 .header {
@@ -63,7 +65,9 @@
   height: 6px;
   margin: 0.75rem auto 0;
   border-radius: 999px;
-  background: rgba(255, 244, 220, 0.18);
+  background: linear-gradient(90deg, rgba(226, 187, 114, 0.3), rgba(255, 244, 220, 0.18), rgba(226, 187, 114, 0.3));
+  background-size: 200% auto;
+  animation: shimmerSlide 3s linear infinite;
 }
 
 .desktopAside {
@@ -75,6 +79,7 @@
   max-height: none;
   transform: none;
   border-radius: 28px;
+  animation: slideInRight 320ms var(--motion-smooth) both;
 }
 
 @media (max-width: 768px) {

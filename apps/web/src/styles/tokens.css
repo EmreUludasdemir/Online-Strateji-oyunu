@@ -59,4 +59,12 @@
   --z-toast: 60;
   --motion-fast: 140ms ease;
   --motion-base: 220ms ease;
+  --motion-slow: 460ms ease;
+  --motion-spring: 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-smooth: 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  --glow-gold: 0 0 18px rgba(226, 187, 114, 0.32), 0 0 52px rgba(226, 187, 114, 0.1);
+  --glow-teal: 0 0 18px rgba(75, 158, 160, 0.32), 0 0 52px rgba(75, 158, 160, 0.1);
+  --glow-danger: 0 0 18px rgba(212, 100, 79, 0.32), 0 0 52px rgba(212, 100, 79, 0.1);
+  --glow-success: 0 0 18px rgba(65, 168, 119, 0.32), 0 0 52px rgba(65, 168, 119, 0.1);
 }

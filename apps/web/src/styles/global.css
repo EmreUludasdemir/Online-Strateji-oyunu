@@ -93,3 +93,109 @@ a {
   background: rgba(226, 187, 114, 0.28);
   color: #fff9ef;
 }
+
+/* ─── Keyframe Animasyonları ─────────────────────────────────────────── */
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmerSlide {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+@keyframes pulseGold {
+  0%,  100% { box-shadow: var(--shadow-soft); }
+  50%        { box-shadow: var(--shadow-soft), var(--glow-gold); }
+}
+
+@keyframes pulseTeal {
+  0%,  100% { box-shadow: var(--shadow-soft); }
+  50%        { box-shadow: var(--shadow-soft), var(--glow-teal); }
+}
+
+@keyframes pulseSuccess {
+  0%,  100% { box-shadow: var(--shadow-soft); }
+  50%        { box-shadow: var(--shadow-soft), var(--glow-success); }
+}
+
+@keyframes pulseDanger {
+  0%,  100% { box-shadow: var(--shadow-soft); }
+  50%        { box-shadow: var(--shadow-soft), var(--glow-danger); }
+}
+
+@keyframes borderGlow {
+  0%,  100% { border-color: rgba(244, 215, 156, 0.12); }
+  50%        { border-color: rgba(244, 215, 156, 0.36); }
+}
+
+@keyframes float {
+  0%,  100% { transform: translateY(0); }
+  50%        { transform: translateY(-5px); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes textShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes progressBar {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}

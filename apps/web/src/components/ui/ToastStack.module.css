@@ -16,22 +16,27 @@
     linear-gradient(180deg, rgba(86, 50, 31, 0.94), rgba(34, 19, 13, 0.96)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.16), transparent);
   box-shadow: var(--shadow-heavy);
+  animation: slideInRight 260ms var(--motion-smooth) both;
 }
 
 .success {
-  border-color: rgba(65, 168, 119, 0.34);
+  border-color: rgba(65, 168, 119, 0.5);
+  box-shadow: var(--shadow-heavy), 0 0 20px rgba(65, 168, 119, 0.14);
 }
 
 .info {
-  border-color: rgba(75, 158, 160, 0.34);
+  border-color: rgba(75, 158, 160, 0.5);
+  box-shadow: var(--shadow-heavy), 0 0 20px rgba(75, 158, 160, 0.14);
 }
 
 .warning {
-  border-color: rgba(226, 187, 114, 0.34);
+  border-color: rgba(226, 187, 114, 0.5);
+  box-shadow: var(--shadow-heavy), 0 0 20px rgba(226, 187, 114, 0.14);
 }
 
 .error {
-  border-color: rgba(212, 100, 79, 0.34);
+  border-color: rgba(212, 100, 79, 0.5);
+  box-shadow: var(--shadow-heavy), 0 0 20px rgba(212, 100, 79, 0.14);
 }
 
 .header {

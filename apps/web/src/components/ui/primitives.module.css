@@ -19,20 +19,28 @@
   font-weight: 700;
   transition:
     transform var(--motion-fast),
+    box-shadow var(--motion-base),
     background var(--motion-fast),
     border-color var(--motion-fast),
     opacity var(--motion-fast);
   cursor: pointer;
+  will-change: transform;
 }
 
 .button:hover:not(:disabled),
 .iconButton:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+}
+
+.button:active:not(:disabled),
+.iconButton:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 80ms;
 }
 
 .button:disabled,
 .iconButton:disabled {
-  opacity: 0.58;
+  opacity: 0.52;
   cursor: not-allowed;
 }
 
@@ -47,6 +55,11 @@
     linear-gradient(180deg, rgba(226, 187, 114, 0.92), rgba(164, 111, 52, 0.95)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
   color: #26140d;
+  box-shadow: 0 4px 14px rgba(164, 111, 52, 0.28), var(--shadow-inset);
+}
+
+.primary:hover:not(:disabled) {
+  box-shadow: 0 6px 22px rgba(164, 111, 52, 0.42), var(--glow-gold), var(--shadow-inset);
 }
 
 .secondary {
@@ -66,6 +79,10 @@
     linear-gradient(180deg, rgba(212, 100, 79, 0.88), rgba(132, 53, 38, 0.94)),
     linear-gradient(90deg, rgba(255, 244, 220, 0.04), transparent);
   color: #fff8f4;
+}
+
+.danger:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(212, 100, 79, 0.36), var(--glow-danger);
 }
 
 .small {
@@ -88,6 +105,11 @@
     linear-gradient(180deg, rgba(76, 45, 27, 0.9), rgba(34, 19, 13, 0.95)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
   color: var(--color-ink-100);
+}
+
+.iconButton:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(226, 187, 114, 0.2), var(--shadow-inset);
+  border-color: rgba(244, 215, 156, 0.26);
 }
 
 .badge,
@@ -125,6 +147,8 @@
 .timerChip {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  animation: pulseGold 2.8s ease-in-out infinite;
+  border-color: rgba(226, 187, 114, 0.38) !important;
 }
 
 .sectionCard,
@@ -140,6 +164,16 @@
 .sectionCard {
   padding: 1.1rem;
   border-radius: var(--radius-md);
+  transition:
+    border-color var(--motion-base),
+    box-shadow var(--motion-base),
+    transform var(--motion-smooth);
+}
+
+.sectionCard:hover {
+  border-color: rgba(244, 215, 156, 0.22);
+  box-shadow: var(--shadow-soft), 0 0 32px rgba(226, 187, 114, 0.08);
+  transform: translateY(-1px);
 }
 
 .sectionCard::after,
@@ -185,6 +219,14 @@
   gap: 0.75rem;
   padding: 0.95rem 1rem;
   border-radius: 22px;
+  transition:
+    border-color var(--motion-base),
+    box-shadow var(--motion-base);
+}
+
+.resourcePill:hover {
+  border-color: rgba(244, 215, 156, 0.28);
+  box-shadow: var(--shadow-soft), 0 0 20px rgba(226, 187, 114, 0.1);
 }
 
 .resourceLabel {
