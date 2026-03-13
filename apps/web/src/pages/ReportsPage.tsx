@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { PoiResourceType, ReportEntryView } from "@frontier/shared";
+import type { ReportEntryView } from "@frontier/shared";
 import { useEffect, useMemo } from "react";
 
 import { api } from "../api";
@@ -12,13 +12,6 @@ import { trackAnalyticsOnce } from "../lib/analytics";
 import { copy } from "../lib/i18n";
 import { formatDateTime, formatNumber } from "../lib/formatters";
 import styles from "./ReportsPage.module.css";
-
-const poiResourceLabels: Record<PoiResourceType, string> = {
-  WOOD: "Odun",
-  STONE: "Tas",
-  FOOD: "Yemek",
-  GOLD: "Altin",
-};
 
 function getLootVolume(report: ReportEntryView): number {
   if (report.kind === "RESOURCE_GATHER") {
@@ -38,14 +31,14 @@ function getReportTone(report: ReportEntryView): "success" | "warning" | "info" 
 
 function getReportHeadline(report: ReportEntryView): string {
   if (report.kind === "CITY_BATTLE") {
-    return report.result === "ATTACKER_WIN" ? "Sefer basarili" : "Savunma tuttu";
+    return report.result === "ATTACKER_WIN" ? "March Succeeded" : "Defense Held";
   }
 
   if (report.kind === "BARBARIAN_BATTLE") {
-    return report.result === "ATTACKER_WIN" ? "Kamp temizlendi" : "Kamp dayandi";
+    return report.result === "ATTACKER_WIN" ? "Camp Cleared" : "Camp Held";
   }
 
-  return "Toplama dondu";
+  return "Gather Returned";
 }
 
 export function ReportsPage() {
@@ -87,11 +80,11 @@ export function ReportsPage() {
   }, [reports]);
 
   if (reportsQuery.isPending) {
-    return <div className={styles.feedback}>Sefer defteri yukleniyor...</div>;
+    return <div className={styles.feedback}>Loading reports...</div>;
   }
 
   if (reportsQuery.isError || !reportsQuery.data) {
-    return <div className={styles.feedback}>Sefer defteri yuklenemedi.</div>;
+    return <div className={styles.feedback}>Unable to load reports.</div>;
   }
 
   return (
@@ -100,29 +93,29 @@ export function ReportsPage() {
         <div className={styles.heroTop}>
           <div>
             <p className={styles.kicker}>{copy.reports.title}</p>
-            <h2 className={styles.heroTitle}>Saha ozetleri ve ikmal donusleri</h2>
+            <h2 className={styles.heroTitle}>Battle outcomes and supply returns</h2>
             <p className={styles.heroLead}>
-              Sehir savaslari, barbar kampi carpismalari ve kaynak donusleri ayni defterde toplanir.
-              Ayrintili odul akislari ulak kutusundan acilir.
+              City battles, barbarian camp clashes, and gathering returns are merged into one readable field log.
+              Deep reward detail stays in the inbox.
             </p>
           </div>
-          <Badge tone="info">{reports.length} kayit</Badge>
+          <Badge tone="info">{reports.length} entries</Badge>
         </div>
         <div className={styles.summaryGrid}>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Zafer</span>
+            <span className={styles.summaryLabel}>Victories</span>
             <strong className={styles.summaryValue}>{formatNumber(summary.victories)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Tutulan savunma</span>
+            <span className={styles.summaryLabel}>Defenses Held</span>
             <strong className={styles.summaryValue}>{formatNumber(summary.holds)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Toplama donusu</span>
+            <span className={styles.summaryLabel}>Gather Returns</span>
             <strong className={styles.summaryValue}>{formatNumber(summary.gatherReturns)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Toplam nakliye</span>
+            <span className={styles.summaryLabel}>Total Throughput</span>
             <strong className={styles.summaryValue}>{formatNumber(summary.movedTotal)}</strong>
           </article>
         </div>
@@ -131,10 +124,10 @@ export function ReportsPage() {
       <div className={styles.layout}>
         <div className={styles.feed}>
           {reports.length === 0 ? (
-            <SectionCard kicker="Bos defter" title="Henuz kayit yok">
+            <SectionCard kicker="Empty Log" title="No entries yet">
               <EmptyState
-                title="Ilk seferi cikarin"
-                body="Haritadan bir hedef secin, march onaylayin ve sonuc kaydinin bu deftere dusmesini bekleyin."
+                title="Launch the first march"
+                body="Select a target from the map, confirm the march, and wait for the first resolved report to land here."
               />
             </SectionCard>
           ) : (
@@ -143,23 +136,23 @@ export function ReportsPage() {
                 return (
                   <SectionCard
                     key={report.id}
-                    kicker="Sehir carpismasi"
+                    kicker="City Battle"
                     title={`${report.attackerCityName} -> ${report.defenderCityName}`}
                     aside={<Badge tone={getReportTone(report)}>{getReportHeadline(report)}</Badge>}
                     className={styles.entryCard}
                   >
                     <div className={styles.entryMeta}>
                       <span>{formatDateTime(report.createdAt)}</span>
-                      <span>{report.location.distance} kare</span>
+                      <span>{report.location.distance} tiles</span>
                     </div>
                     <p className={styles.entryBody}>
-                      {report.attackerName}, {report.defenderName} uzerine {report.location.from.x},
-                      {report.location.from.y} noktasindan yurudu. Taarruz gucu {formatNumber(report.attackerPower)},
-                      savunma gucu {formatNumber(report.defenderPower)}.
+                      {report.attackerName} marched on {report.defenderName} from {report.location.from.x},
+                      {report.location.from.y}. Attack power reached {formatNumber(report.attackerPower)} against
+                      {formatNumber(report.defenderPower)} defense power.
                     </p>
                     <div className={styles.metricGrid}>
                       <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Ganimet</span>
+                        <span className={styles.metricLabel}>Loot</span>
                         <dl className={styles.definitionGrid}>
                           {Object.entries(report.loot).map(([resource, amount]) => (
                             <div key={resource}>
@@ -170,7 +163,7 @@ export function ReportsPage() {
                         </dl>
                       </article>
                       <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Taarruz kaybi</span>
+                        <span className={styles.metricLabel}>Attacker Losses</span>
                         <dl className={styles.definitionGrid}>
                           {Object.entries(report.attackerLosses).map(([troopType, amount]) => (
                             <div key={troopType}>
@@ -181,7 +174,7 @@ export function ReportsPage() {
                         </dl>
                       </article>
                       <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Savunma kaybi</span>
+                        <span className={styles.metricLabel}>Defender Losses</span>
                         <dl className={styles.definitionGrid}>
                           {Object.entries(report.defenderLosses).map(([troopType, amount]) => (
                             <div key={troopType}>
@@ -200,22 +193,22 @@ export function ReportsPage() {
                 return (
                   <SectionCard
                     key={report.id}
-                    kicker="Barbar baskini"
+                    kicker="Barbarian Battle"
                     title={`${report.attackerCityName} -> ${report.poiName}`}
                     aside={<Badge tone={getReportTone(report)}>{getReportHeadline(report)}</Badge>}
                     className={styles.entryCard}
                   >
                     <div className={styles.entryMeta}>
                       <span>{formatDateTime(report.createdAt)}</span>
-                      <span>Seviye {report.poiLevel}</span>
+                      <span>Level {report.poiLevel}</span>
                     </div>
                     <p className={styles.entryBody}>
-                      March, {report.location.distance} kare kat ederek kampa ulasti. Taarruz gucu
-                      {" "}{formatNumber(report.attackerPower)}, kamp savunmasi {formatNumber(report.defenderPower)}.
+                      The march covered {report.location.distance} tiles to reach the camp. Attack power peaked at
+                      {" "}{formatNumber(report.attackerPower)} against {formatNumber(report.defenderPower)} camp defense.
                     </p>
                     <div className={styles.metricGrid}>
                       <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Oduller</span>
+                        <span className={styles.metricLabel}>Rewards</span>
                         <dl className={styles.definitionGrid}>
                           {Object.entries(report.loot).map(([resource, amount]) => (
                             <div key={resource}>
@@ -226,7 +219,7 @@ export function ReportsPage() {
                         </dl>
                       </article>
                       <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Taarruz kaybi</span>
+                        <span className={styles.metricLabel}>Attacker Losses</span>
                         <dl className={styles.definitionGrid}>
                           {Object.entries(report.attackerLosses).map(([troopType, amount]) => (
                             <div key={troopType}>
@@ -237,7 +230,7 @@ export function ReportsPage() {
                         </dl>
                       </article>
                       <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Kamp kaybi</span>
+                        <span className={styles.metricLabel}>Camp Losses</span>
                         <dl className={styles.definitionGrid}>
                           {Object.entries(report.defenderLosses).map(([troopType, amount]) => (
                             <div key={troopType}>
@@ -255,35 +248,34 @@ export function ReportsPage() {
               return (
                 <SectionCard
                   key={report.id}
-                  kicker="Toplama donusu"
+                  kicker="Gather Return"
                   title={`${report.cityName} <- ${report.poiName}`}
                   aside={<Badge tone="info">{getReportHeadline(report)}</Badge>}
                   className={styles.entryCard}
                 >
                   <div className={styles.entryMeta}>
                     <span>{formatDateTime(report.createdAt)}</span>
-                    <span>{report.location.distance} kare</span>
+                    <span>{report.location.distance} tiles</span>
                   </div>
                   <p className={styles.entryBody}>
-                    {report.ownerName}, dugumden {formatNumber(report.amount)}
-                    {" "}{poiResourceLabels[report.resourceType].toLowerCase()} getirerek sehre geri dondu.
+                    {report.ownerName} returned with {formatNumber(report.amount)} {copy.poiResources[report.resourceType].toLowerCase()} from the node.
                   </p>
                   <div className={styles.metricGrid}>
                     <article className={styles.metricCard}>
-                      <span className={styles.metricLabel}>Kargo</span>
+                      <span className={styles.metricLabel}>Cargo</span>
                       <dl className={styles.definitionGrid}>
                         <div>
-                          <dt>Kaynak</dt>
-                          <dd>{poiResourceLabels[report.resourceType]}</dd>
+                          <dt>Resource</dt>
+                          <dd>{copy.poiResources[report.resourceType]}</dd>
                         </div>
                         <div>
-                          <dt>Miktar</dt>
+                          <dt>Amount</dt>
                           <dd>{formatNumber(report.amount)}</dd>
                         </div>
                       </dl>
                     </article>
                     <article className={styles.metricCard}>
-                      <span className={styles.metricLabel}>Kullanilan birlik</span>
+                      <span className={styles.metricLabel}>Assigned Troops</span>
                       <dl className={styles.definitionGrid}>
                         {Object.entries(report.troops).map(([troopType, amount]) => (
                           <div key={troopType}>
@@ -302,23 +294,23 @@ export function ReportsPage() {
 
         <aside className={styles.sideRail}>
           <SectionCard
-            kicker="Ulak akis"
-            title="Ayrinti merkezi"
-            aside={<Badge tone="warning">{notifications.unreadMailboxCount} yeni</Badge>}
+            kicker="Inbox Flow"
+            title="Detail Center"
+            aside={<Badge tone="warning">{notifications.unreadMailboxCount} new</Badge>}
           >
             <p className={styles.sideText}>
-              Scout raporlari, sistem odulleri ve claim bekleyen kayitlar ulak kutusunda ayrintili tutulur.
+              Scout reports, system rewards, and claimable entries remain in the inbox so this page stays focused on battle outcomes.
             </p>
             <Button type="button" variant="secondary" onClick={openInbox}>
-              Ulak kutusunu ac
+              Open Inbox
             </Button>
           </SectionCard>
 
-          <SectionCard kicker="Defter okuma" title="Yorum ipuclari">
+          <SectionCard kicker="Reading Guide" title="How to parse the log">
             <ul className={styles.tipList}>
-              <li>Sehir savaslarinda ganimet ve kayip dagilimini birlikte okuyun.</li>
-              <li>Barbar kampi raporlari komutan XP ve PvE tempo takibi icin degerlidir.</li>
-              <li>Toplama kayitlari ikmal zincirinin hangi dugum uzerinden verimli aktigini gosterir.</li>
+              <li>Compare loot and loss distribution together when reviewing city battles.</li>
+              <li>Barbarian camp entries are useful for commander XP pacing and PvE pressure.</li>
+              <li>Gather logs reveal which nodes are keeping the supply chain most efficient.</li>
             </ul>
           </SectionCard>
         </aside>

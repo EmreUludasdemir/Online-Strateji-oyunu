@@ -102,44 +102,44 @@ export function getSocketToast(type: SocketEventType): SocketToastDescriptor | n
     case "upgrade.completed":
       return {
         tone: "success",
-        title: "Insa tamamlandi",
-        body: "Yeni bolge yukseltmesi divanda kullanima acildi.",
+        title: "Upgrade Complete",
+        body: "A new district upgrade is now available in the dashboard.",
       };
     case "training.completed":
       return {
         tone: "success",
-        title: "Talim bitti",
-        body: "Kisladan yeni birlikler cikti.",
+        title: "Training Complete",
+        body: "Fresh troops have marched out of the barracks.",
       };
     case "research.completed":
       return {
         tone: "info",
-        title: "Arastirma tamamlandi",
-        body: "Akademi yeni doktrini kaydetti.",
+        title: "Research Complete",
+        body: "The academy has recorded a new doctrine.",
       };
     case "battle.resolved":
       return {
         tone: "warning",
-        title: "Sefer cozuldu",
-        body: "Sinirda bir catisma sonucu raporlara islendi.",
+        title: "Battle Resolved",
+        body: "A frontier clash has been added to your reports.",
       };
     case "scout.completed":
       return {
         tone: "info",
-        title: "Kesif dondu",
-        body: "Ulak kutusuna yeni bir kesif raporu geldi.",
+        title: "Scout Returned",
+        body: "A new scout report is waiting in your inbox.",
       };
     case "mailbox.updated":
       return {
         tone: "info",
-        title: "Yeni ulak kaydi",
-        body: "Odul veya rapor bekliyor.",
+        title: "New Inbox Entry",
+        body: "A reward or report is waiting for review.",
       };
     case "rally.updated":
       return {
         tone: "warning",
-        title: "Ralli durumu guncellendi",
-        body: "Ittifak sefer penceresi degisti.",
+        title: "Rally Updated",
+        body: "The alliance rally window has changed.",
       };
     default:
       return null;

@@ -10,7 +10,7 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
 import { trackAnalyticsOnce } from "../lib/analytics";
 import { copy } from "../lib/i18n";
-import { formatNumber, formatRelativeTimer } from "../lib/formatters";
+import { formatNumber } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
 import styles from "./DashboardPage.module.css";
 
@@ -94,22 +94,23 @@ export function DashboardPage() {
             <p className={styles.statLabel}>{copy.dashboard.title}</p>
             <h2 className={styles.heroTitle}>{state.city.cityName}</h2>
             <p className={styles.heroLead}>
-              Koordinatlar {state.city.coordinates.x}, {state.city.coordinates.y}. Bu panel insa, talim, doktrin, gorev ve ulak akisini tek yerde toplar.
+              Coordinates {state.city.coordinates.x}, {state.city.coordinates.y}. This screen keeps building,
+              training, research, tasks, and inbox flow in one operations layer.
             </p>
           </div>
-          {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Bos sira</Badge>}
+          {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Queue idle</Badge>}
         </div>
         <div className={styles.heroStats}>
-          <div className={styles.statCard}><span className={styles.statLabel}>Saldiri</span><strong className={styles.statValue}>{formatNumber(state.city.attackPower)}</strong></div>
-          <div className={styles.statCard}><span className={styles.statLabel}>Savunma</span><strong className={styles.statValue}>{formatNumber(state.city.defensePower)}</strong></div>
-          <div className={styles.statCard}><span className={styles.statLabel}>Acik sefer</span><strong className={styles.statValue}>{formatNumber(state.city.openMarchCount)}</strong></div>
-          <div className={styles.statCard}><span className={styles.statLabel}>Toplam stok</span><strong className={styles.statValue}>{formatNumber(totalStores)}</strong></div>
+          <div className={styles.statCard}><span className={styles.statLabel}>Attack</span><strong className={styles.statValue}>{formatNumber(state.city.attackPower)}</strong></div>
+          <div className={styles.statCard}><span className={styles.statLabel}>Defense</span><strong className={styles.statValue}>{formatNumber(state.city.defensePower)}</strong></div>
+          <div className={styles.statCard}><span className={styles.statLabel}>Open marches</span><strong className={styles.statValue}>{formatNumber(state.city.openMarchCount)}</strong></div>
+          <div className={styles.statCard}><span className={styles.statLabel}>Total stock</span><strong className={styles.statValue}>{formatNumber(totalStores)}</strong></div>
         </div>
       </header>
 
       <div className={styles.columns}>
         <div className={styles.mainColumn}>
-          <SectionCard kicker={copy.dashboard.tasks} title="Ilk 5 dakika akisi" aside={<Badge tone={tasksQuery.data?.tutorialCompleted ? "success" : "warning"}>{tasksQuery.data?.tutorialCompleted ? "Tamam" : "Acik"}</Badge>}>
+          <SectionCard kicker={copy.dashboard.tasks} title="First 5-minute flow" aside={<Badge tone={tasksQuery.data?.tutorialCompleted ? "success" : "warning"}>{tasksQuery.data?.tutorialCompleted ? "Complete" : "Open"}</Badge>}>
             <div className={styles.taskList}>
               {[...tutorialTasks.slice(0, 4), ...dailyTasks.slice(0, 2)].map((task) => (
                 <article key={task.id} className={styles.taskCard}>
@@ -120,7 +121,7 @@ export function DashboardPage() {
                   <p className={styles.stackHint}>{task.description}</p>
                   <div className={styles.taskActions}>
                     <Button type="button" size="small" disabled={task.isClaimed || !task.isCompleted || claimTaskMutation.isPending} onClick={() => claimTaskMutation.mutate(task.id)}>
-                      {task.isClaimed ? "Alindi" : task.isCompleted ? "Odulu al" : "Bekle"}
+                      {task.isClaimed ? "Claimed" : task.isCompleted ? "Claim Reward" : "Pending"}
                     </Button>
                   </div>
                 </article>
@@ -129,22 +130,22 @@ export function DashboardPage() {
           </SectionCard>
 
           <div className={styles.grid}>
-            <SectionCard kicker="Kisla" title="Birlik talimi" aside={<Badge tone="info">{selectedTroop?.label ?? "Birlik"}</Badge>}>
+            <SectionCard kicker="Barracks" title="Troop training" aside={<Badge tone="info">{selectedTroop?.label ?? "Troops"}</Badge>}>
               <div className={styles.inlineForm}>
                 <select value={selectedTroopType} onChange={(event) => setSelectedTroopType(event.target.value as TroopType)}>
                   {state.city.troops.map((troop) => <option key={troop.type} value={troop.type}>{troop.label}</option>)}
                 </select>
                 <input type="number" min={1} max={120} value={trainingQuantity} onChange={(event) => setTrainingQuantity(Number(event.target.value))} />
               </div>
-              <p className={styles.stackHint}>Mevcut stok {formatNumber(selectedTroop?.quantity ?? 0)} | Tasima {formatNumber(selectedTroop?.carry ?? 0)} | Hiz {formatNumber(selectedTroop?.speed ?? 0)}</p>
+              <p className={styles.stackHint}>Current stock {formatNumber(selectedTroop?.quantity ?? 0)} | Carry {formatNumber(selectedTroop?.carry ?? 0)} | Speed {formatNumber(selectedTroop?.speed ?? 0)}</p>
               <div className={styles.actionRow}>
                 <Button type="button" disabled={isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1} onClick={() => train(selectedTroopType, trainingQuantity)}>
-                  {state.city.activeTraining ? "Kisla dolu" : isTraining ? "Gonderiliyor" : "Talim baslat"}
+                  {state.city.activeTraining ? "Barracks busy" : isTraining ? "Submitting" : "Start Training"}
                 </Button>
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Akademi" title="Doktrin masasi" aside={<Badge tone="info">{suggestedResearch?.label ?? "Tum hatlar dolu"}</Badge>}>
+            <SectionCard kicker="Academy" title="Doctrine board" aside={<Badge tone="info">{suggestedResearch?.label ?? "All lanes capped"}</Badge>}>
               <div className={styles.compactList}>
                 {state.city.research.map((entry) => (
                   <div key={entry.type} className={styles.taskMeta}>
@@ -157,20 +158,20 @@ export function DashboardPage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker={copy.dashboard.inventory} title="Hizlandirici ve sandiklar" aside={<Badge tone="warning">{inventoryItems.length} lot</Badge>}>
+            <SectionCard kicker={copy.dashboard.inventory} title="Speedups and chests" aside={<Badge tone="warning">{inventoryItems.length} lots</Badge>}>
               <div className={styles.compactList}>
                 {inventoryItems.slice(0, 5).map((item) => (
                   <div key={item.itemKey} className={styles.taskMeta}>
                     <div><strong>{item.label}</strong><p className={styles.stackHint}>x{item.quantity}</p></div>
                     <Button type="button" variant="secondary" size="small" disabled={useItemMutation.isPending} onClick={() => useItemMutation.mutate({ itemKey: item.itemKey })}>
-                      Kullan
+                      Use
                     </Button>
                   </div>
                 ))}
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Canli pano" title="Etkinlikler ve sezon" aside={<Badge tone="success">{formatNumber(seasonPass?.xp ?? 0)} xp</Badge>}>
+            <SectionCard kicker="Live board" title="Events and season" aside={<Badge tone="success">{formatNumber(seasonPass?.xp ?? 0)} xp</Badge>}>
               <div className={styles.compactList}>
                 {liveEvents.slice(0, 3).map((event) => (
                   <div key={event.eventKey} className={styles.taskMeta}>
@@ -178,24 +179,24 @@ export function DashboardPage() {
                     <span className={styles.stackHint}>{event.score}/{event.target}</span>
                   </div>
                 ))}
-                <p className={styles.stackHint}>{seasonPass ? `${seasonPass.tiers.filter((tier) => tier.claimedFree).length} ucretsiz kademe acildi.` : "Sezon verisi yukleniyor."}</p>
+                <p className={styles.stackHint}>{seasonPass ? `${seasonPass.tiers.filter((tier) => tier.claimedFree).length} free tiers unlocked.` : "Season data is loading."}</p>
               </div>
             </SectionCard>
           </div>
 
-          <SectionCard kicker="Sehir bolgeleri" title="Yukseltme hatti">
+          <SectionCard kicker="City districts" title="Upgrade lane">
             <div className={styles.buildingGrid}>
               {state.city.buildings.map((building) => (
                 <article key={building.type} className={styles.buildingCard}>
                   <div className={styles.buildingHeader}>
-                    <div><p className={styles.buildingMeta}>{building.label}</p><h3 className={styles.buildingTitle}>Seviye {building.level}</h3></div>
-                    <Badge tone="info">Sonraki {building.nextLevel}</Badge>
+                    <div><p className={styles.buildingMeta}>{building.label}</p><h3 className={styles.buildingTitle}>Level {building.level}</h3></div>
+                    <Badge tone="info">Next {building.nextLevel}</Badge>
                   </div>
                   <p className={styles.buildingBody}>{building.description}</p>
                   <div className={styles.resourceList}>{Object.entries(building.upgradeCost).map(([resource, amount]) => <span key={resource}>{resource}: {formatNumber(amount)}</span>)}</div>
                   <div className={styles.actionRow}>
                     <Button type="button" disabled={isUpgrading || (Boolean(activeUpgrade) && !building.isUpgradeActive) || building.isUpgradeActive} onClick={() => upgrade(building.type as BuildingType)}>
-                      {building.isUpgradeActive ? "Suruyor" : "Yukselt"}
+                      {building.isUpgradeActive ? "In Progress" : "Upgrade"}
                     </Button>
                   </div>
                 </article>
@@ -205,27 +206,26 @@ export function DashboardPage() {
         </div>
 
         <aside className={styles.sideColumn}>
-          <SectionCard kicker={copy.dashboard.commanders} title={primaryCommander?.name ?? "Komutan yok"} aside={<Badge tone="info">L{primaryCommander?.level ?? 0}</Badge>}>
-            <p className={styles.stackHint}>XP {formatNumber(primaryCommander?.xp ?? 0)}/{formatNumber(primaryCommander?.xpToNextLevel ?? 0)} | Yildiz {formatNumber(primaryCommander?.starLevel ?? 0)}</p>
-            <div className={styles.actionRow}><Button type="button" onClick={() => openCommanderPanel(primaryCommander?.id)}>Komutan paneli</Button></div>
+          <SectionCard kicker={copy.dashboard.commanders} title={primaryCommander?.name ?? "No commander"} aside={<Badge tone="info">L{primaryCommander?.level ?? 0}</Badge>}>
+            <p className={styles.stackHint}>XP {formatNumber(primaryCommander?.xp ?? 0)}/{formatNumber(primaryCommander?.xpToNextLevel ?? 0)} | Stars {formatNumber(primaryCommander?.starLevel ?? 0)}</p>
+            <div className={styles.actionRow}><Button type="button" onClick={() => openCommanderPanel(primaryCommander?.id)}>Open Commander Panel</Button></div>
           </SectionCard>
 
-          <SectionCard kicker={copy.dashboard.mailbox} title="Son dispatchler" aside={<Badge tone="warning">{mailboxQuery.data?.unreadCount ?? 0} yeni</Badge>}>
+          <SectionCard kicker={copy.dashboard.mailbox} title="Latest dispatches" aside={<Badge tone="warning">{mailboxQuery.data?.unreadCount ?? 0} new</Badge>}>
             <div className={styles.compactList}>
-              {mailboxEntries.slice(0, 4).map((entry) => <div key={entry.id} className={styles.taskMeta}><strong>{entry.title}</strong><span className={styles.stackHint}>{entry.canClaim ? "Odul bekliyor" : "Rapor arsivde"}</span></div>)}
+              {mailboxEntries.slice(0, 4).map((entry) => <div key={entry.id} className={styles.taskMeta}><strong>{entry.title}</strong><span className={styles.stackHint}>{entry.canClaim ? "Reward waiting" : "Report archived"}</span></div>)}
             </div>
-            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={openInbox}>Tum ulaklar</Button></div>
+            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={openInbox}>Open Inbox</Button></div>
           </SectionCard>
 
-          <SectionCard kicker={copy.dashboard.store} title="Kervan ozeti" aside={<Badge tone="success">{storeOffers.length} teklif</Badge>}>
+          <SectionCard kicker={copy.dashboard.store} title="Store summary" aside={<Badge tone="success">{storeOffers.length} offers</Badge>}>
             <div className={styles.compactList}>
-              {storeOffers.slice(0, 3).map((offer) => <div key={offer.offerId} className={styles.taskMeta}><strong>{offer.title}</strong><span className={styles.stackHint}>{offer.productIds.length} urun</span></div>)}
+              {storeOffers.slice(0, 3).map((offer) => <div key={offer.offerId} className={styles.taskMeta}><strong>{offer.title}</strong><span className={styles.stackHint}>{offer.productIds.length} products</span></div>)}
             </div>
-            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={openStorePreview}>Kervani ac</Button></div>
+            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={openStorePreview}>Open Store</Button></div>
           </SectionCard>
         </aside>
       </div>
     </section>
   );
 }
-

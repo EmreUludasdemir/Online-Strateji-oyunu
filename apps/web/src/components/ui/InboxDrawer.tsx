@@ -22,10 +22,10 @@ function renderRewardLines(entry: MailboxEntryView): string[] {
     lines.push(entry.reward.items.map((item) => `${item.itemKey} x${item.quantity}`).join(" | "));
   }
   if (entry.reward.commanderXp > 0) {
-    lines.push(`Komutan XP: ${formatNumber(entry.reward.commanderXp)}`);
+    lines.push(`Commander XP: ${formatNumber(entry.reward.commanderXp)}`);
   }
   if (entry.reward.seasonPassXp > 0) {
-    lines.push(`Sezon XP: ${formatNumber(entry.reward.seasonPassXp)}`);
+    lines.push(`Season XP: ${formatNumber(entry.reward.seasonPassXp)}`);
   }
   return lines;
 }
@@ -61,12 +61,12 @@ export function InboxDrawer({
                   <strong className={styles.entryTitle}>{entry.title}</strong>
                   <p className={styles.entryBody}>{entry.body}</p>
                 </div>
-                <Badge tone={entry.claimedAt ? "info" : "warning"}>{entry.claimedAt ? "Arsiv" : "Yeni"}</Badge>
+                <Badge tone={entry.claimedAt ? "info" : "warning"}>{entry.claimedAt ? "Filed" : "New"}</Badge>
               </div>
               <div className={styles.meta}>
                 <span>{formatDateTime(entry.createdAt)}</span>
                 <span>{entry.kind.replaceAll("_", " ").toLowerCase()}</span>
-                {entry.scoutReport ? <span>kesif raporu</span> : null}
+                {entry.scoutReport ? <span>scout report</span> : null}
               </div>
               {renderRewardLines(entry).length > 0 ? (
                 <div className={styles.rewardList}>

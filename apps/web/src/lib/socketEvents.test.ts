@@ -16,8 +16,8 @@ describe("socketEvents", () => {
   it("maps selected socket events to toast copy", () => {
     expect(getSocketToast("upgrade.completed")).toEqual({
       tone: "success",
-      title: "Insa tamamlandi",
-      body: "Yeni bolge yukseltmesi divanda kullanima acildi.",
+      title: "Upgrade Complete",
+      body: "A new district upgrade is now available in the dashboard.",
     });
     expect(getSocketToast("map.updated")).toBeNull();
   });

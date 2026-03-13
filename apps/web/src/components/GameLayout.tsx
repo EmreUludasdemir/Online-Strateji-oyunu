@@ -88,41 +88,41 @@ function createQueueItems(state: GameStateResponse["city"]): QueueSummaryItem[] 
     state.activeUpgrade
       ? {
           id: "upgrade",
-          label: "Insa",
+          label: "Build",
           value: `L${state.activeUpgrade.toLevel}`,
-          hint: `${state.activeUpgrade.buildingType.replaceAll("_", " ")} calisiyor`,
+          hint: `${state.activeUpgrade.buildingType.replaceAll("_", " ")} upgrade running`,
         }
       : {
           id: "upgrade",
-          label: "Insa",
-          value: "Bos",
-          hint: "Yeni yukseltme bekliyor",
+          label: "Build",
+          value: "Idle",
+          hint: "Ready for the next district upgrade",
         },
     state.activeTraining
       ? {
           id: "training",
-          label: "Kisla",
+          label: "Barracks",
           value: `${formatNumber(state.activeTraining.quantity)}`,
-          hint: `${state.activeTraining.troopType.toLowerCase()} talimi`,
+          hint: `${state.activeTraining.troopType.toLowerCase()} training`,
         }
       : {
           id: "training",
-          label: "Kisla",
-          value: "Hazir",
-          hint: "Yeni talim icin acik",
+          label: "Barracks",
+          value: "Ready",
+          hint: "Open for a new training order",
         },
     state.activeResearch
       ? {
           id: "research",
-          label: "Akademi",
+          label: "Academy",
           value: `L${state.activeResearch.toLevel}`,
           hint: state.activeResearch.researchType.replaceAll("_", " ").toLowerCase(),
         }
       : {
           id: "research",
-          label: "Sefer",
+          label: "Marches",
           value: formatNumber(state.openMarchCount),
-          hint: "Acik march sayisi",
+          hint: "Open march count",
         },
   ];
 }
@@ -246,8 +246,8 @@ export function GameLayout() {
       }
       enqueueToast({
         tone: "success",
-        title: "Yukseltme basladi",
-        body: "Yeni insa emri sehir sirasina alindi.",
+        title: "Upgrade Started",
+        body: "A new build order has been placed in the city queue.",
       });
     },
   });
@@ -264,8 +264,8 @@ export function GameLayout() {
       }
       enqueueToast({
         tone: "success",
-        title: "Talim emri verildi",
-        body: "Kislada yeni birlikler kayda girdi.",
+        title: "Training Queued",
+        body: "New troops have been entered into the barracks queue.",
       });
     },
   });
@@ -280,8 +280,8 @@ export function GameLayout() {
       });
       enqueueToast({
         tone: "info",
-        title: "Arastirma basladi",
-        body: "Akademi yeni doktrini isleme aldi.",
+        title: "Research Started",
+        body: "The academy has started a new doctrine study.",
       });
     },
   });
@@ -304,11 +304,11 @@ export function GameLayout() {
         target: march.targetPoiName ?? march.targetCityName ?? "unknown",
       });
       const targetName = march.targetPoiName ?? march.targetCityName ?? "target";
-      const missionLabel = march.objective === "RESOURCE_GATHER" ? "Toplama seferi" : "Sefer";
+      const missionLabel = march.objective === "RESOURCE_GATHER" ? "Gather March" : "March Dispatched";
       enqueueToast({
         tone: "info",
         title: missionLabel,
-        body: `${targetName} icin cikis yapildi. ETA ${march.remainingSeconds}s.`,
+        body: `${targetName} departure confirmed. ETA ${march.remainingSeconds}s.`,
       });
     },
   });
@@ -322,8 +322,8 @@ export function GameLayout() {
       ]);
       enqueueToast({
         tone: "warning",
-        title: "Sefer geri cagrildi",
-        body: "Birlikler sehre donus yoluna girdi.",
+        title: "March Recalled",
+        body: "Troops are returning to the city.",
       });
     },
   });
@@ -337,8 +337,8 @@ export function GameLayout() {
       ]);
       enqueueToast({
         tone: "success",
-        title: "Komutan terfi etti",
-        body: "Harp meclisi kayitlari yenilendi.",
+        title: "Commander Upgraded",
+        body: "Command records have been updated.",
       });
     },
   });
@@ -353,8 +353,8 @@ export function GameLayout() {
       ]);
       enqueueToast({
         tone: "success",
-        title: "Ulak odulu alindi",
-        body: "Kaynaklar ve haklar yenilendi.",
+        title: "Inbox Reward Claimed",
+        body: "Resources and entitlements have been refreshed.",
       });
     },
   });
@@ -567,7 +567,7 @@ export function GameLayout() {
   }, [location.pathname]);
 
   if (sessionQuery.isError) {
-    return <div className={styles.feedback}>Oturum geri yuklenemedi.</div>;
+    return <div className={styles.feedback}>Session could not be restored.</div>;
   }
 
   if (sessionQuery.data && !sessionQuery.data.user) {
@@ -580,29 +580,29 @@ export function GameLayout() {
       return <Navigate to="/login" replace />;
     }
 
-    return <div className={styles.feedback}>Oyun durumu yuklenemedi.</div>;
+    return <div className={styles.feedback}>Game state could not be loaded.</div>;
   }
 
   if (sessionQuery.isPending || stateQuery.isPending) {
-    return <div className={styles.feedback}>Hud aciliyor...</div>;
+    return <div className={styles.feedback}>Loading HUD...</div>;
   }
 
   if (!contextValue) {
-    return <div className={styles.feedback}>Hud aciliyor...</div>;
+    return <div className={styles.feedback}>Loading HUD...</div>;
   }
 
   const resources = [
-    { label: "Odun", value: contextValue.state.city.resources.wood },
-    { label: "Tas", value: contextValue.state.city.resources.stone },
-    { label: "Yemek", value: contextValue.state.city.resources.food },
-    { label: "Altin", value: contextValue.state.city.resources.gold },
+    { label: copy.resources.wood, value: contextValue.state.city.resources.wood },
+    { label: copy.resources.stone, value: contextValue.state.city.resources.stone },
+    { label: copy.resources.food, value: contextValue.state.city.resources.food },
+    { label: copy.resources.gold, value: contextValue.state.city.resources.gold },
   ];
   const mailboxEntries = mailboxQuery.data?.entries ?? [];
   const storeCatalog = storeCatalogQuery.data?.catalog;
   const entitlements = entitlementsQuery.data?.entitlements ?? [];
   const allianceLabel = contextValue.state.alliance
     ? `[${contextValue.state.alliance.tag}] ${contextValue.state.alliance.name}`
-    : "Bagimsiz sancak";
+    : "Independent Province";
   const commanders = contextValue.state.city.commanders;
   const focusedCommander =
     commanders.find((commander) => commander.id === commanderPanelId) ?? commanders[0] ?? null;
@@ -613,7 +613,7 @@ export function GameLayout() {
         <div className={styles.brandCard}>
           <p className={styles.brandKicker}>Frontier Dominion</p>
           <h1 className={styles.brandTitle}>{contextValue.state.city.cityName}</h1>
-          <p className={styles.brandMeta}>Vali {contextValue.state.player.username}</p>
+          <p className={styles.brandMeta}>Governor {contextValue.state.player.username}</p>
           <p className={styles.brandMeta}>{allianceLabel}</p>
         </div>
 
@@ -633,26 +633,26 @@ export function GameLayout() {
         </nav>
 
         <div className={styles.summaryCard}>
-          <p className={styles.brandKicker}>Hud ozeti</p>
+          <p className={styles.brandKicker}>HUD Overview</p>
           <div className={styles.summaryList}>
             <div>
-              <span className={styles.summaryLabel}>Gorus</span>
-              <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.visionRadius)} kare</strong>
+              <span className={styles.summaryLabel}>View Radius</span>
+              <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.visionRadius)} tiles</strong>
             </div>
             <div>
-              <span className={styles.summaryLabel}>Sefer</span>
+              <span className={styles.summaryLabel}>Marches</span>
               <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.openMarchCount)}</strong>
             </div>
             <div>
-              <span className={styles.summaryLabel}>Ulak</span>
-              <strong className={styles.summaryValue}>{formatNumber(mailboxQuery.data?.unreadCount ?? 0)} yeni</strong>
+              <span className={styles.summaryLabel}>Inbox</span>
+              <strong className={styles.summaryValue}>{formatNumber(mailboxQuery.data?.unreadCount ?? 0)} unread</strong>
             </div>
           </div>
         </div>
 
         <div className={styles.sidebarFooter}>
           <Button type="button" variant="ghost" onClick={() => logoutMutation.mutate()}>
-            Cikis yap
+            Log Out
           </Button>
         </div>
       </aside>
@@ -663,14 +663,14 @@ export function GameLayout() {
           queueItems={contextValue.hud.queueItems}
           meta={
             <div className={styles.summaryCard}>
-              <p className={styles.brandKicker}>Muharebe cizgisi</p>
+              <p className={styles.brandKicker}>Battle Line</p>
               <div className={styles.summaryList}>
                 <div>
-                  <span className={styles.summaryLabel}>Saldiri</span>
+                  <span className={styles.summaryLabel}>Attack</span>
                   <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.attackPower)}</strong>
                 </div>
                 <div>
-                  <span className={styles.summaryLabel}>Savunma</span>
+                  <span className={styles.summaryLabel}>Defense</span>
                   <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.defensePower)}</strong>
                 </div>
               </div>
@@ -704,16 +704,16 @@ export function GameLayout() {
 
       <BottomSheet
         open={commanderPanelOpen}
-        title="Harp meclisi"
+        title="Command Staff"
         mode="aside"
         onClose={() => setCommanderPanelOpen(false)}
       >
         <div className={styles.sheetGrid}>
           {focusedCommander ? (
             <SectionCard
-              kicker="Secili komutan"
+              kicker="Selected Commander"
               title={`${focusedCommander.name} L${focusedCommander.level}`}
-              aside={<Badge tone="warning">{focusedCommander.starLevel} yildiz</Badge>}
+              aside={<Badge tone="warning">{focusedCommander.starLevel} stars</Badge>}
             >
               <div className={styles.sheetList}>
                 <div className={styles.sheetRow}>
@@ -721,7 +721,7 @@ export function GameLayout() {
                   <strong>{formatNumber(focusedCommander.xp)} / {formatNumber(focusedCommander.xpToNextLevel)}</strong>
                 </div>
                 <div className={styles.sheetRow}>
-                  <span className={styles.sheetMeta}>Yetenek hatti</span>
+                  <span className={styles.sheetMeta}>Talent Track</span>
                   <strong>{focusedCommander.talentTrack.toLowerCase()}</strong>
                 </div>
               </div>
@@ -730,7 +730,7 @@ export function GameLayout() {
           {commanders.map((commander) => (
             <SectionCard
               key={commander.id}
-              kicker={commander.isPrimary ? "Ana komutan" : "Hazir subay"}
+              kicker={commander.isPrimary ? "Primary Commander" : "Reserve Officer"}
               title={`${commander.name} L${commander.level}`}
               aside={<Badge tone="info">{commander.talentTrack.toLowerCase()}</Badge>}
             >
@@ -739,7 +739,7 @@ export function GameLayout() {
                   XP {formatNumber(commander.xp)}/{formatNumber(commander.xpToNextLevel)}
                 </span>
                 <Button type="button" variant="secondary" size="small" onClick={() => setCommanderPanelId(commander.id)}>
-                  Detay
+                  Details
                 </Button>
               </div>
               <div className={styles.sheetRow}>
@@ -753,7 +753,7 @@ export function GameLayout() {
                   disabled={upgradeCommanderMutation.isPending || commander.xp < commander.xpToNextLevel}
                   onClick={() => upgradeCommanderMutation.mutate(commander.id)}
                 >
-                  Terfi et
+                  Upgrade
                 </Button>
               </div>
             </SectionCard>
@@ -769,7 +769,7 @@ export function GameLayout() {
       >
         <div className={styles.sheetGrid}>
           <SectionCard
-            kicker="Teklifler"
+            kicker="Offers"
             title={copy.store.offers}
             aside={<Badge tone="warning">{formatNumber(storeCatalog?.offers.length ?? 0)}</Badge>}
           >
@@ -780,19 +780,19 @@ export function GameLayout() {
                     <strong>{offer.title}</strong>
                     <p className={styles.sheetMeta}>{offer.description}</p>
                   </div>
-                  <Badge tone="info">{offer.productIds.length} urun</Badge>
+                  <Badge tone="info">{offer.productIds.length} products</Badge>
                 </div>
               ))}
             </div>
           </SectionCard>
           <SectionCard
-            kicker="Haklar"
+            kicker="Entitlements"
             title={copy.store.entitlements}
             aside={<Badge tone="success">{formatNumber(entitlements.length)}</Badge>}
           >
             <div className={styles.sheetList}>
               {entitlements.length === 0 ? (
-                <p className={styles.sheetMeta}>Bu dalgada yalnizca katalog gorunumu acik.</p>
+                <p className={styles.sheetMeta}>This wave only exposes the catalog preview.</p>
               ) : (
                 entitlements.slice(0, 5).map((entitlement) => (
                   <div key={entitlement.id} className={styles.sheetRow}>
@@ -812,3 +812,4 @@ export function GameLayout() {
 export function useGameLayoutContext() {
   return useOutletContext<GameLayoutContext>();
 }
+

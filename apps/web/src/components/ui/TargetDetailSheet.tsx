@@ -60,31 +60,35 @@ export function TargetDetailSheet({
             </Button>
           ) : null}
           <Button type="button" variant="primary" onClick={onProceed}>
-            Ilerle
+            Proceed
           </Button>
         </>
       }
     >
       <SectionCard
-        kicker="Hedef ozeti"
+        kicker="Target Overview"
         title={title}
-        aside={<Badge tone={projectedOutcome === "ATTACKER_WIN" ? "success" : "warning"}>{projectedOutcome === "ATTACKER_WIN" ? "Elverisli" : "Direncli"}</Badge>}
+        aside={
+          <Badge tone={projectedOutcome === "ATTACKER_WIN" ? "success" : "warning"}>
+            {projectedOutcome === "ATTACKER_WIN" ? "Favorable" : "Resistant"}
+          </Badge>
+        }
       >
         <p>{subtitle}</p>
         {target.kind === "CITY" ? (
           <div style={{ marginTop: "0.85rem", display: "grid", gap: "0.4rem" }}>
-            <span>Savunma gucu: {formatNumber(target.city.defensePower)}</span>
-            <span>Mesafe: {target.city.distance != null ? `${formatNumber(target.city.distance)} kare` : "-"}</span>
-            <span>Sis durumu: {target.city.fogState.toLowerCase()}</span>
+            <span>Defense Power: {formatNumber(target.city.defensePower)}</span>
+            <span>Distance: {target.city.distance != null ? `${formatNumber(target.city.distance)} tiles` : "-"}</span>
+            <span>Fog State: {target.city.fogState.toLowerCase()}</span>
           </div>
         ) : (
           <div style={{ marginTop: "0.85rem", display: "grid", gap: "0.4rem" }}>
-            <span>Seviye: {target.poi.level}</span>
-            <span>Durum: {target.poi.state.toLowerCase()}</span>
-            <span>Mesafe: {target.poi.distance != null ? `${formatNumber(target.poi.distance)} kare` : "-"}</span>
+            <span>Level: {target.poi.level}</span>
+            <span>State: {target.poi.state.toLowerCase()}</span>
+            <span>Distance: {target.poi.distance != null ? `${formatNumber(target.poi.distance)} tiles` : "-"}</span>
             {target.poi.remainingAmount != null ? (
               <span>
-                Kalan: {formatNumber(target.poi.remainingAmount)}
+                Remaining: {formatNumber(target.poi.remainingAmount)}
                 {target.poi.maxAmount != null ? ` / ${formatNumber(target.poi.maxAmount)}` : ""}
               </span>
             ) : null}

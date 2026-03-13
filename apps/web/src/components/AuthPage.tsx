@@ -47,46 +47,46 @@ export function AuthPage({ mode }: AuthPageProps) {
     <main className={styles.shell}>
       <section className={styles.hero}>
         <p className={styles.kicker}>{copy.auth.brand}</p>
-        <h1 className={styles.title}>Tarayicidan yonetilen bir sinir eyaletini sehirden atlasa tasiyin.</h1>
+        <h1 className={styles.title}>Run a frontier province from browser tab to battle map.</h1>
         <p className={styles.subtitle}>
-          Bu giris katmani, gorev zinciri, harita seferleri, ulak kutusu ve ittifak koordinasyonu icin hizli
-          bir baslangic noktasi sunar.
+          This entry layer gives players a fast path into tasks, marches, inbox flow, and alliance coordination
+          without changing the core strategy loop.
         </p>
 
         <div className={styles.journey}>
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>01</span>
-            <strong>Sehre gir</strong>
-            <p>Demo sancaklardan biriyle ya da kendi hesabinizla aninda iceri alin.</p>
+            <strong>Enter the city</strong>
+            <p>Use a demo banner or your own account to jump directly into a live province.</p>
           </article>
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>02</span>
-            <strong>Ilk gorevi ac</strong>
-            <p>Dashboard sizi ilk insa, talim ve arastirma zincirine yonlendirir.</p>
+            <strong>Open the first tasks</strong>
+            <p>The dashboard guides players through their first build, training, and research steps.</p>
           </article>
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>03</span>
-            <strong>Atlasa cik</strong>
-            <p>Iki asamali hedef sheeti ile kamp, node ya da sehir secip sefer cikarirsiniz.</p>
+            <strong>March onto the map</strong>
+            <p>The two-step target sheet lets players scout, gather, or attack with clear confirmation.</p>
           </article>
         </div>
 
         <ul className={styles.highlights}>
-          <li>Mobil-odakli hud ve alt gezinme</li>
-          <li>March merkezli harita akisi</li>
-          <li>Ulak kutusu ve sefer defteri</li>
-          <li>Ittifak odasi ve yardim panosu</li>
+          <li>Mobile-first HUD and bottom navigation</li>
+          <li>March-first strategy flow</li>
+          <li>Inbox and report center</li>
+          <li>Alliance coordination and help board</li>
         </ul>
       </section>
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <p className={styles.modeBadge}>{isLogin ? "Giris" : "Kayit"}</p>
+          <p className={styles.modeBadge}>{isLogin ? "Login" : "Register"}</p>
           <h2 className={styles.cardTitle}>{isLogin ? copy.auth.loginTitle : copy.auth.registerTitle}</h2>
           <p className={styles.cardIntro}>
             {isLogin
-              ? "Komuta paneline donun, aktif kuyruklarinizi ve saha emirlerinizi kaldiginiz yerden surdurun."
-              : "Yeni bir komutan olusturun ve ilk sehir operasyonlarinizi gorev zinciri ile acin."}
+              ? "Return to your queues, marches, and active alliance state without losing momentum."
+              : "Create a new account and open the first city operations through the tutorial chain."}
           </p>
         </div>
 
@@ -106,7 +106,7 @@ export function AuthPage({ mode }: AuthPageProps) {
               autoComplete="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="komutan_01"
+              placeholder="commander_01"
             />
           </label>
 
@@ -120,7 +120,7 @@ export function AuthPage({ mode }: AuthPageProps) {
               autoComplete={isLogin ? "current-password" : "new-password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="En az 8 karakter"
+              placeholder="At least 8 characters"
             />
           </label>
 
@@ -132,24 +132,26 @@ export function AuthPage({ mode }: AuthPageProps) {
           ) : null}
 
           <button className={styles.submitButton} type="submit" disabled={authMutation.isPending}>
-            {authMutation.isPending ? "Isleniyor..." : isLogin ? copy.auth.login : copy.auth.register}
+            {authMutation.isPending ? "Working..." : isLogin ? copy.auth.login : copy.auth.register}
           </button>
         </form>
 
         <p className={styles.switchText}>
-          {isLogin ? "Yeni bir hesap mi gerekiyor?" : "Zaten kayitli misiniz?"}{" "}
-          <Link to={isLogin ? "/register" : "/login"}>{isLogin ? "Kayit ekranina gec" : "Giris ekranina don"}</Link>
+          {isLogin ? "Need a new account?" : "Already registered?"}{" "}
+          <Link to={isLogin ? "/register" : "/login"}>{isLogin ? "Go to register" : "Back to login"}</Link>
         </p>
 
         <div className={styles.demoBox}>
-          <span className={styles.demoTitle}>Hazir demo sancaklari</span>
-          <p className={styles.helperText}>Sifre butun demo komutanlari icin ayni: <code>demo12345</code></p>
+          <span className={styles.demoTitle}>Ready demo banners</span>
+          <p className={styles.helperText}>
+            The shared password for every demo commander is <code>demo12345</code>
+          </p>
           <div className={styles.demoList}>
             {demoUsers.map((demoUser) => (
               <div key={demoUser} className={styles.demoRow}>
                 <div>
                   <strong>{demoUser}</strong>
-                  <p>Hazir sehir, ittifak ve sefer verisi ile acilir.</p>
+                  <p>Opens with seeded city, alliance, and march data.</p>
                 </div>
                 {isLogin ? (
                   <button
@@ -164,7 +166,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                       })
                     }
                   >
-                    Giris yap
+                    Log in
                   </button>
                 ) : null}
               </div>
@@ -175,4 +177,3 @@ export function AuthPage({ mode }: AuthPageProps) {
     </main>
   );
 }
-

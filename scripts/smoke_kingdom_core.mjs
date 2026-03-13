@@ -118,9 +118,9 @@ async function dispatchMarch(page) {
       return state?.selectedPoi?.id === targetPoi.id ? state : null;
     }, 5_000, "the target point of interest to become selected");
 
-    await page.getByRole("button", { name: "Ilerle" }).click();
+    await page.getByRole("button", { name: "Proceed" }).click();
     await page
-      .getByRole("button", { name: targetPoi.canGather ? "Toplama gonder" : "Kampa yuru" })
+      .getByRole("button", { name: targetPoi.canGather ? "Start Gathering" : "March to Camp" })
       .click();
 
     const sentState = await waitFor(async () => {
@@ -149,8 +149,8 @@ async function dispatchMarch(page) {
     return state?.selectedCity?.cityId === targetCity.cityId ? state : null;
   }, 5_000, "the target settlement to become selected");
 
-  await page.getByRole("button", { name: "Ilerle" }).click();
-  await page.getByRole("button", { name: "Seferi gonder" }).click();
+  await page.getByRole("button", { name: "Proceed" }).click();
+  await page.getByRole("button", { name: "Send March" }).click();
 
   const sentState = await waitFor(async () => {
     const state = await readGameState(page);
@@ -193,18 +193,18 @@ async function main() {
       return null;
     }, 15_000, "dashboard state");
 
-    await page.getByRole("link", { name: "Ittifak" }).click();
+    await page.getByRole("link", { name: "Alliance" }).click();
     await page.waitForURL("**/app/alliance");
     const allianceState = await ensureAllianceLoaded(page);
 
-    await page.getByRole("link", { name: "Atlas" }).click();
+    await page.getByRole("link", { name: "Map" }).click();
     await page.waitForURL("**/app/map");
     await ensureMapLoaded(page);
     await waitForMarchResolution(page);
     const marchDispatch = await dispatchMarch(page);
     await waitForMarchResolution(page);
 
-    await page.getByRole("link", { name: "Sefer Defteri" }).click();
+    await page.getByRole("link", { name: "Reports" }).click();
     await page.waitForURL("**/app/reports");
     await page.getByRole("heading").first().waitFor();
     await page.screenshot({ path: args.screenshotPath, fullPage: true });
@@ -242,3 +242,4 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
+

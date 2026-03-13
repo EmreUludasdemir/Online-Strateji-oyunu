@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { MapCity, PoiKind, PoiResourceType, PoiView, TroopStock, TroopType } from "@frontier/shared";
+import type { MapCity, PoiView, TroopStock, TroopType } from "@frontier/shared";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { api } from "../api";
@@ -18,8 +18,6 @@ import styles from "./MapPage.module.css";
 const WorldMap = lazy(() => import("../components/WorldMap"));
 const RADII = [6, 8, 10] as const;
 
-const poiResourceLabels: Record<PoiResourceType, string> = { WOOD: "Odun", STONE: "Tas", FOOD: "Yemek", GOLD: "Altin" };
-
 function createTroopPayload(stateTroops: Array<{ type: TroopType; quantity: number }>): TroopStock {
   return {
     INFANTRY: Math.min(18, stateTroops.find((troop) => troop.type === "INFANTRY")?.quantity ?? 0),
@@ -29,9 +27,9 @@ function createTroopPayload(stateTroops: Array<{ type: TroopType; quantity: numb
 }
 
 function getMarchTimingLabel(march: { state: string; etaAt: string; battleWindowClosesAt: string | null; returnEtaAt: string | null }, now: number): string {
-  if (march.state === "STAGING" && march.battleWindowClosesAt) return `Pencere ${formatRelativeTimer(march.battleWindowClosesAt, now)}`;
-  if (march.state === "GATHERING") return `Toplama ${formatRelativeTimer(march.etaAt, now)}`;
-  if (march.state === "RETURNING" && march.returnEtaAt) return `Donus ${formatRelativeTimer(march.returnEtaAt, now)}`;
+  if (march.state === "STAGING" && march.battleWindowClosesAt) return `Window ${formatRelativeTimer(march.battleWindowClosesAt, now)}`;
+  if (march.state === "GATHERING") return `Gathering ${formatRelativeTimer(march.etaAt, now)}`;
+  if (march.state === "RETURNING" && march.returnEtaAt) return `Return ${formatRelativeTimer(march.returnEtaAt, now)}`;
   return `ETA ${formatRelativeTimer(march.etaAt, now)}`;
 }
 
@@ -96,8 +94,8 @@ export function MapPage() {
 
   const targetCards = useMemo(() => {
     if (!worldChunkQuery.data) return [];
-    const cityCards = worldChunkQuery.data.cities.filter((city) => !city.isCurrentPlayer && (filter === "ALL" || filter === "CITIES")).map((city) => ({ id: city.cityId, label: city.cityName, meta: `${city.ownerName} | ${city.distance ?? "-"} kare`, kind: "CITY" as const, city }));
-    const poiCards = worldChunkQuery.data.pois.filter((poi) => filter === "ALL" || (filter === "CAMPS" && poi.kind === "BARBARIAN_CAMP") || (filter === "NODES" && poi.kind === "RESOURCE_NODE")).map((poi) => ({ id: poi.id, label: poi.label, meta: `${poi.kind.toLowerCase()} | ${poi.distance ?? "-"} kare`, kind: "POI" as const, poi }));
+    const cityCards = worldChunkQuery.data.cities.filter((city) => !city.isCurrentPlayer && (filter === "ALL" || filter === "CITIES")).map((city) => ({ id: city.cityId, label: city.cityName, meta: `${city.ownerName} | ${city.distance ?? "-"} tiles`, kind: "CITY" as const, city }));
+    const poiCards = worldChunkQuery.data.pois.filter((poi) => filter === "ALL" || (filter === "CAMPS" && poi.kind === "BARBARIAN_CAMP") || (filter === "NODES" && poi.kind === "RESOURCE_NODE")).map((poi) => ({ id: poi.id, label: poi.label, meta: `${poi.kind.toLowerCase()} | ${poi.distance ?? "-"} tiles`, kind: "POI" as const, poi }));
     return [...cityCards, ...poiCards].slice(0, 12);
   }, [filter, worldChunkQuery.data]);
 
@@ -121,11 +119,11 @@ export function MapPage() {
   }, [openedTargetKey, selectedCity, selectedPoi]);
 
   if (worldChunkQuery.isPending) {
-    return <div className={styles.hero}>Atlas yukleniyor...</div>;
+    return <div className={styles.hero}>Loading map...</div>;
   }
 
   if (worldChunkQuery.isError || !worldChunkQuery.data) {
-    return <div className={styles.hero}>Dunya parcasi yuklenemedi.</div>;
+    return <div className={styles.hero}>Unable to load this world chunk.</div>;
   }
 
   const handleCitySelect = (city: MapCity) => {
@@ -170,8 +168,8 @@ export function MapPage() {
     <section className={styles.page}>
       <article className={styles.hero}>
         <div className={styles.heroTop}>
-          <div><p className={styles.muted}>{copy.map.title}</p><h2 className={styles.heroTitle}>Sinir tiyatrosu</h2><p className={styles.heroLead}>Canvas dunya haritasi altta kalir; hedef akisi artik iki asamali sheet uzerinden ilerler.</p></div>
-          <Badge tone="info">Merkez {worldChunkQuery.data.center.x},{worldChunkQuery.data.center.y}</Badge>
+          <div><p className={styles.muted}>{copy.map.title}</p><h2 className={styles.heroTitle}>Frontier Theater</h2><p className={styles.heroLead}>The Phaser world remains render-only while targeting, scouting, and march confirmation now live in React overlays.</p></div>
+          <Badge tone="info">Center {worldChunkQuery.data.center.x},{worldChunkQuery.data.center.y}</Badge>
         </div>
         <div className={styles.summaryGrid}>
           <article className={styles.summaryCard}><span className={styles.muted}>{copy.map.visible}</span><strong className={styles.summaryValue}>{formatNumber(visibleTiles)}</strong></article>
@@ -181,10 +179,10 @@ export function MapPage() {
       </article>
 
       <div className={styles.chipRow}>
-        <Button type="button" size="small" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>Tumu</Button>
-        <Button type="button" size="small" variant={filter === "CITIES" ? "primary" : "secondary"} onClick={() => setFilter("CITIES")}>Sehirler</Button>
-        <Button type="button" size="small" variant={filter === "CAMPS" ? "primary" : "secondary"} onClick={() => setFilter("CAMPS")}>Kamplar</Button>
-        <Button type="button" size="small" variant={filter === "NODES" ? "primary" : "secondary"} onClick={() => setFilter("NODES")}>Node'lar</Button>
+        <Button type="button" size="small" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>All</Button>
+        <Button type="button" size="small" variant={filter === "CITIES" ? "primary" : "secondary"} onClick={() => setFilter("CITIES")}>Cities</Button>
+        <Button type="button" size="small" variant={filter === "CAMPS" ? "primary" : "secondary"} onClick={() => setFilter("CAMPS")}>Camps</Button>
+        <Button type="button" size="small" variant={filter === "NODES" ? "primary" : "secondary"} onClick={() => setFilter("NODES")}>Nodes</Button>
       </div>
 
       <article className={styles.mapFrame}>
@@ -192,7 +190,7 @@ export function MapPage() {
           <Button type="button" size="small" variant="secondary" disabled={radiusIndex === 0} onClick={() => setRadiusIndex((current) => Math.max(0, current - 1))}>{copy.map.zoomIn}</Button>
           <Button type="button" size="small" variant="secondary" disabled={radiusIndex === RADII.length - 1} onClick={() => setRadiusIndex((current) => Math.min(RADII.length - 1, current + 1))}>{copy.map.zoomOut}</Button>
         </div>
-        <Suspense fallback={<div className={styles.hero}>Harita aciliyor...</div>}>
+        <Suspense fallback={<div className={styles.hero}>Opening map...</div>}>
           <WorldMap
             size={64}
             center={worldChunkQuery.data.center}
@@ -224,17 +222,17 @@ export function MapPage() {
         ))}
       </section>
 
-      <SectionCard kicker={copy.map.activeMarches} title="Sahadaki emirler">
+      <SectionCard kicker={copy.map.activeMarches} title="Orders in the field">
         <div className={styles.marchList}>
           {state.city.activeMarches.map((march) => (
             <article key={march.id} className={styles.marchCard}>
               <div className={styles.marchMeta}>
-                <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Hedef"}</strong>
+                <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Target"}</strong>
                 <Badge tone={march.state === "STAGING" ? "warning" : march.state === "RETURNING" ? "info" : "success"}>{march.state.toLowerCase()}</Badge>
               </div>
-              <p className={styles.muted}>{getMarchTimingLabel(march, now)} | Mesafe {formatNumber(march.distance)} kare</p>
+              <p className={styles.muted}>{getMarchTimingLabel(march, now)} | Distance {formatNumber(march.distance)} tiles</p>
               <div className={styles.actionRow}>
-                <Button type="button" size="small" variant="ghost" disabled={isRecallingMarch} onClick={() => recallMarch(march.id)}>{isRecallingMarch ? "Bekle" : "Geri cagir"}</Button>
+                <Button type="button" size="small" variant="ghost" disabled={isRecallingMarch} onClick={() => recallMarch(march.id)}>{isRecallingMarch ? "Please wait" : "Recall"}</Button>
                 <Button
                   type="button"
                   size="small"
@@ -274,21 +272,21 @@ export function MapPage() {
 
       <BottomSheet
         open={Boolean(composerMode)}
-        title={composerMode === "SCOUT" ? "Kesif emri" : composerMode === "RALLY" ? "Ralli hazirligi" : copy.map.confirm}
+        title={composerMode === "SCOUT" ? "Scout Mission" : composerMode === "RALLY" ? "Rally Setup" : copy.map.confirm}
         onClose={() => setComposerMode(null)}
         actions={
           <>
-            <Button type="button" variant="ghost" onClick={() => setComposerMode(null)}>Vazgec</Button>
+            <Button type="button" variant="ghost" onClick={() => setComposerMode(null)}>Cancel</Button>
             <Button type="button" disabled={isSendingMarch || (composerMode !== "SCOUT" && totalAssignedTroops <= 0)} onClick={() => void handleComposerConfirm()}>
               {composerMode === "SCOUT"
-                ? "Kesfi gonder"
+                ? "Send Scout"
                 : composerMode === "RALLY"
-                  ? "Ralli ac"
+                  ? "Open Rally"
                   : composerMode === "RESOURCE_GATHER"
-                    ? "Toplama gonder"
+                    ? "Start Gathering"
                     : composerMode === "BARBARIAN_ATTACK"
-                      ? "Kampa yuru"
-                      : "Seferi gonder"}
+                      ? "March to Camp"
+                      : "Send March"}
             </Button>
           </>
         }
@@ -298,7 +296,7 @@ export function MapPage() {
           {composerMode !== "SCOUT" ? (
             <>
               <div className={styles.composerRow}>
-                <span className={styles.muted}>Komutan</span>
+                <span className={styles.muted}>Commander</span>
                 <select value={commanderId} onChange={(event) => setCommanderId(event.target.value)}>
                   {state.city.commanders.map((commander) => <option key={commander.id} value={commander.id}>{commander.name} L{commander.level}</option>)}
                 </select>
@@ -312,8 +310,8 @@ export function MapPage() {
             </>
           ) : (
             <div className={styles.detailList}>
-              <p className={styles.muted}>Kesif emirleri birlik tasimaz. Sonuc ulak kutusuna detayli rapor olarak duser.</p>
-              {selectedPoi?.resourceType ? <p className={styles.muted}>Kaynak tipi: {poiResourceLabels[selectedPoi.resourceType]}</p> : null}
+              <p className={styles.muted}>Scout missions do not carry troops. The result will arrive as a detailed inbox report.</p>
+              {selectedPoi?.resourceType ? <p className={styles.muted}>Resource Type: {copy.poiResources[selectedPoi.resourceType]}</p> : null}
             </div>
           )}
         </div>

@@ -42,3 +42,8 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
 - 2026-03-13: Re-ran `corepack pnpm --filter @frontier/web build`, `corepack pnpm --filter @frontier/web test`, and `corepack pnpm smoke:e2e`; the smoke flow passed with `Ashwatch -> Barbarian Camp 5` on the refreshed UI.
 - Note: The browser console still shows an initial `404 /api/auth/me` during the login route in dev mode; this did not block login, route transitions, or the smoke flow, but it should be traced separately if auth proxy behavior is tightened.
 - TODO: Finish the design-system split by extracting a dedicated tokens file and moving more English gameplay labels from server/shared constants into UI-facing TR/i18n presentation layers.
+
+- 2026-03-13: Completed a full English normalization pass across the active web runtime. Converted GameLayout HUD copy, the alliance surface, inbox/target sheets, auth/dashboard/map/reports shell text, and smoke selectors to clear English while keeping gameplay contracts unchanged.
+- 2026-03-13: Re-ran corepack pnpm --filter @frontier/web build, corepack pnpm --filter @frontier/web test, and corepack pnpm smoke:e2e; all passed with the updated English labels and selectors.
+- Note: The latest smoke screenshot shows the refreshed HUD in English; the Reports route still transitions through a visible loading state during capture, but the smoke flow resolved successfully and rendered an English report heading.
+

@@ -23,6 +23,10 @@ function getRoleTone(role: AllianceRole): "info" | "success" | "warning" {
   return "warning";
 }
 
+function formatResourceLabel(resource: string): string {
+  return resource.slice(0, 1).toUpperCase() + resource.slice(1);
+}
+
 export function AlliancePage() {
   const queryClient = useQueryClient();
   const { state } = useGameLayoutContext();
@@ -55,7 +59,7 @@ export function AlliancePage() {
     mutationFn: () => api.createAlliance({ name, tag: tag.toUpperCase(), description }),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Ittifak sancagi kuruldu.");
+      setNotice("Alliance banner established.");
       setName("");
       setTag("");
       setDescription("");
@@ -66,7 +70,7 @@ export function AlliancePage() {
     mutationFn: (allianceId: string) => api.joinAlliance(allianceId),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Ittifaka katilim onaylandi.");
+      setNotice("Alliance join confirmed.");
     },
   });
 
@@ -74,7 +78,7 @@ export function AlliancePage() {
     mutationFn: api.leaveAlliance,
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Ittifaktan ayrildiniz.");
+      setNotice("You left the alliance.");
     },
   });
 
@@ -82,7 +86,7 @@ export function AlliancePage() {
     mutationFn: () => api.sendAllianceChat(chatMessage),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Ittifak mesaji gonderildi.");
+      setNotice("Alliance message sent.");
       setChatMessage("");
     },
   });
@@ -97,7 +101,7 @@ export function AlliancePage() {
       }),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Ittifak hazinesi guncellendi.");
+      setNotice("Alliance treasury updated.");
     },
   });
 
@@ -105,7 +109,7 @@ export function AlliancePage() {
     mutationFn: ({ userId, role }: { userId: string; role: AllianceRole }) => api.updateAllianceRole(userId, role),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Rol dagilimi guncellendi.");
+      setNotice("Role assignments updated.");
     },
   });
 
@@ -113,7 +117,7 @@ export function AlliancePage() {
     mutationFn: (kind: "BUILDING_UPGRADE" | "TRAINING" | "RESEARCH") => api.requestAllianceHelp(kind),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Yardim talebi panoya asildi.");
+      setNotice("Help request posted to the board.");
     },
   });
 
@@ -121,7 +125,7 @@ export function AlliancePage() {
     mutationFn: (helpRequestId: string) => api.respondAllianceHelp(helpRequestId),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Yardim gonderildi.");
+      setNotice("Support sent.");
     },
   });
 
@@ -129,7 +133,7 @@ export function AlliancePage() {
     mutationFn: () => api.updateAllianceAnnouncement(announcementDraft),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Duyuru guncellendi.");
+      setNotice("Announcement updated.");
     },
   });
 
@@ -137,7 +141,7 @@ export function AlliancePage() {
     mutationFn: () => api.createAllianceMarker({ label: markerLabel, x: markerX, y: markerY }),
     onSuccess: async () => {
       await invalidateAlliance();
-      setNotice("Harita isareti eklendi.");
+      setNotice("Map marker added.");
       setMarkerLabel("");
     },
   });
@@ -148,17 +152,17 @@ export function AlliancePage() {
     () => [
       {
         kind: "BUILDING_UPGRADE" as const,
-        label: "Insa yardimi",
+        label: "Build Help",
         enabled: Boolean(state.city.activeUpgrade),
       },
       {
         kind: "TRAINING" as const,
-        label: "Talim yardimi",
+        label: "Training Help",
         enabled: Boolean(state.city.activeTraining),
       },
       {
         kind: "RESEARCH" as const,
-        label: "Arastirma yardimi",
+        label: "Research Help",
         enabled: Boolean(state.city.activeResearch),
       },
     ],
@@ -180,11 +184,11 @@ export function AlliancePage() {
   }, [state.city.coordinates.x, state.city.coordinates.y]);
 
   if (allianceQuery.isPending) {
-    return <div className={styles.feedback}>Ittifak odasi yukleniyor...</div>;
+    return <div className={styles.feedback}>Loading alliance chamber...</div>;
   }
 
   if (allianceQuery.isError) {
-    return <div className={styles.feedback}>Ittifak odasi yuklenemedi.</div>;
+    return <div className={styles.feedback}>Alliance chamber could not be loaded.</div>;
   }
 
   return (
@@ -192,46 +196,51 @@ export function AlliancePage() {
       <header className={styles.hero}>
         <div className={styles.heroTop}>
           <div>
-            <p className={styles.kicker}>Ittifak odasi</p>
-            <h2 className={styles.heroTitle}>{alliance ? `${alliance.name} [${alliance.tag}]` : "Acik diplomasi"}</h2>
+            <p className={styles.kicker}>Alliance Chamber</p>
+            <h2 className={styles.heroTitle}>{alliance ? `${alliance.name} [${alliance.tag}]` : "Open Diplomacy"}</h2>
             <p className={styles.heroLead}>
-              Uye koordinasyonu, yardim panosu, harita isaretleri ve ortak hazine ayni komuta katmaninda toplanir.
+              Member coordination, the help board, map markers, and the shared treasury stay in one command layer.
             </p>
           </div>
           <Badge tone={alliance ? getRoleTone(alliance.role) : "info"}>
-            {alliance ? alliance.role : "Sancak araniyor"}
+            {alliance ? alliance.role : "Seeking Banner"}
           </Badge>
         </div>
         <div className={styles.summaryGrid}>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Uye</span>
+            <span className={styles.summaryLabel}>Members</span>
             <strong className={styles.summaryValue}>{formatNumber(alliance?.memberCount ?? publicAlliances.length)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Yardim</span>
+            <span className={styles.summaryLabel}>Help</span>
             <strong className={styles.summaryValue}>{formatNumber(alliance?.helpRequests.length ?? 0)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Mesaj</span>
+            <span className={styles.summaryLabel}>Messages</span>
             <strong className={styles.summaryValue}>{formatNumber(alliance?.chatMessages.length ?? 0)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Hazine</span>
+            <span className={styles.summaryLabel}>Treasury</span>
             <strong className={styles.summaryValue}>
               {formatNumber(alliance ? Object.values(alliance.treasury).reduce((sum, value) => sum + value, 0) : 0)}
             </strong>
           </article>
         </div>
-        <div className={styles.notice}>{notice ?? (alliance ? "Saha odagi, yardim, lojistik ve sohbet tek yerde tutulur." : "Yeni bir ittifak kurabilir ya da acik sancaklardan birine katilabilirsiniz.")}</div>
+        <div className={styles.notice}>
+          {notice ??
+            (alliance
+              ? "Field coordination, support, logistics, and chat stay in one place."
+              : "Create a new alliance or join one of the open banners.")}
+        </div>
       </header>
 
       {alliance ? (
         <div className={styles.layout}>
           <div className={styles.mainColumn}>
             <SectionCard
-              kicker="Duyuru ve rota"
-              title="Komuta panosu"
-              aside={<Badge tone="info">{alliance.markers.length} isaret</Badge>}
+              kicker="Command Board"
+              title="Announcements and Routes"
+              aside={<Badge tone="info">{alliance.markers.length} markers</Badge>}
             >
               <div className={styles.stack}>
                 <textarea
@@ -239,7 +248,7 @@ export function AlliancePage() {
                   value={announcementDraft}
                   maxLength={220}
                   onChange={(event) => setAnnouncementDraft(event.target.value)}
-                  placeholder="Bugunun odagini, rally rotasini veya savunma emrini yazin."
+                  placeholder="Write today's focus, rally route, or defense order."
                 />
                 <div className={styles.actions}>
                   <Button
@@ -248,7 +257,7 @@ export function AlliancePage() {
                     disabled={alliance.role === "MEMBER" || updateAnnouncementMutation.isPending}
                     onClick={() => updateAnnouncementMutation.mutate()}
                   >
-                    {alliance.role === "MEMBER" ? "Sadece oku" : "Duyuruyu kaydet"}
+                    {alliance.role === "MEMBER" ? "Read Only" : "Save Announcement"}
                   </Button>
                 </div>
                 <div className={styles.inlineForm}>
@@ -257,53 +266,53 @@ export function AlliancePage() {
                     value={markerLabel}
                     maxLength={48}
                     onChange={(event) => setMarkerLabel(event.target.value)}
-                    placeholder="Yeni harita isareti"
+                    placeholder="New map marker"
                   />
                   <input
                     className={styles.textField}
                     type="number"
                     value={markerX}
                     onChange={(event) => setMarkerX(Number(event.target.value))}
-                    aria-label="Isaret X"
+                    aria-label="Marker X"
                   />
                   <input
                     className={styles.textField}
                     type="number"
                     value={markerY}
                     onChange={(event) => setMarkerY(Number(event.target.value))}
-                    aria-label="Isaret Y"
+                    aria-label="Marker Y"
                   />
                   <Button
                     type="button"
                     disabled={markerLabel.trim().length < 3 || createMarkerMutation.isPending}
                     onClick={() => createMarkerMutation.mutate()}
                   >
-                    Isaret birak
+                    Drop Marker
                   </Button>
                 </div>
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Alan sohbeti" title="Iletisim hatti" aside={<Badge tone="info">Canli</Badge>}>
+            <SectionCard kicker="Field Chat" title="Alliance Channel" aside={<Badge tone="info">Live</Badge>}>
               <div className={styles.inlineComposer}>
                 <input
                   className={styles.textField}
                   value={chatMessage}
                   maxLength={240}
                   onChange={(event) => setChatMessage(event.target.value)}
-                  placeholder="Plan paylas, destek iste veya hedef cagir."
+                  placeholder="Share the plan, call for support, or mark a target."
                 />
                 <Button
                   type="button"
                   disabled={sendChatMutation.isPending || chatMessage.trim().length === 0}
                   onClick={() => sendChatMutation.mutate()}
                 >
-                  {sendChatMutation.isPending ? "Gidiyor" : "Gonder"}
+                  {sendChatMutation.isPending ? "Sending" : "Send"}
                 </Button>
               </div>
               <div className={styles.feedList}>
                 {alliance.chatMessages.length === 0 ? (
-                  <EmptyState title="Sohbet sessiz" body="Ilk emri yazin ve saha ritmini buradan kurun." />
+                  <EmptyState title="Quiet Channel" body="Write the first order and set the field rhythm from here." />
                 ) : (
                   alliance.chatMessages.map((message) => (
                     <article key={message.id} className={styles.feedCard}>
@@ -318,7 +327,7 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Yardim panosu" title="Sira hizlandirma">
+            <SectionCard kicker="Help Board" title="Queue Acceleration">
               <div className={styles.helpGrid}>
                 {requestableHelp.map((entry) => (
                   <Button
@@ -334,7 +343,10 @@ export function AlliancePage() {
               </div>
               <div className={styles.feedList}>
                 {alliance.helpRequests.length === 0 ? (
-                  <EmptyState title="Acik talep yok" body="Aktif insa, talim veya arastirma oldugunda yardim penceresi buradan acilir." />
+                  <EmptyState
+                    title="No Open Requests"
+                    body="When a build, training, or research queue is active, help opens here."
+                  />
                 ) : (
                   alliance.helpRequests.map((request) => (
                     <article key={request.id} className={styles.feedCard}>
@@ -354,7 +366,7 @@ export function AlliancePage() {
                           }
                           onClick={() => respondHelpMutation.mutate(request.id)}
                         >
-                          {request.requesterUserId === state.player.id ? "Senin talebin" : "Yardim gonder"}
+                          {request.requesterUserId === state.player.id ? "Your Request" : "Send Help"}
                         </Button>
                       </div>
                     </article>
@@ -363,10 +375,10 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Saha kayitlari" title="Son olaylar" aside={<Badge tone="info">{alliance.logs.length} kayit</Badge>}>
+            <SectionCard kicker="Activity Log" title="Latest Events" aside={<Badge tone="info">{alliance.logs.length} entries</Badge>}>
               <div className={styles.feedList}>
                 {alliance.logs.length === 0 ? (
-                  <EmptyState title="Log bos" body="Yeni yardim, bagis ve diplomasi hareketleri buraya dusecek." />
+                  <EmptyState title="Log Empty" body="New aid, donation, and diplomacy actions will land here." />
                 ) : (
                   alliance.logs.slice(0, 6).map((entry) => (
                     <article key={entry.id} className={styles.feedCard}>
@@ -383,11 +395,11 @@ export function AlliancePage() {
           </div>
 
           <aside className={styles.sideColumn}>
-            <SectionCard kicker="Hazine" title="Ortak stok" aside={<Badge tone="success">Acik</Badge>}>
+            <SectionCard kicker="Treasury" title="Shared Stock" aside={<Badge tone="success">Active</Badge>}>
               <dl className={styles.definitionGrid}>
                 {Object.entries(alliance.treasury).map(([resource, amount]) => (
                   <div key={resource}>
-                    <dt>{resource}</dt>
+                    <dt>{formatResourceLabel(resource)}</dt>
                     <dd>{formatNumber(amount)}</dd>
                   </div>
                 ))}
@@ -396,7 +408,7 @@ export function AlliancePage() {
                 <select value={donationResource} onChange={(event) => setDonationResource(event.target.value as ResourceKey)}>
                   {RESOURCE_OPTIONS.map((resource) => (
                     <option key={resource} value={resource}>
-                      {resource}
+                      {formatResourceLabel(resource)}
                     </option>
                   ))}
                 </select>
@@ -410,7 +422,7 @@ export function AlliancePage() {
                 />
               </div>
               <p className={styles.mutedText}>
-                Sehir stogu: {formatNumber(state.city.resources[donationResource])} {donationResource}
+                City stock: {formatNumber(state.city.resources[donationResource])} {donationResource}
               </p>
               <Button
                 type="button"
@@ -421,20 +433,20 @@ export function AlliancePage() {
                 }
                 onClick={() => donateMutation.mutate()}
               >
-                {donateMutation.isPending ? "Isleniyor" : "Hazineye bagisla"}
+                {donateMutation.isPending ? "Processing" : "Donate to Treasury"}
               </Button>
             </SectionCard>
 
-            <SectionCard kicker="Katki puani" title="Liderlik sirasi">
+            <SectionCard kicker="Contribution Score" title="Leadership Ranking">
               <div className={styles.feedList}>
                 {alliance.contributions.length === 0 ? (
-                  <EmptyState title="Puan yok" body="Bagis ve yardim aksiyonlari katkilar tablosunu doldurur." />
+                  <EmptyState title="No Score Yet" body="Donation and aid actions fill the contribution table." />
                 ) : (
                   alliance.contributions.slice(0, 6).map((entry, index) => (
                     <article key={entry.userId} className={styles.feedCard}>
                       <div className={styles.feedMeta}>
                         <strong>#{index + 1} {entry.username}</strong>
-                        <span>{formatNumber(entry.points)} puan</span>
+                        <span>{formatNumber(entry.points)} points</span>
                       </div>
                     </article>
                   ))
@@ -442,10 +454,10 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Sancaklar" title="Harita isaretleri">
+            <SectionCard kicker="Markers" title="Map Pins">
               <div className={styles.feedList}>
                 {alliance.markers.length === 0 ? (
-                  <EmptyState title="Isaret yok" body="Toplanma, savunma ve hedef noktalarini buradan sabitleyin." />
+                  <EmptyState title="No Markers" body="Lock rally, defense, and target points here." />
                 ) : (
                   alliance.markers.slice(0, 6).map((marker) => (
                     <article key={marker.id} className={styles.feedCard}>
@@ -461,9 +473,19 @@ export function AlliancePage() {
             </SectionCard>
 
             <SectionCard
-              kicker="Kadrolar"
-              title="Uye listesi"
-              aside={<Button type="button" variant="ghost" size="small" disabled={leaveAllianceMutation.isPending} onClick={() => leaveAllianceMutation.mutate()}>{leaveAllianceMutation.isPending ? "Cikiliyor" : "Ayril"}</Button>}
+              kicker="Roster"
+              title="Member List"
+              aside={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="small"
+                  disabled={leaveAllianceMutation.isPending}
+                  onClick={() => leaveAllianceMutation.mutate()}
+                >
+                  {leaveAllianceMutation.isPending ? "Leaving" : "Leave"}
+                </Button>
+              }
             >
               <div className={styles.feedList}>
                 {alliance.members.map((member) => (
@@ -483,7 +505,7 @@ export function AlliancePage() {
                             disabled={updateRoleMutation.isPending}
                             onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "OFFICER" })}
                           >
-                            Officer yap
+                            Promote Officer
                           </Button>
                         ) : null}
                         {member.role !== "MEMBER" ? (
@@ -494,7 +516,7 @@ export function AlliancePage() {
                             disabled={updateRoleMutation.isPending}
                             onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "MEMBER" })}
                           >
-                            Uye yap
+                            Set Member
                           </Button>
                         ) : null}
                         {member.role !== "LEADER" ? (
@@ -505,7 +527,7 @@ export function AlliancePage() {
                             disabled={updateRoleMutation.isPending}
                             onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "LEADER" })}
                           >
-                            Liderligi devret
+                            Transfer Leadership
                           </Button>
                         ) : null}
                       </div>
@@ -518,43 +540,43 @@ export function AlliancePage() {
         </div>
       ) : (
         <div className={styles.emptyLayout}>
-          <SectionCard kicker="Yeni sancak" title="Ittifak kur">
+          <SectionCard kicker="New Banner" title="Create Alliance">
             <div className={styles.stack}>
               <input
                 className={styles.textField}
                 value={name}
                 maxLength={32}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Ittifak adi"
+                placeholder="Alliance name"
               />
               <input
                 className={styles.textField}
                 value={tag}
                 maxLength={6}
                 onChange={(event) => setTag(event.target.value.toUpperCase())}
-                placeholder="Etiket"
+                placeholder="Tag"
               />
               <textarea
                 className={styles.textArea}
                 value={description}
                 maxLength={180}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Kisa doktrin notu"
+                placeholder="Short doctrine note"
               />
               <Button
                 type="button"
                 disabled={createAllianceMutation.isPending || name.trim().length < 3 || tag.trim().length < 2}
                 onClick={() => createAllianceMutation.mutate()}
               >
-                {createAllianceMutation.isPending ? "Kuruluyor" : "Ittifaki kur"}
+                {createAllianceMutation.isPending ? "Creating" : "Create Alliance"}
               </Button>
             </div>
           </SectionCard>
 
-          <SectionCard kicker="Acik sancaklar" title="Katil">
+          <SectionCard kicker="Open Banners" title="Join Alliance">
             <div className={styles.feedList}>
               {publicAlliances.length === 0 ? (
-                <EmptyState title="Liste bos" body="Henuz gorunen bir ittifak yok." />
+                <EmptyState title="List Empty" body="No visible alliance is available yet." />
               ) : (
                 publicAlliances.map((entry) => (
                   <article key={entry.id} className={styles.feedCard}>
@@ -562,16 +584,16 @@ export function AlliancePage() {
                       <strong>{entry.name}</strong>
                       <Badge tone="info">[{entry.tag}]</Badge>
                     </div>
-                    <p>{entry.description || "Doktrin notu eklenmemis."}</p>
+                    <p>{entry.description || "Doctrine note has not been set."}</p>
                     <div className={styles.actions}>
-                      <span>{entry.memberCount} uye</span>
+                      <span>{entry.memberCount} members</span>
                       <Button
                         type="button"
                         size="small"
                         disabled={joinAllianceMutation.isPending || entry.joined}
                         onClick={() => joinAllianceMutation.mutate(entry.id)}
                       >
-                        {entry.joined ? "Katilindi" : "Katil"}
+                        {entry.joined ? "Joined" : "Join"}
                       </Button>
                     </div>
                   </article>
