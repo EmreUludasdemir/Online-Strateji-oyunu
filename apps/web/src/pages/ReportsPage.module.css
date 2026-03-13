@@ -1,0 +1,168 @@
+.page {
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  display: grid;
+  gap: 1rem;
+  padding: 1.05rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(94, 57, 37, 0.48), rgba(30, 17, 12, 0.96)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent 70%);
+  box-shadow: var(--shadow-soft);
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.kicker,
+.summaryLabel,
+.metricLabel {
+  color: var(--color-gold-200);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.74rem;
+}
+
+.heroTitle {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.heroLead,
+.entryBody,
+.sideText {
+  color: var(--color-ink-300);
+  line-height: 1.65;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.summaryCard,
+.metricCard {
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(63, 37, 24, 0.82), rgba(29, 16, 11, 0.94)),
+    linear-gradient(90deg, rgba(255, 244, 220, 0.04), transparent);
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.3rem;
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 1rem;
+}
+
+.feed,
+.sideRail {
+  display: grid;
+  gap: 1rem;
+}
+
+.entryCard {
+  min-width: 0;
+}
+
+.entryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: var(--color-ink-300);
+  font-size: 0.88rem;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.definitionGrid {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.definitionGrid div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--color-ink-200);
+}
+
+.definitionGrid dt {
+  color: var(--color-ink-300);
+  text-transform: capitalize;
+}
+
+.definitionGrid dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tipList {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--color-ink-300);
+  line-height: 1.55;
+}
+
+.feedback {
+  padding: 1.3rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background: rgba(35, 20, 14, 0.9);
+  color: var(--color-ink-200);
+}
+
+@media (max-width: 1080px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .hero,
+  .summaryCard,
+  .metricCard {
+    border-radius: 20px;
+  }
+
+  .heroTop {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summaryGrid,
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+}

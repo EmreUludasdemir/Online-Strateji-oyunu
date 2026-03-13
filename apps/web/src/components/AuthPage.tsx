@@ -3,11 +3,14 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { api, ApiClientError } from "../api";
+import { copy } from "../lib/i18n";
 import styles from "./AuthPage.module.css";
 
 interface AuthPageProps {
   mode: "login" | "register";
 }
+
+const demoUsers = ["demo_alpha", "demo_beta", "demo_gamma"];
 
 export function AuthPage({ mode }: AuthPageProps) {
   const queryClient = useQueryClient();
@@ -38,28 +41,55 @@ export function AuthPage({ mode }: AuthPageProps) {
   }
 
   const error = authMutation.error instanceof ApiClientError ? authMutation.error : null;
+  const isLogin = mode === "login";
 
   return (
     <main className={styles.shell}>
       <section className={styles.hero}>
-        <p className={styles.kicker}>Frontier Dominion</p>
-        <h1 className={styles.title}>Raise an imperial frontier province from a browser tab.</h1>
+        <p className={styles.kicker}>{copy.auth.brand}</p>
+        <h1 className={styles.title}>Tarayicidan yonetilen bir sinir eyaletini sehirden atlasa tasiyin.</h1>
         <p className={styles.subtitle}>
-          Govern storehouses, academies, roads, and war banners through an original parchment-and-brass
-          strategy interface built around authoritative marches, frontier pressure, and courtly command.
+          Bu giris katmani, gorev zinciri, harita seferleri, ulak kutusu ve ittifak koordinasyonu icin hizli
+          bir baslangic noktasi sunar.
         </p>
+
+        <div className={styles.journey}>
+          <article className={styles.stepCard}>
+            <span className={styles.stepIndex}>01</span>
+            <strong>Sehre gir</strong>
+            <p>Demo sancaklardan biriyle ya da kendi hesabinizla aninda iceri alin.</p>
+          </article>
+          <article className={styles.stepCard}>
+            <span className={styles.stepIndex}>02</span>
+            <strong>Ilk gorevi ac</strong>
+            <p>Dashboard sizi ilk insa, talim ve arastirma zincirine yonlendirir.</p>
+          </article>
+          <article className={styles.stepCard}>
+            <span className={styles.stepIndex}>03</span>
+            <strong>Atlasa cik</strong>
+            <p>Iki asamali hedef sheeti ile kamp, node ya da sehir secip sefer cikarirsiniz.</p>
+          </article>
+        </div>
+
         <ul className={styles.highlights}>
-          <li>March-led kingdom pressure</li>
-          <li>Single-seat imperial build queue</li>
-          <li>Parchment campaign atlas</li>
-          <li>Persistent war ledger</li>
+          <li>Mobil-odakli hud ve alt gezinme</li>
+          <li>March merkezli harita akisi</li>
+          <li>Ulak kutusu ve sefer defteri</li>
+          <li>Ittifak odasi ve yardim panosu</li>
         </ul>
       </section>
 
       <section className={styles.card}>
-        <h2 className={styles.cardTitle}>
-          {mode === "login" ? "Enter the imperial pavilion" : "Charter a frontier province"}
-        </h2>
+        <div className={styles.cardHeader}>
+          <p className={styles.modeBadge}>{isLogin ? "Giris" : "Kayit"}</p>
+          <h2 className={styles.cardTitle}>{isLogin ? copy.auth.loginTitle : copy.auth.registerTitle}</h2>
+          <p className={styles.cardIntro}>
+            {isLogin
+              ? "Komuta paneline donun, aktif kuyruklarinizi ve saha emirlerinizi kaldiginiz yerden surdurun."
+              : "Yeni bir komutan olusturun ve ilk sehir operasyonlarinizi gorev zinciri ile acin."}
+          </p>
+        </div>
+
         <form
           className={styles.form}
           onSubmit={(event) => {
@@ -68,7 +98,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           }}
         >
           <label className={styles.field}>
-            <span>Username</span>
+            <span>{copy.auth.username}</span>
             <input
               required
               minLength={3}
@@ -76,21 +106,21 @@ export function AuthPage({ mode }: AuthPageProps) {
               autoComplete="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="commander_01"
+              placeholder="komutan_01"
             />
           </label>
 
           <label className={styles.field}>
-            <span>Password</span>
+            <span>{copy.auth.password}</span>
             <input
               required
               minLength={8}
               maxLength={72}
               type="password"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoComplete={isLogin ? "current-password" : "new-password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 8 characters"
+              placeholder="En az 8 karakter"
             />
           </label>
 
@@ -102,49 +132,47 @@ export function AuthPage({ mode }: AuthPageProps) {
           ) : null}
 
           <button className={styles.submitButton} type="submit" disabled={authMutation.isPending}>
-            {authMutation.isPending
-              ? "Submitting..."
-              : mode === "login"
-                ? "Log in"
-                : "Create account"}
+            {authMutation.isPending ? "Isleniyor..." : isLogin ? copy.auth.login : copy.auth.register}
           </button>
         </form>
 
         <p className={styles.switchText}>
-          {mode === "login" ? "Need a new account?" : "Already registered?"}{" "}
-          <Link to={mode === "login" ? "/register" : "/login"}>
-            {mode === "login" ? "Register here" : "Log in"}
-          </Link>
+          {isLogin ? "Yeni bir hesap mi gerekiyor?" : "Zaten kayitli misiniz?"}{" "}
+          <Link to={isLogin ? "/register" : "/login"}>{isLogin ? "Kayit ekranina gec" : "Giris ekranina don"}</Link>
         </p>
 
         <div className={styles.demoBox}>
-          <span>Demo users:</span>
-          <code>demo_alpha / demo12345</code>
-          <code>demo_beta / demo12345</code>
-          <code>demo_gamma / demo12345</code>
-          {mode === "login" ? (
-            <div className={styles.demoActions}>
-              {["demo_alpha", "demo_beta", "demo_gamma"].map((demoUser) => (
-                <button
-                  key={demoUser}
-                  className={styles.demoButton}
-                  data-demo-login={demoUser}
-                  type="button"
-                  disabled={authMutation.isPending}
-                  onClick={() =>
-                    authMutation.mutate({
-                      username: demoUser,
-                      password: "demo12345",
-                    })
-                  }
-                >
-                  Enter as {demoUser}
-                </button>
-              ))}
-            </div>
-          ) : null}
+          <span className={styles.demoTitle}>Hazir demo sancaklari</span>
+          <p className={styles.helperText}>Sifre butun demo komutanlari icin ayni: <code>demo12345</code></p>
+          <div className={styles.demoList}>
+            {demoUsers.map((demoUser) => (
+              <div key={demoUser} className={styles.demoRow}>
+                <div>
+                  <strong>{demoUser}</strong>
+                  <p>Hazir sehir, ittifak ve sefer verisi ile acilir.</p>
+                </div>
+                {isLogin ? (
+                  <button
+                    className={styles.demoButton}
+                    data-demo-login={demoUser}
+                    type="button"
+                    disabled={authMutation.isPending}
+                    onClick={() =>
+                      authMutation.mutate({
+                        username: demoUser,
+                        password: "demo12345",
+                      })
+                    }
+                  >
+                    Giris yap
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </main>
   );
 }
+

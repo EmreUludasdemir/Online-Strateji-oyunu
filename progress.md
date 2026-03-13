@@ -37,3 +37,8 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
 - TODO: Consider swapping Phaser for a lighter renderer or trimming Phaser imports if bundle size becomes a release concern.
 - TODO: Extend Phase 2B battle windows to barbarian camps and then expose defender-side/alliance-side battle-window context in the map UI if coordinated siege play becomes a priority.
 - TODO: Add dedicated frontend component tests and a fuller automated Playwright suite if this MVP grows beyond the current smoke-level browser validation.
+- 2026-03-13: Completed the mobile-first HUD second pass for legacy screens. Rebuilt `AuthPage` as a TR-first onboarding surface with demo-account guidance, rewrote `ReportsPage` into a dedicated battle-log layout with inbox linkage, and moved `AlliancePage` onto the new primitive card system with announcement, marker, log, and contribution panels.
+- 2026-03-13: Fixed the remaining dashboard text corruption (`Yukseltme hatti`) and verified the refreshed `login`, `alliance`, and `reports` routes in a live browser session after the existing dashboard/map HUD refresh.
+- 2026-03-13: Re-ran `corepack pnpm --filter @frontier/web build`, `corepack pnpm --filter @frontier/web test`, and `corepack pnpm smoke:e2e`; the smoke flow passed with `Ashwatch -> Barbarian Camp 5` on the refreshed UI.
+- Note: The browser console still shows an initial `404 /api/auth/me` during the login route in dev mode; this did not block login, route transitions, or the smoke flow, but it should be traced separately if auth proxy behavior is tightened.
+- TODO: Finish the design-system split by extracting a dedicated tokens file and moving more English gameplay labels from server/shared constants into UI-facing TR/i18n presentation layers.

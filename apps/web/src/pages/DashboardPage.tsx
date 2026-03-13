@@ -183,7 +183,7 @@ export function DashboardPage() {
             </SectionCard>
           </div>
 
-          <SectionCard kicker="Sehir bolgeleri" title="Yukseltme hattı">
+          <SectionCard kicker="Sehir bolgeleri" title="Yukseltme hatti">
             <div className={styles.buildingGrid}>
               {state.city.buildings.map((building) => (
                 <article key={building.type} className={styles.buildingCard}>
@@ -228,3 +228,4 @@ export function DashboardPage() {
     </section>
   );
 }
+
