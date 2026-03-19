@@ -12,7 +12,7 @@ import type {
   ScoutReportView,
   TaskView,
 } from "@frontier/shared";
-import { type LiveEventKey, type ResourceStock } from "@frontier/shared";
+import { COMMANDER_TALENT_LABELS, type LiveEventKey, type ResourceStock } from "@frontier/shared";
 import type { Prisma } from "@prisma/client";
 
 import { HttpError } from "../lib/http";
@@ -38,6 +38,207 @@ import { getPrimaryCommander, getResourceLedger, loadCityStateRecordOrThrow, map
 
 const XP_PER_LEVEL_BASE = 80;
 const XP_PER_LEVEL_STEP = 35;
+
+const COMMANDER_SKILL_BLUEPRINT: Record<
+  CommanderTalentTrack,
+  Array<{
+    id: string;
+    label: string;
+    description: string;
+    tier: number;
+    lane: number;
+    icon: string;
+    requiredPoints: number;
+    bonusLabel: string;
+  }>
+> = {
+  CONQUEST: [
+    {
+      id: "spearhead",
+      label: "Spearhead",
+      description: "Sharpens the first impact of assault marches.",
+      tier: 1,
+      lane: 0,
+      icon: "sword",
+      requiredPoints: 0,
+      bonusLabel: "+4% opening attack",
+    },
+    {
+      id: "war-drum",
+      label: "War Drum",
+      description: "Keeps infantry pressure steady after first contact.",
+      tier: 1,
+      lane: 1,
+      icon: "drum",
+      requiredPoints: 1,
+      bonusLabel: "+3% infantry pressure",
+    },
+    {
+      id: "banner-push",
+      label: "Banner Push",
+      description: "Turns allied pressure into faster march tempo.",
+      tier: 2,
+      lane: 0,
+      icon: "banner",
+      requiredPoints: 2,
+      bonusLabel: "+3% march tempo",
+    },
+    {
+      id: "iron-surge",
+      label: "Iron Surge",
+      description: "Adds a strong late-fight assault spike.",
+      tier: 2,
+      lane: 1,
+      icon: "shield",
+      requiredPoints: 4,
+      bonusLabel: "+5% assault power",
+    },
+    {
+      id: "breach-order",
+      label: "Breach Order",
+      description: "Cracks fortified defenders during staged assaults.",
+      tier: 3,
+      lane: 0,
+      icon: "gate",
+      requiredPoints: 6,
+      bonusLabel: "+4% vs defenses",
+    },
+    {
+      id: "imperial-slam",
+      label: "Imperial Slam",
+      description: "Final doctrine burst for decisive breakthrough windows.",
+      tier: 3,
+      lane: 1,
+      icon: "crown",
+      requiredPoints: 8,
+      bonusLabel: "+6% decisive damage",
+    },
+  ],
+  PEACEKEEPING: [
+    {
+      id: "front-watch",
+      label: "Front Watch",
+      description: "Raises guard efficiency against roaming threats.",
+      tier: 1,
+      lane: 0,
+      icon: "watch",
+      requiredPoints: 0,
+      bonusLabel: "+4% guard defense",
+    },
+    {
+      id: "steady-ranks",
+      label: "Steady Ranks",
+      description: "Reduces troop collapse under barbarian pressure.",
+      tier: 1,
+      lane: 1,
+      icon: "shield",
+      requiredPoints: 1,
+      bonusLabel: "+3% battle steadiness",
+    },
+    {
+      id: "warden-step",
+      label: "Warden Step",
+      description: "Improves pursuit speed between frontier fights.",
+      tier: 2,
+      lane: 0,
+      icon: "hoof",
+      requiredPoints: 2,
+      bonusLabel: "+3% pursuit speed",
+    },
+    {
+      id: "ember-aegis",
+      label: "Ember Aegis",
+      description: "Bolsters defenses when staging around camps or cities.",
+      tier: 2,
+      lane: 1,
+      icon: "tower",
+      requiredPoints: 4,
+      bonusLabel: "+5% staging defense",
+    },
+    {
+      id: "guardian-circle",
+      label: "Guardian Circle",
+      description: "Improves allied survivability in shared battle windows.",
+      tier: 3,
+      lane: 0,
+      icon: "ring",
+      requiredPoints: 6,
+      bonusLabel: "+4% ally support",
+    },
+    {
+      id: "trucebreaker",
+      label: "Trucebreaker",
+      description: "Converts patient defense into clean counter pressure.",
+      tier: 3,
+      lane: 1,
+      icon: "flame",
+      requiredPoints: 8,
+      bonusLabel: "+6% counter strike",
+    },
+  ],
+  GATHERING: [
+    {
+      id: "caravan-step",
+      label: "Caravan Step",
+      description: "Speeds up first-leg travel toward distant nodes.",
+      tier: 1,
+      lane: 0,
+      icon: "hoof",
+      requiredPoints: 0,
+      bonusLabel: "+4% march speed",
+    },
+    {
+      id: "supply-ledger",
+      label: "Supply Ledger",
+      description: "Improves resource accounting and carry efficiency.",
+      tier: 1,
+      lane: 1,
+      icon: "ledger",
+      requiredPoints: 1,
+      bonusLabel: "+6% carry load",
+    },
+    {
+      id: "ore-reading",
+      label: "Ore Reading",
+      description: "Finds the richest extraction seams sooner.",
+      tier: 2,
+      lane: 0,
+      icon: "gem",
+      requiredPoints: 2,
+      bonusLabel: "+4% node yield",
+    },
+    {
+      id: "quiet-column",
+      label: "Quiet Column",
+      description: "Makes gathering lines harder to disrupt in the field.",
+      tier: 2,
+      lane: 1,
+      icon: "veil",
+      requiredPoints: 4,
+      bonusLabel: "+3% route concealment",
+    },
+    {
+      id: "harvest-burst",
+      label: "Harvest Burst",
+      description: "Accelerates the final loading cycle before return.",
+      tier: 3,
+      lane: 0,
+      icon: "grain",
+      requiredPoints: 6,
+      bonusLabel: "+5% load speed",
+    },
+    {
+      id: "golden-route",
+      label: "Golden Route",
+      description: "Turns efficient gathering into strategic treasury growth.",
+      tier: 3,
+      lane: 1,
+      icon: "coin",
+      requiredPoints: 8,
+      bonusLabel: "+6% return value",
+    },
+  ],
+};
 
 function mapRewardBundle(value: Prisma.JsonValue | null): RewardBundleView | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -98,6 +299,31 @@ function getCommanderStats(templateKey: string, level: number, starLevel: number
 
 export function getCommanderXpRequirement(level: number): number {
   return XP_PER_LEVEL_BASE + Math.max(0, level - 1) * XP_PER_LEVEL_STEP;
+}
+
+function getCommanderTotalTalentPoints(level: number, starLevel: number) {
+  return Math.max(0, level - 1) + Math.max(0, starLevel - 1) * 2;
+}
+
+function buildCommanderSkillTree(track: CommanderTalentTrack, level: number, starLevel: number, talentPointsSpent: number) {
+  const totalPoints = getCommanderTotalTalentPoints(level, starLevel);
+  const availablePoints = Math.max(0, totalPoints - talentPointsSpent);
+  const blueprint = COMMANDER_SKILL_BLUEPRINT[track];
+
+  return {
+    track,
+    trackLabel: COMMANDER_TALENT_LABELS[track],
+    availablePoints,
+    nodes: blueprint.map((node, index) => ({
+      ...node,
+      unlocked: totalPoints >= node.requiredPoints,
+      active: talentPointsSpent > index,
+    })),
+    links: blueprint.slice(1).map((node, index) => ({
+      from: blueprint[index].id,
+      to: node.id,
+    })),
+  };
 }
 
 async function getPlayerCityIdTx(tx: Prisma.TransactionClient, userId: string): Promise<string> {
@@ -824,6 +1050,18 @@ export async function getCommanderProgressViewTx(tx: Prisma.TransactionClient, u
       commander.carryBonusPct +
       commander.level * 6 +
       commander.starLevel * 12,
+    xpForCurrentLevel: commander.xp,
+    xpForNextLevel: commander.xp + commander.xpToNextLevel,
+    talentPointsAvailable: Math.max(
+      0,
+      getCommanderTotalTalentPoints(commander.level, commander.starLevel) - commander.talentPointsSpent,
+    ),
+    skillTree: buildCommanderSkillTree(
+      commander.talentTrack,
+      commander.level,
+      commander.starLevel,
+      commander.talentPointsSpent,
+    ),
   }));
 }
 

@@ -7,6 +7,7 @@ import { incrementCounter, observeDuration, snapshotMetrics } from "./lib/metric
 import { getRealtimeAdapterDiagnostics } from "./lib/notifications";
 import { storeValidationPort } from "./lib/storeValidation";
 import { authRouter } from "./routes/auth";
+import { allianceRouter } from "./routes/alliance";
 import { gameRouter } from "./routes/game";
 import { storeRouter } from "./routes/store";
 
@@ -83,6 +84,7 @@ export function createApp() {
   });
 
   app.use("/api/auth", authRouter);
+  app.use("/api/alliance", allianceRouter);
   app.use("/api/game", gameRouter);
   app.use("/api/store", storeRouter);
 

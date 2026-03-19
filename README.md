@@ -96,6 +96,10 @@ Frontier Dominion is a browser-based online strategy game MVP. Each player comma
 - Settlement selection, commander assignment, troop sliders, march dispatch, and recall
 - Battle report ledger with city battles, barbarian clears, and gather returns
 - Alliance chamber with roster, chat, and help request handling
+- Alliance role management view with role reassignment, treasury donations, and donation history
+- Commander progression page with roster selection, XP bars, and talent-tree visualization
+- Map filters for paths, scout trails, and report balloons
+- Theme selection for day, night, and high-contrast play
 - `window.render_game_to_text()` and `window.advanceTime(ms)` hooks for browser validation
 - Mobile bottom navigation for narrow screens
 
@@ -237,7 +241,6 @@ Game:
 - `GET /api/game/troops`
 - `POST /api/game/troops/train`
 - `GET /api/game/commanders`
-- `GET /api/game/alliance`
 - `POST /api/game/alliances`
 - `POST /api/game/alliances/:id/join`
 - `POST /api/game/alliances/leave`
@@ -250,6 +253,12 @@ Game:
 - `POST /api/game/analytics`
 - `POST /api/game/attacks`
 - `GET /api/game/reports`
+
+Alliance:
+
+- `GET /api/alliance`
+- `POST /api/alliance/donations`
+- `POST /api/alliance/members/:userId/role`
 
 ## Verification
 
@@ -298,7 +307,7 @@ The smoke script:
   - `20 cavalry`
 - Starting buildings: all 8 building types at level `1`
 - Starting research: all doctrine lanes at level `0`
-- Starting commander: one primary vanguard commander
+- Starting commanders: six commander templates, including one primary vanguard commander
 - Resource production:
   - Farm: `20 food / minute / level`
   - Lumber Mill: `16 wood / minute / level`
@@ -308,11 +317,11 @@ The smoke script:
 ## Known limitations
 
 - One city per player
-- Alliance roles stop at `leader/officer/member`; role management UI is not exposed yet
+- Alliance roles currently stop at `leader/officer/member/recruit`; there is no deeper permission matrix yet
 - Alliance help currently accelerates queues with a flat time reduction; there is no deeper alliance tech tree
-- Combat still resolves authoritatively without free-form join/leave battle instances; only city attacks have a short battle window
-- Reports are currently listed as the latest 20 entries without filtering
-- Web frontend tests are still smoke-level only; dedicated React tests are not present
+- Combat still resolves authoritatively without free-form join/leave battle instances; battle windows are staged but not fully freeform
+- Report filters are client-side only; there is no server-side report search/index yet
+- Web frontend tests now include a few Vitest component checks, but most UI verification is still smoke-level
 - Phaser is split into its own lazy-loaded chunk, but that vendor chunk is still large
 - Cookie and CORS defaults are aimed at localhost development rather than hardened production deployment
 - Realtime fanout still runs on the in-memory adapter; `REALTIME_ADAPTER=redis` only falls back to a Redis-ready boundary today
@@ -322,10 +331,10 @@ The smoke script:
 
 ## Next improvements
 
-- Extend battle windows beyond city attacks and expose richer coordinated-siege UI
-- Add alliance role management, donations, and shared territory mechanics
-- Expand commander progression beyond fixed template bonuses
-- Add richer map overlays, march trails, and report filtering
+- Expand battle windows into deeper rally/siege coordination UI
+- Add alliance shared territory, permissions, and richer treasury tooling
+- Expand commander progression beyond the current fixed tree visualization into real skill assignment
+- Add richer map overlays, scout telemetry, and report interactions
 - Replace the in-memory metrics and realtime adapters with Redis/pubsub plus OpenTelemetry exporters
 - Wire the analytics ingest stream into a real warehouse or dashboard sink
 - Implement real App Store / Play receipt validation behind the existing store port

@@ -1,0 +1,145 @@
+.page,
+.memberList,
+.donationHistory,
+.rankList,
+.linkStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  display: grid;
+  gap: 1rem;
+  padding: 1.05rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(83, 51, 33, 0.5), rgba(28, 16, 11, 0.96)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent 72%);
+  box-shadow: var(--shadow-soft);
+}
+
+.heroTop,
+.memberHeader,
+.donationRow,
+.rankRow,
+.actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.kicker,
+.summaryLabel {
+  color: var(--color-gold-200);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.74rem;
+}
+
+.heroTitle {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+}
+
+.heroLead,
+.meta {
+  color: var(--color-ink-300);
+  line-height: 1.6;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.summaryCard,
+.memberCard,
+.donationRow,
+.rankRow,
+.donationForm {
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(64, 38, 24, 0.84), rgba(27, 15, 10, 0.96));
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.28rem;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
+  gap: 1rem;
+}
+
+.mainColumn,
+.sideColumn,
+.donationForm,
+.linkStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.roleButtons,
+.donationBreakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+}
+
+.donationForm select,
+.donationForm input {
+  min-height: var(--touch-target);
+  padding: 0 0.9rem;
+  border-radius: 18px;
+  border: 1px solid var(--color-panel-edge);
+  background: rgba(21, 13, 10, 0.82);
+  color: var(--color-ink-100);
+  font: inherit;
+}
+
+.inlineLink {
+  color: var(--color-teal-300);
+  text-decoration: none;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}
+
+.feedback {
+  padding: 1.3rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background: rgba(35, 20, 14, 0.9);
+  color: var(--color-ink-200);
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .heroTop,
+  .memberHeader,
+  .donationRow,
+  .rankRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

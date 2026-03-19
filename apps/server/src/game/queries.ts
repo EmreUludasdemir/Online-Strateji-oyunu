@@ -1,7 +1,7 @@
 import type {
   AllianceStateResponse,
   BattleReportsResponse,
-  CommanderView,
+  CommanderProgressView,
   EntitlementsResponse,
   GameEventsResponse,
   GameStateResponse,
@@ -244,7 +244,7 @@ export async function getWorldChunk(
       .map((poi) => {
         const key = `${poi.x}:${poi.y}`;
         const fogState = visible.has(key) ? "VISIBLE" : discovered.has(key) ? "DISCOVERED" : "HIDDEN";
-        return mapPoiView(poi, currentCity, fogState);
+        return mapPoiView(poi, currentCity, fogState, now);
       })
       .filter((poi) => poi.fogState !== "HIDDEN");
 
@@ -327,7 +327,7 @@ export async function getTroops(userId: string): Promise<TroopView[]> {
   return state.city.troops;
 }
 
-export async function getCommanders(userId: string): Promise<CommanderView[]> {
+export async function getCommanders(userId: string): Promise<CommanderProgressView[]> {
   await reconcileWorld();
   const now = new Date();
 

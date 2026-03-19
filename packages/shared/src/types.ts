@@ -138,8 +138,38 @@ export interface CommanderView {
   isPrimary: boolean;
 }
 
+export interface CommanderSkillNodeView {
+  id: string;
+  label: string;
+  description: string;
+  tier: number;
+  lane: number;
+  icon: string;
+  unlocked: boolean;
+  active: boolean;
+  requiredPoints: number;
+  bonusLabel: string;
+}
+
+export interface CommanderSkillLinkView {
+  from: string;
+  to: string;
+}
+
+export interface CommanderSkillTreeView {
+  track: CommanderTalentTrack;
+  trackLabel: string;
+  availablePoints: number;
+  nodes: CommanderSkillNodeView[];
+  links: CommanderSkillLinkView[];
+}
+
 export interface CommanderProgressView extends CommanderView {
   totalPowerScore: number;
+  xpForCurrentLevel: number;
+  xpForNextLevel: number;
+  talentPointsAvailable: number;
+  skillTree: CommanderSkillTreeView;
 }
 
 export interface ResearchView {
@@ -165,6 +195,9 @@ export interface MarchView {
   state: MarchState;
   battleWindowId: string | null;
   battleWindowClosesAt: string | null;
+  ownerUserId: string;
+  ownerName: string;
+  ownerAllianceTag: string | null;
   targetCityId: string | null;
   targetCityName: string | null;
   targetPoiId: string | null;
@@ -190,6 +223,32 @@ export interface MarchView {
   projectedOutcome: BattleResult | null;
 }
 
+export interface BattleWindowParticipantView {
+  marchId: string;
+  ownerUserId: string;
+  ownerName: string;
+  ownerAllianceTag: string | null;
+  commanderName: string;
+  troops: TroopStock;
+  objective: MarchObjective;
+  etaAt: string;
+}
+
+export interface BattleWindowView {
+  id: string;
+  objective: MarchObjective;
+  targetKind: "CITY" | "POI";
+  targetCityId: string | null;
+  targetPoiId: string | null;
+  label: string;
+  attackerLabel: string;
+  defenderLabel: string;
+  closesAt: string;
+  remainingSeconds: number;
+  participantCount: number;
+  participants: BattleWindowParticipantView[];
+}
+
 export interface PoiView {
   id: string;
   kind: PoiKind;
@@ -207,6 +266,9 @@ export interface PoiView {
   occupantMarchId: string | null;
   canSendMarch: boolean;
   canGather: boolean;
+  battleWindowClosesAt: string | null;
+  stagedMarchCount: number;
+  battleWindow: BattleWindowView | null;
   projectedOutcome: BattleResult | null;
   projectedLoad: number | null;
 }
@@ -285,6 +347,7 @@ export interface AllianceView {
   markers: AllianceMarkerView[];
   logs: AllianceLogEntryView[];
   contributions: AllianceContributionView[];
+  donations: AllianceDonationView[];
 }
 
 export interface AllianceListItemView {
@@ -325,6 +388,15 @@ export interface AllianceContributionView {
   points: number;
 }
 
+export interface AllianceDonationView {
+  id: string;
+  userId: string;
+  username: string;
+  resources: ResourceStock;
+  totalValue: number;
+  createdAt: string;
+}
+
 export interface MapCity {
   cityId: string;
   cityName: string;
@@ -340,6 +412,7 @@ export interface MapCity {
   defensePower: number;
   battleWindowClosesAt: string | null;
   stagedMarchCount: number;
+  battleWindow: BattleWindowView | null;
   projectedOutcome: BattleResult | null;
 }
 

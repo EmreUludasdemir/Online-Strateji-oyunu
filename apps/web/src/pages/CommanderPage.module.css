@@ -1,0 +1,140 @@
+.page,
+.rosterList,
+.mainColumn {
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  display: grid;
+  gap: 1rem;
+  padding: 1.05rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(83, 51, 33, 0.48), rgba(27, 16, 11, 0.96)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent 72%);
+  box-shadow: var(--shadow-soft);
+}
+
+.heroTop,
+.rosterHeader,
+.actionRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.kicker,
+.summaryLabel,
+.profileLabel {
+  color: var(--color-gold-200);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.74rem;
+}
+
+.heroTitle {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+}
+
+.heroLead,
+.meta {
+  color: var(--color-ink-300);
+  line-height: 1.6;
+}
+
+.summaryGrid,
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.summaryCard,
+.rosterCard,
+.profileCard {
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(64, 38, 24, 0.84), rgba(27, 15, 10, 0.96));
+}
+
+.summaryValue,
+.profileValue {
+  display: block;
+  margin-top: 0.28rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+  gap: 1rem;
+}
+
+.rosterCard {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--motion-base),
+    border-color var(--motion-base),
+    box-shadow var(--motion-base);
+}
+
+.rosterCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(244, 215, 156, 0.25);
+}
+
+.rosterCardActive {
+  border-color: rgba(244, 215, 156, 0.5);
+  box-shadow: var(--glow-gold);
+}
+
+.progressRail {
+  margin-top: 0.75rem;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 244, 220, 0.08);
+  overflow: hidden;
+}
+
+.progressRail span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-teal-400), var(--color-gold-300));
+}
+
+.feedback {
+  padding: 1.3rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background: rgba(35, 20, 14, 0.9);
+  color: var(--color-ink-200);
+}
+
+@media (max-width: 1040px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .heroTop,
+  .actionRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summaryGrid,
+  .profileGrid {
+    grid-template-columns: 1fr;
+  }
+}

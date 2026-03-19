@@ -1,8 +1,9 @@
-:root {
+:root,
+:root[data-theme="night"] {
   color-scheme: dark;
-  --font-display: "Baskerville Old Face", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-display: "Cinzel", "Baskerville Old Face", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --font-body:
-    "Segoe UI", "Noto Sans", "Trebuchet MS", "Gill Sans", "Helvetica Neue", Arial, sans-serif;
+    "Inter", "Segoe UI", "Noto Sans", "Trebuchet MS", "Gill Sans", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Cascadia Mono", "Consolas", "Courier New", monospace;
 
   --color-bg-950: #130a07;
@@ -67,4 +68,58 @@
   --glow-teal: 0 0 18px rgba(75, 158, 160, 0.32), 0 0 52px rgba(75, 158, 160, 0.1);
   --glow-danger: 0 0 18px rgba(212, 100, 79, 0.32), 0 0 52px rgba(212, 100, 79, 0.1);
   --glow-success: 0 0 18px rgba(65, 168, 119, 0.32), 0 0 52px rgba(65, 168, 119, 0.1);
+}
+
+:root[data-theme="day"] {
+  color-scheme: light;
+  --color-bg-950: #f7efe1;
+  --color-bg-900: #ead7bc;
+  --color-bg-850: #dec29b;
+  --color-surface-900: rgba(250, 243, 232, 0.96);
+  --color-surface-850: rgba(243, 232, 211, 0.94);
+  --color-surface-800: rgba(233, 216, 185, 0.92);
+  --color-surface-760: rgba(223, 200, 164, 0.86);
+  --color-surface-720: rgba(212, 188, 151, 0.8);
+  --color-ink-100: #2c170f;
+  --color-ink-200: #563728;
+  --color-ink-300: #77543d;
+  --color-ink-400: #926a48;
+  --color-panel-edge: rgba(75, 143, 203, 0.24);
+  --color-panel-line: rgba(44, 23, 15, 0.08);
+  --color-overlay: rgba(54, 36, 28, 0.28);
+  --shadow-soft: 0 16px 36px rgba(96, 74, 48, 0.18);
+  --shadow-heavy: 0 28px 72px rgba(96, 74, 48, 0.22);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+:root[data-theme="high-contrast"] {
+  color-scheme: dark;
+  --color-bg-950: #020202;
+  --color-bg-900: #080808;
+  --color-bg-850: #101010;
+  --color-surface-900: rgba(6, 6, 6, 0.98);
+  --color-surface-850: rgba(14, 14, 14, 0.96);
+  --color-surface-800: rgba(22, 22, 22, 0.94);
+  --color-surface-760: rgba(30, 30, 30, 0.92);
+  --color-surface-720: rgba(40, 40, 40, 0.9);
+  --color-ink-100: #ffffff;
+  --color-ink-200: #f5f5f5;
+  --color-ink-300: #d5d5d5;
+  --color-ink-400: #b7b7b7;
+  --color-gold-400: #ffd166;
+  --color-gold-300: #ffe29a;
+  --color-gold-200: #fff1c1;
+  --color-teal-500: #56d4d8;
+  --color-teal-400: #7be4e7;
+  --color-teal-300: #a9f0f2;
+  --color-copper-500: #ff9e6d;
+  --color-copper-400: #ffbf98;
+  --color-red-500: #ff7a7a;
+  --color-green-500: #58d68d;
+  --color-blue-500: #7dd3fc;
+  --color-panel-edge: rgba(255, 255, 255, 0.34);
+  --color-panel-line: rgba(255, 255, 255, 0.18);
+  --color-overlay: rgba(0, 0, 0, 0.72);
+  --glow-gold: 0 0 18px rgba(255, 209, 102, 0.4), 0 0 52px rgba(255, 209, 102, 0.14);
+  --glow-teal: 0 0 18px rgba(125, 211, 252, 0.4), 0 0 52px rgba(125, 211, 252, 0.14);
 }

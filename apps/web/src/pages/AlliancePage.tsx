@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AllianceRole, ResourceKey } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
@@ -22,6 +23,10 @@ function getRoleTone(role: AllianceRole): "info" | "success" | "warning" {
     return "info";
   }
   return "warning";
+}
+
+function canManageAlliance(role: AllianceRole) {
+  return role === "LEADER" || role === "OFFICER";
 }
 
 function formatResourceLabel(resource: string): string {
@@ -264,11 +269,14 @@ export function AlliancePage() {
                   <Button
                     type="button"
                     variant="secondary"
-                    disabled={alliance.role === "MEMBER" || updateAnnouncementMutation.isPending}
+                    disabled={!canManageAlliance(alliance.role) || updateAnnouncementMutation.isPending}
                     onClick={() => updateAnnouncementMutation.mutate()}
                   >
-                    {alliance.role === "MEMBER" ? "Read Only" : "Save Announcement"}
+                    {!canManageAlliance(alliance.role) ? "Read Only" : "Save Announcement"}
                   </Button>
+                  <Link className={styles.inlineLink} to="/app/alliance/roles">
+                    Open role management
+                  </Link>
                 </div>
                 <div className={styles.inlineForm}>
                   <input

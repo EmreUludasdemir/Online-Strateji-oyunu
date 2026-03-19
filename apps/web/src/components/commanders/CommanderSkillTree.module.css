@@ -1,0 +1,160 @@
+.treeCard {
+  display: grid;
+  gap: 1rem;
+}
+
+.treeHeader,
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.kicker {
+  color: var(--color-gold-200);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.74rem;
+}
+
+.title,
+.detailTitle {
+  margin-top: 0.2rem;
+  font-family: var(--font-display);
+}
+
+.treeBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(250px, 0.8fr);
+  gap: 1rem;
+}
+
+.canvasWrap {
+  position: relative;
+  min-height: 420px;
+  padding: 1rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top, rgba(75, 158, 160, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(70, 42, 27, 0.84), rgba(21, 12, 8, 0.96));
+  overflow: hidden;
+}
+
+.links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.link {
+  fill: none;
+  stroke: rgba(244, 215, 156, 0.32);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 7;
+}
+
+.node {
+  position: absolute;
+  width: 110px;
+  min-height: 84px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  gap: 0.15rem;
+  padding: 0.7rem 0.6rem;
+  border-radius: 22px;
+  border: 1px solid var(--color-panel-edge);
+  background: rgba(23, 14, 10, 0.9);
+  color: var(--color-ink-100);
+  cursor: pointer;
+  transition:
+    transform var(--motion-base),
+    box-shadow var(--motion-base),
+    border-color var(--motion-base);
+}
+
+.node:hover {
+  transform: translate(-50%, -52%);
+}
+
+.nodeSelected {
+  border-color: rgba(244, 215, 156, 0.55);
+  box-shadow: var(--glow-gold);
+}
+
+.nodeActive {
+  background: linear-gradient(180deg, rgba(75, 158, 160, 0.32), rgba(23, 14, 10, 0.92));
+}
+
+.nodeUnlocked {
+  background: linear-gradient(180deg, rgba(198, 146, 68, 0.18), rgba(23, 14, 10, 0.9));
+}
+
+.nodeLocked {
+  opacity: 0.72;
+}
+
+.nodeIcon {
+  font-size: 1.25rem;
+}
+
+.nodeLabel {
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.nodeTier {
+  color: var(--color-ink-300);
+}
+
+.detailCard {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(61, 37, 25, 0.8), rgba(22, 13, 9, 0.94));
+}
+
+.detailBody {
+  color: var(--color-ink-300);
+  line-height: 1.65;
+}
+
+.metaGrid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.metaGrid div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--color-panel-line);
+}
+
+.metaGrid dt {
+  color: var(--color-ink-300);
+}
+
+.metaGrid dd {
+  margin: 0;
+  color: var(--color-ink-100);
+}
+
+@media (max-width: 980px) {
+  .treeBody {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .canvasWrap {
+    min-height: 500px;
+  }
+}

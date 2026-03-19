@@ -19,6 +19,7 @@ import { trackAnalyticsEvent, trackAnalyticsOnce } from "../lib/analytics";
 import { formatNumber } from "../lib/formatters";
 import { copy } from "../lib/i18n";
 import { getInvalidationKeys, getSocketToast, parseSocketEvent } from "../lib/socketEvents";
+import { useTheme } from "./ThemeProvider";
 import type { ActiveMapChunkMeta, MapCameraState } from "./worldMapShared";
 import styles from "./GameLayoutShell.module.css";
 import { MobileBottomNav } from "./hud/MobileBottomNav";
@@ -197,6 +198,8 @@ export function GameLayout() {
   const [storePreviewOpen, setStorePreviewOpen] = useState(false);
   const [commanderPanelOpen, setCommanderPanelOpen] = useState(false);
   const [commanderPanelId, setCommanderPanelId] = useState<string | null>(null);
+  const [themeSheetOpen, setThemeSheetOpen] = useState(false);
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const enqueueToast = useCallback((toast: Omit<ToastItem, "id">) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setToasts((current) => [...current.slice(-3), { id, ...toast }]);
@@ -518,6 +521,9 @@ export function GameLayout() {
           treasury: allianceState?.alliance?.treasury ?? null,
           markers: allianceState?.alliance?.markers ?? [],
         },
+        settings: {
+          themeMode,
+        },
         selectedCity,
         selectedPoi,
         map: {
@@ -594,7 +600,7 @@ export function GameLayout() {
       delete window.select_map_poi;
       delete window.open_map_field_command;
     };
-  }, [location.pathname, queryClient, selectCity, selectPoi, selectedCityId, selectedPoiId, stateQuery.data]);
+  }, [location.pathname, queryClient, selectCity, selectPoi, selectedCityId, selectedPoiId, stateQuery.data, themeMode]);
 
   useEffect(() => {
     trackAnalyticsEvent("hud_tab_opened", {
@@ -687,6 +693,9 @@ export function GameLayout() {
         </div>
 
         <div className={styles.sidebarFooter}>
+          <Button type="button" variant="secondary" onClick={() => setThemeSheetOpen(true)}>
+            Theme
+          </Button>
           <Button type="button" variant="ghost" onClick={() => logoutMutation.mutate()}>
             Log Out
           </Button>
@@ -794,6 +803,22 @@ export function GameLayout() {
               </div>
             </SectionCard>
           ))}
+          <SectionCard kicker="Progression View" title="Open the full chamber">
+            <div className={styles.sheetRow}>
+              <span className={styles.sheetMeta}>Skill tree, roster growth, and doctrine cards live on the full commander page.</span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="small"
+                onClick={() => {
+                  setCommanderPanelOpen(false);
+                  navigate("/app/commanders");
+                }}
+              >
+                Open Page
+              </Button>
+            </div>
+          </SectionCard>
         </div>
       </BottomSheet>
 
@@ -837,6 +862,40 @@ export function GameLayout() {
                   </div>
                 ))
               )}
+            </div>
+          </SectionCard>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        open={themeSheetOpen}
+        title="Display Theme"
+        mode="aside"
+        onClose={() => setThemeSheetOpen(false)}
+      >
+        <div className={styles.sheetGrid}>
+          <SectionCard kicker="Theme Mode" title="Choose contrast and lighting">
+            <div className={styles.sheetList}>
+              {[
+                { mode: "day" as const, label: "Day mode", hint: "Brighter parchment surfaces for daylight play." },
+                { mode: "night" as const, label: "Night mode", hint: "Warm low-light palette for long sessions." },
+                { mode: "highContrast" as const, label: "High contrast", hint: "Sharper contrast for visibility and accessibility." },
+              ].map((option) => (
+                <div key={option.mode} className={styles.sheetRow}>
+                  <div>
+                    <strong>{option.label}</strong>
+                    <p className={styles.sheetMeta}>{option.hint}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={themeMode === option.mode ? "primary" : "secondary"}
+                    size="small"
+                    onClick={() => setThemeMode(option.mode)}
+                  >
+                    {themeMode === option.mode ? "Active" : "Use"}
+                  </Button>
+                </div>
+              ))}
             </div>
           </SectionCard>
         </div>

@@ -128,14 +128,28 @@
   padding: 0;
   border-radius: 18px;
   background:
+    radial-gradient(circle at 30% 25%, rgba(255, 245, 224, 0.16), transparent 34%),
     linear-gradient(180deg, rgba(76, 45, 27, 0.9), rgba(34, 19, 13, 0.95)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
   color: var(--color-ink-100);
+  backdrop-filter: blur(10px);
 }
 
 .iconButton:hover:not(:disabled) {
   box-shadow: 0 4px 16px rgba(226, 187, 114, 0.2), var(--shadow-inset);
   border-color: rgba(244, 215, 156, 0.26);
+}
+
+.iconButton svg {
+  transition:
+    transform var(--motion-smooth),
+    filter var(--motion-base),
+    opacity var(--motion-base);
+}
+
+.iconButton:hover:not(:disabled) svg {
+  transform: translateY(-1px) scale(1.08);
+  filter: drop-shadow(0 0 8px rgba(244, 215, 156, 0.22));
 }
 
 .badge,
@@ -203,6 +217,21 @@
   transform: translateY(-1px);
 }
 
+.sectionCard::after,
+.resourcePill::after,
+.emptyState::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: inherit;
+  border: 1px solid var(--color-panel-line);
+  pointer-events: none;
+}
+
+.sectionCard::before {
+  opacity: 0.1;
+}
+
 .sectionCard::before,
 .resourcePill::before {
   top: -35%;
@@ -217,17 +246,6 @@
 .sectionCard:hover::before,
 .resourcePill:hover::before {
   animation: sheenSweep 1200ms var(--motion-smooth);
-}
-
-.sectionCard::after,
-.resourcePill::after,
-.emptyState::after {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border-radius: inherit;
-  border: 1px solid var(--color-panel-line);
-  pointer-events: none;
 }
 
 .sectionHeader {

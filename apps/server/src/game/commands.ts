@@ -132,6 +132,10 @@ interface InternalMarchResult {
   targetPoiId: string | null;
 }
 
+function isAllianceOfficerRole(role: AllianceRole) {
+  return role === "LEADER" || role === "OFFICER";
+}
+
 type CreateMarchPayload =
   | ({
       objective?: "CITY_ATTACK";
@@ -285,6 +289,43 @@ async function updateTroopGarrisonTx(tx: Prisma.TransactionClient, cityId: strin
   }
 }
 
+async function syncPoiOccupancyStateTx(tx: Prisma.TransactionClient, poiId: string) {
+  const poi = await tx.mapPoi.findUnique({
+    where: { id: poiId },
+    select: {
+      state: true,
+    },
+  });
+
+  if (!poi || (poi.state !== "ACTIVE" && poi.state !== "OCCUPIED")) {
+    return;
+  }
+
+  const [activeMarches, openWindows] = await Promise.all([
+    tx.march.count({
+      where: {
+        targetPoiId: poiId,
+        state: {
+          in: ["ENROUTE", "STAGING", "GATHERING"],
+        },
+      },
+    }),
+    tx.battleWindow.count({
+      where: {
+        targetPoiId: poiId,
+        resolvedAt: null,
+      },
+    }),
+  ]);
+
+  await tx.mapPoi.update({
+    where: { id: poiId },
+    data: {
+      state: activeMarches > 0 || openWindows > 0 ? "OCCUPIED" : "ACTIVE",
+    },
+  });
+}
+
 function buildCompatibilityTroopPayload(troops: TroopStock): TroopStock {
   return {
     INFANTRY: Math.max(0, Math.floor(troops.INFANTRY * 0.6)),
@@ -382,7 +423,8 @@ async function createMarchTx(
     );
   } else if ("targetPoiId" in payload) {
     targetPoi = await loadMapPoiRecordOrThrow(tx, payload.targetPoiId);
-    if (targetPoi.targetMarches.length > 0 || targetPoi.state !== "ACTIVE") {
+    const hasLockedOccupant = targetPoi.targetMarches.some((entry) => entry.state === "GATHERING");
+    if (hasLockedOccupant || (targetPoi.state !== "ACTIVE" && targetPoi.state !== "OCCUPIED")) {
       throw new HttpError(409, "POI_OCCUPIED", "That point of interest is already occupied.");
     }
 
@@ -443,12 +485,7 @@ async function createMarchTx(
   });
 
   if (targetPoi) {
-    await tx.mapPoi.update({
-      where: { id: targetPoi.id },
-      data: {
-        state: "OCCUPIED",
-      },
-    });
+    await syncPoiOccupancyStateTx(tx, targetPoi.id);
   }
 
   await updateTroopGarrisonTx(tx, city.id, spendTroops(garrison, payload.troops));
@@ -897,15 +934,6 @@ export async function recallMarch(userId: string, marchId: string): Promise<City
       });
     }
 
-    if (march.targetPoiId && march.state !== "RETURNING" && march.targetPoi) {
-      await tx.mapPoi.update({
-        where: { id: march.targetPoiId },
-        data: {
-          state: "ACTIVE",
-        },
-      });
-    }
-
     await tx.march.update({
       where: { id: marchId },
       data: {
@@ -932,6 +960,10 @@ export async function recallMarch(userId: string, marchId: string): Promise<City
           },
         });
       }
+    }
+
+    if (march.targetPoiId) {
+      await syncPoiOccupancyStateTx(tx, march.targetPoiId);
     }
 
     const updated = await loadCityStateRecordOrThrow(tx, city.id);
@@ -1014,7 +1046,7 @@ export async function joinAlliance(userId: string, allianceId: string): Promise<
       data: {
         allianceId,
         userId,
-        role: "MEMBER",
+        role: "RECRUIT",
       },
     });
     await appendAllianceLogTx(tx, allianceId, "MEMBER_JOINED", `A new member joined the alliance.`, userId);
@@ -1282,6 +1314,17 @@ export async function donateAllianceResources(
         gold: { increment: donation.gold },
       },
     });
+    await tx.allianceDonation.create({
+      data: {
+        allianceId: membership.allianceId,
+        userId,
+        wood: donation.wood,
+        stone: donation.stone,
+        food: donation.food,
+        gold: donation.gold,
+        totalValue: donation.wood + donation.stone + donation.food + donation.gold,
+      },
+    });
     await addAllianceContributionTx(
       tx,
       membership.allianceId,
@@ -1311,8 +1354,8 @@ export async function updateAllianceMemberRole(
 ): Promise<AllianceView> {
   const result = await prisma.$transaction(async (tx) => {
     const actorMembership = await getAllianceForMemberTx(tx, userId);
-    if (actorMembership.role !== "LEADER") {
-      throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Only alliance leaders can change member roles.");
+    if (!isAllianceOfficerRole(actorMembership.role)) {
+      throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Only alliance officers can change member roles.");
     }
 
     const targetMembership = actorMembership.alliance.members.find((member) => member.userId === targetUserId);
@@ -1322,6 +1365,15 @@ export async function updateAllianceMemberRole(
 
     if (targetUserId === userId && role !== "LEADER") {
       throw new HttpError(409, "ALLIANCE_SELF_ROLE_BLOCKED", "The leader cannot demote themselves directly.");
+    }
+
+    if (actorMembership.role === "OFFICER") {
+      if (targetMembership.role === "LEADER" || targetMembership.role === "OFFICER") {
+        throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Officers cannot change the alliance command staff.");
+      }
+      if (role === "LEADER" || role === "OFFICER") {
+        throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Only alliance leaders can promote officers or transfer leadership.");
+      }
     }
 
     if (targetMembership.role === role) {
@@ -1549,30 +1601,13 @@ export async function retargetMarch(
         throw new HttpError(400, "RETARGET_POI_REQUIRED", "A POI target is required for this march.");
       }
       const targetPoi = await loadMapPoiRecordOrThrow(tx, payload.targetPoiId);
-      if (targetPoi.state !== "ACTIVE" || targetPoi.targetMarches.some((entry) => entry.id !== marchId)) {
+      const hasLockedOccupant = targetPoi.targetMarches.some((entry) => entry.state === "GATHERING" && entry.id !== marchId);
+      if (hasLockedOccupant || (targetPoi.state !== "ACTIVE" && targetPoi.state !== "OCCUPIED")) {
         throw new HttpError(409, "POI_OCCUPIED", "That point of interest is not available.");
       }
       targetPoiId = targetPoi.id;
       targetCoordinates = { x: targetPoi.x, y: targetPoi.y };
       defenderPowerSnapshot = currentMarch.objective === "BARBARIAN_ATTACK" ? getTroopDefensePower(getBarbarianCampTroops(targetPoi.level)) : null;
-    }
-
-    if (currentMarch.targetPoiId && currentMarch.targetPoiId !== targetPoiId) {
-      await tx.mapPoi.update({
-        where: { id: currentMarch.targetPoiId },
-        data: {
-          state: "ACTIVE",
-        },
-      });
-    }
-
-    if (targetPoiId && targetPoiId !== currentMarch.targetPoiId) {
-      await tx.mapPoi.update({
-        where: { id: targetPoiId },
-        data: {
-          state: "OCCUPIED",
-        },
-      });
     }
 
     const commander = city.owner.commanders.find((entry) => entry.id === currentMarch.commanderId) ?? getPrimaryCommander(city);
@@ -1605,6 +1640,19 @@ export async function retargetMarch(
       },
       include: {
         commander: true,
+        ownerUser: {
+          include: {
+            allianceMembership: {
+              include: {
+                alliance: {
+                  select: {
+                    tag: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         targetCity: {
           include: {
             owner: true,
@@ -1614,6 +1662,14 @@ export async function retargetMarch(
         battleWindow: true,
       },
     });
+
+    if (currentMarch.targetPoiId && currentMarch.targetPoiId !== targetPoiId) {
+      await syncPoiOccupancyStateTx(tx, currentMarch.targetPoiId);
+    }
+
+    if (targetPoiId) {
+      await syncPoiOccupancyStateTx(tx, targetPoiId);
+    }
 
     return mapMarchView(updatedMarch, { x: city.x, y: city.y }, now);
   });
@@ -1980,6 +2036,19 @@ export async function launchRally(userId: string, rallyId: string): Promise<Rall
       },
       include: {
         commander: true,
+        ownerUser: {
+          include: {
+            allianceMembership: {
+              include: {
+                alliance: {
+                  select: {
+                    tag: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         targetCity: {
           include: {
             owner: true,
@@ -2031,7 +2100,7 @@ export async function updateAllianceAnnouncement(userId: string, content: string
     if (!membership?.alliance) {
       throw new HttpError(409, "ALLIANCE_REQUIRED", "Only alliance members can post announcements.");
     }
-    if (membership.role === "MEMBER") {
+    if (!isAllianceOfficerRole(membership.role)) {
       throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Only officers can update alliance announcements.");
     }
 
@@ -2128,7 +2197,7 @@ export async function deleteAllianceMarker(userId: string, markerId: string): Pr
       throw new HttpError(404, "MARKER_NOT_FOUND", "That alliance marker could not be found.");
     }
 
-    if (marker.userId !== userId && membership.role === "MEMBER") {
+    if (marker.userId !== userId && !isAllianceOfficerRole(membership.role)) {
       throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Only officers can remove another member's marker.");
     }
 

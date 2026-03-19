@@ -30,7 +30,7 @@ export const RESEARCH_TYPES = [
 
 export type ResearchType = (typeof RESEARCH_TYPES)[number];
 
-export const ALLIANCE_ROLES = ["LEADER", "OFFICER", "MEMBER"] as const;
+export const ALLIANCE_ROLES = ["LEADER", "OFFICER", "MEMBER", "RECRUIT"] as const;
 
 export type AllianceRole = (typeof ALLIANCE_ROLES)[number];
 

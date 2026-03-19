@@ -1,5 +1,6 @@
 .shell {
   min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 286px minmax(0, 1fr);
   color: var(--color-ink-100);
@@ -16,6 +17,7 @@
 
 .sidebar {
   position: relative;
+  overflow: auto;
   padding: 1.5rem 1.2rem 1.3rem;
   display: flex;
   flex-direction: column;
@@ -29,6 +31,8 @@
 
 .brandCard,
 .summaryCard {
+  position: relative;
+  overflow: hidden;
   padding: 1rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-panel-edge);
@@ -41,6 +45,25 @@
 
 .summaryCard {
   animation-delay: 80ms;
+}
+
+.brandCard::before,
+.summaryCard::before,
+.queueCard::before {
+  content: "";
+  position: absolute;
+  inset: -45% auto -45% -16%;
+  width: 32%;
+  background: linear-gradient(90deg, transparent, rgba(255, 244, 220, 0.14), transparent);
+  transform: translateX(-180%) skewX(-16deg);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.brandCard:hover::before,
+.summaryCard:hover::before,
+.queueCard:hover::before {
+  animation: sheenSweep 1200ms var(--motion-smooth);
 }
 
 .summaryList {
@@ -161,10 +184,13 @@
 
 .main {
   min-width: 0;
+  min-height: 0;
   display: grid;
+  height: 100vh;
   grid-template-rows: auto auto 1fr;
   gap: 1rem;
   padding: 1.2rem 1.2rem 1.8rem;
+  overflow: hidden;
   animation: fadeIn 320ms ease both;
 }
 
@@ -174,6 +200,7 @@
   z-index: var(--z-sticky);
   display: grid;
   gap: 0.85rem;
+  padding-top: 0.2rem;
 }
 
 .resourceRow {
@@ -211,6 +238,7 @@
   gap: 0.65rem;
   overflow: auto;
   padding-bottom: 0.15rem;
+  align-items: stretch;
 }
 
 .queueRail::-webkit-scrollbar,
@@ -219,6 +247,8 @@
 }
 
 .queueCard {
+  position: relative;
+  overflow: hidden;
   min-width: 178px;
   padding: 0.85rem 0.95rem;
   border-radius: var(--radius-md);
@@ -266,8 +296,22 @@
 
 .content {
   min-width: 0;
+  min-height: 0;
   display: grid;
+  overflow: auto;
+  padding-right: 0.2rem;
   animation: fadeSlideUp var(--motion-slow) var(--motion-smooth) both;
+}
+
+.sidebar::-webkit-scrollbar,
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-thumb,
+.content::-webkit-scrollbar-thumb {
+  background: rgba(114, 206, 209, 0.16);
+  border-radius: 999px;
 }
 
 .feedback {

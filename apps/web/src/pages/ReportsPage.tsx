@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReportEntryView } from "@frontier/shared";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
@@ -43,6 +44,10 @@ function getReportHeadline(report: ReportEntryView): string {
 
 export function ReportsPage() {
   const { openInbox, notifications } = useGameLayoutContext();
+  const [searchParams] = useSearchParams();
+  const [kindFilter, setKindFilter] = useState<"ALL" | ReportEntryView["kind"]>("ALL");
+  const [resultFilter, setResultFilter] = useState<"ALL" | "ATTACKER_WIN" | "DEFENDER_HOLD" | "LOGISTICS">("ALL");
+  const [dateFilter, setDateFilter] = useState<"ALL" | "24H" | "7D" | "30D">("ALL");
   const reportsQuery = useQuery({
     queryKey: ["battle-reports"],
     queryFn: api.reports,
@@ -66,18 +71,56 @@ export function ReportsPage() {
   }, [reportsQuery.data]);
 
   const reports = reportsQuery.data?.reports ?? [];
+  const focusedReportId = searchParams.get("focus");
+  const filteredReports = useMemo(() => {
+    const now = Date.now();
+
+    return reports.filter((report) => {
+      if (kindFilter !== "ALL" && report.kind !== kindFilter) {
+        return false;
+      }
+
+      if (resultFilter !== "ALL") {
+        if (resultFilter === "LOGISTICS") {
+          if (report.kind !== "RESOURCE_GATHER") {
+            return false;
+          }
+        } else {
+          if (report.kind === "RESOURCE_GATHER" || report.result !== resultFilter) {
+            return false;
+          }
+        }
+      }
+
+      if (dateFilter !== "ALL") {
+        const ageMs = now - new Date(report.createdAt).getTime();
+        const maxAgeMs =
+          dateFilter === "24H"
+            ? 24 * 60 * 60 * 1000
+            : dateFilter === "7D"
+              ? 7 * 24 * 60 * 60 * 1000
+              : 30 * 24 * 60 * 60 * 1000;
+        if (ageMs > maxAgeMs) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [dateFilter, kindFilter, reports, resultFilter]);
+
   const summary = useMemo(() => {
-    const victories = reports.filter(
+    const victories = filteredReports.filter(
       (report) => report.kind !== "RESOURCE_GATHER" && report.result === "ATTACKER_WIN",
     ).length;
-    const holds = reports.filter(
+    const holds = filteredReports.filter(
       (report) => report.kind !== "RESOURCE_GATHER" && report.result === "DEFENDER_HOLD",
     ).length;
-    const gatherReturns = reports.filter((report) => report.kind === "RESOURCE_GATHER").length;
-    const movedTotal = reports.reduce((sum, report) => sum + getLootVolume(report), 0);
+    const gatherReturns = filteredReports.filter((report) => report.kind === "RESOURCE_GATHER").length;
+    const movedTotal = filteredReports.reduce((sum, report) => sum + getLootVolume(report), 0);
 
     return { victories, holds, gatherReturns, movedTotal };
-  }, [reports]);
+  }, [filteredReports]);
 
   if (reportsQuery.isPending) {
     return <div className={styles.feedback}>Loading reports...</div>;
@@ -101,6 +144,26 @@ export function ReportsPage() {
           </div>
           <Badge tone="info">{reports.length} entries</Badge>
         </div>
+        <div className={styles.filterRow}>
+          <select value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)}>
+            <option value="ALL">All categories</option>
+            <option value="CITY_BATTLE">City battles</option>
+            <option value="BARBARIAN_BATTLE">Barbarian battles</option>
+            <option value="RESOURCE_GATHER">Gather returns</option>
+          </select>
+          <select value={resultFilter} onChange={(event) => setResultFilter(event.target.value as typeof resultFilter)}>
+            <option value="ALL">All outcomes</option>
+            <option value="ATTACKER_WIN">Attacker win</option>
+            <option value="DEFENDER_HOLD">Defender hold</option>
+            <option value="LOGISTICS">Logistics only</option>
+          </select>
+          <select value={dateFilter} onChange={(event) => setDateFilter(event.target.value as typeof dateFilter)}>
+            <option value="ALL">All dates</option>
+            <option value="24H">Last 24h</option>
+            <option value="7D">Last 7d</option>
+            <option value="30D">Last 30d</option>
+          </select>
+        </div>
         <div className={styles.summaryGrid}>
           <article className={styles.summaryCard}>
             <span className={styles.summaryLabel}>Victories</span>
@@ -123,15 +186,16 @@ export function ReportsPage() {
 
       <div className={styles.layout}>
         <div className={styles.feed}>
-          {reports.length === 0 ? (
+          {filteredReports.length === 0 ? (
             <SectionCard kicker="Empty Log" title="No entries yet">
               <EmptyState
                 title="Launch the first march"
-                body="Select a target from the map, confirm the march, and wait for the first resolved report to land here."
+                body="Adjust the filters or launch a new march, then wait for the next resolved report to land here."
               />
             </SectionCard>
           ) : (
-            reports.map((report) => {
+            filteredReports.map((report) => {
+              const focusedClass = focusedReportId === report.id ? styles.focusedEntry : undefined;
               if (report.kind === "CITY_BATTLE") {
                 return (
                   <SectionCard
@@ -139,7 +203,7 @@ export function ReportsPage() {
                     kicker="City Battle"
                     title={`${report.attackerCityName} -> ${report.defenderCityName}`}
                     aside={<Badge tone={getReportTone(report)}>{getReportHeadline(report)}</Badge>}
-                    className={styles.entryCard}
+                    className={[styles.entryCard, focusedClass].filter(Boolean).join(" ")}
                   >
                     <div className={styles.entryMeta}>
                       <span>{formatDateTime(report.createdAt)}</span>
@@ -196,7 +260,7 @@ export function ReportsPage() {
                     kicker="Barbarian Battle"
                     title={`${report.attackerCityName} -> ${report.poiName}`}
                     aside={<Badge tone={getReportTone(report)}>{getReportHeadline(report)}</Badge>}
-                    className={styles.entryCard}
+                    className={[styles.entryCard, focusedClass].filter(Boolean).join(" ")}
                   >
                     <div className={styles.entryMeta}>
                       <span>{formatDateTime(report.createdAt)}</span>
@@ -251,7 +315,7 @@ export function ReportsPage() {
                   kicker="Gather Return"
                   title={`${report.cityName} <- ${report.poiName}`}
                   aside={<Badge tone="info">{getReportHeadline(report)}</Badge>}
-                  className={styles.entryCard}
+                  className={[styles.entryCard, focusedClass].filter(Boolean).join(" ")}
                 >
                   <div className={styles.entryMeta}>
                     <span>{formatDateTime(report.createdAt)}</span>

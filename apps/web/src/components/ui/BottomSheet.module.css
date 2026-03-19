@@ -2,7 +2,10 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-overlay);
-  background: var(--color-overlay);
+  background:
+    radial-gradient(circle at 50% 20%, rgba(244, 215, 156, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(11, 7, 6, 0.28), rgba(11, 7, 6, 0.7)),
+    var(--color-overlay);
   backdrop-filter: blur(8px);
   animation: fadeIn 200ms ease both;
 }
@@ -18,12 +21,23 @@
   border-radius: 28px 28px 0 0;
   border: 1px solid var(--color-panel-edge);
   background:
+    radial-gradient(circle at 20% 0%, rgba(255, 244, 220, 0.08), transparent 20%),
     linear-gradient(180deg, rgba(87, 52, 34, 0.98), rgba(26, 14, 10, 0.98)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
   box-shadow: var(--shadow-heavy);
   display: grid;
   grid-template-rows: auto 1fr auto;
   animation: slideUp 320ms var(--motion-smooth) both;
+  overflow: hidden;
+}
+
+.sheet::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 244, 220, 0.08);
+  pointer-events: none;
 }
 
 .header {

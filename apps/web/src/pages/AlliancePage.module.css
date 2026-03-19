@@ -4,6 +4,8 @@
 }
 
 .hero {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 1rem;
   padding: 1.05rem;
@@ -13,6 +15,17 @@
     linear-gradient(180deg, rgba(83, 51, 33, 0.48), rgba(28, 16, 11, 0.96)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent 72%);
   box-shadow: var(--shadow-soft);
+  animation: borderGlow 5s ease-in-out infinite;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -22% auto auto -10%;
+  width: 34%;
+  height: 82%;
+  background: radial-gradient(circle, rgba(255, 244, 220, 0.1), transparent 72%);
+  pointer-events: none;
 }
 
 .heroTop {
@@ -53,12 +66,25 @@
 .summaryCard,
 .feedCard,
 .notice {
+  position: relative;
+  overflow: hidden;
   padding: 0.95rem 1rem;
   border: 1px solid var(--color-panel-edge);
   border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(64, 38, 24, 0.84), rgba(27, 15, 10, 0.96)),
     linear-gradient(90deg, rgba(255, 244, 220, 0.04), transparent);
+}
+
+.summaryCard::after,
+.feedCard::after,
+.notice::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 244, 220, 0.06);
+  pointer-events: none;
 }
 
 .summaryValue {
@@ -132,6 +158,15 @@
 
 .helpGrid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inlineLink {
+  color: var(--color-teal-300);
+  text-decoration: none;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
 }
 
 .feedCard {

@@ -143,7 +143,8 @@ describe("API smoke", () => {
     expect(stateResponse.status).toBe(200);
     expect(stateResponse.body.city.buildings).toHaveLength(8);
     expect(stateResponse.body.city.troops).toHaveLength(3);
-    expect(stateResponse.body.city.commanders).toHaveLength(1);
+    expect(stateResponse.body.city.commanders).toHaveLength(6);
+    expect(stateResponse.body.city.commanders.some((commander: { isPrimary: boolean }) => commander.isPrimary)).toBe(true);
     expect(stateResponse.body.city.research).toHaveLength(6);
 
     const upgradeResponse = await attacker.post("/api/game/buildings/FARM/upgrade");
@@ -334,7 +335,16 @@ describe("API smoke", () => {
     expect(defenderReports.status).toBe(200);
     expect(attackerOneReports.body.reports.some((report: { kind: string }) => report.kind === "CITY_BATTLE")).toBe(true);
     expect(attackerTwoReports.body.reports.some((report: { kind: string }) => report.kind === "CITY_BATTLE")).toBe(true);
-    expect(defenderReports.body.reports.filter((report: { kind: string }) => report.kind === "CITY_BATTLE").length).toBe(2);
+    const defenderCityBattleReports = defenderReports.body.reports.filter(
+      (report: { kind: string; attackerName?: string }) => report.kind === "CITY_BATTLE",
+    );
+    expect(defenderCityBattleReports.length).toBeGreaterThanOrEqual(2);
+    expect(defenderCityBattleReports.some((report: { attackerName?: string }) => report.attackerName === "window_attacker_one")).toBe(
+      true,
+    );
+    expect(defenderCityBattleReports.some((report: { attackerName?: string }) => report.attackerName === "window_attacker_two")).toBe(
+      true,
+    );
   });
 
   it("runs a barbarian camp march and stores a PvE report", async () => {
@@ -382,6 +392,20 @@ describe("API smoke", () => {
       where: { id: marchResponse.body.march.id },
       data: {
         etaAt: new Date(Date.now() - 5_000),
+      },
+    });
+
+    const stagedState = await raider.get("/api/game/state");
+    expect(stagedState.status).toBe(200);
+    expect(stagedState.body.city.activeMarches[0].state).toBe("STAGING");
+    expect(stagedState.body.city.activeMarches[0].battleWindowId).toBeTruthy();
+
+    await prisma.battleWindow.update({
+      where: {
+        id: stagedState.body.city.activeMarches[0].battleWindowId,
+      },
+      data: {
+        closesAt: new Date(Date.now() - 5_000),
       },
     });
 
@@ -453,6 +477,20 @@ describe("API smoke", () => {
       },
     });
 
+    const stagingState = await gatherer.get("/api/game/state");
+    expect(stagingState.status).toBe(200);
+    expect(stagingState.body.city.activeMarches[0].state).toBe("STAGING");
+    expect(stagingState.body.city.activeMarches[0].battleWindowId).toBeTruthy();
+
+    await prisma.battleWindow.update({
+      where: {
+        id: stagingState.body.city.activeMarches[0].battleWindowId,
+      },
+      data: {
+        closesAt: new Date(Date.now() - 5_000),
+      },
+    });
+
     const gatheringState = await gatherer.get("/api/game/state");
     expect(gatheringState.status).toBe(200);
     expect(gatheringState.body.city.activeMarches[0].state).toBe("GATHERING");
@@ -516,7 +554,7 @@ describe("API smoke", () => {
     expect(createResponse.status).toBe(201);
     expect(createResponse.body.alliance.role).toBe("LEADER");
 
-    const allianceState = await leader.get("/api/game/alliance");
+    const allianceState = await leader.get("/api/alliance");
     expect(allianceState.status).toBe(200);
     expect(allianceState.body.alliance.memberCount).toBe(1);
 
@@ -526,7 +564,7 @@ describe("API smoke", () => {
     const allyMember = joinResponse.body.alliance.members.find((member: { username: string }) => member.username === "ally_one");
     expect(allyMember).toBeTruthy();
 
-    const donateResponse = await leader.post("/api/game/alliance/donate").send({
+    const donateResponse = await leader.post("/api/alliance/donations").send({
       wood: 120,
       stone: 0,
       food: 0,
@@ -535,7 +573,7 @@ describe("API smoke", () => {
     expect(donateResponse.status).toBe(200);
     expect(donateResponse.body.alliance.treasury.wood).toBe(120);
 
-    const promoteResponse = await leader.post(`/api/game/alliances/members/${allyMember!.userId}/role`).send({
+    const promoteResponse = await leader.post(`/api/alliance/members/${allyMember!.userId}/role`).send({
       role: "OFFICER",
     });
     expect(promoteResponse.status).toBe(200);
@@ -675,6 +713,12 @@ describe("API smoke", () => {
       tag: "RLG",
       description: "retention flow",
     });
+
+    const commandersResponse = await actor.get("/api/game/commanders");
+    expect(commandersResponse.status).toBe(200);
+    expect(commandersResponse.body.commanders).toHaveLength(6);
+    expect(commandersResponse.body.commanders[0].skillTree.nodes.length).toBeGreaterThan(0);
+    expect(commandersResponse.body.commanders[0].skillTree.links.length).toBeGreaterThan(0);
 
     const tasksResponse = await actor.get("/api/game/tasks");
     expect(tasksResponse.status).toBe(200);

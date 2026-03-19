@@ -4,6 +4,7 @@ import type {
   AnalyticsEventRequest,
   AuthResponse,
   BattleReportsResponse,
+  CommanderProgressView,
   EntitlementsResponse,
   GameEventsResponse,
   GameStateResponse,
@@ -104,6 +105,7 @@ export const api = {
       method: "POST",
     }),
   gameState: () => apiRequest<GameStateResponse>("/api/game/state"),
+  commanders: () => apiRequest<{ commanders: CommanderProgressView[] }>("/api/game/commanders"),
   startUpgrade: (buildingType: string) =>
     apiRequest<GameStateResponse>(`/api/game/buildings/${buildingType}/upgrade`, {
       method: "POST",
@@ -191,7 +193,7 @@ export const api = {
     }),
   events: () => apiRequest<GameEventsResponse>("/api/game/events"),
   leaderboard: (leaderboardId: string) => apiRequest<LeaderboardResponse>(`/api/game/leaderboards/${leaderboardId}`),
-  allianceState: () => apiRequest<AllianceStateResponse>("/api/game/alliance"),
+  allianceState: () => apiRequest<AllianceStateResponse>("/api/alliance"),
   createAlliance: (body: { name: string; tag: string; description?: string }) =>
     apiRequest<AllianceMutationResponse>("/api/game/alliances", {
       method: "POST",
@@ -225,12 +227,12 @@ export const api = {
       method: "DELETE",
     }),
   donateAllianceResources: (body: { wood: number; stone: number; food: number; gold: number }) =>
-    apiRequest<AllianceMutationResponse>("/api/game/alliance/donate", {
+    apiRequest<AllianceMutationResponse>("/api/alliance/donations", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  updateAllianceRole: (userId: string, role: "LEADER" | "OFFICER" | "MEMBER") =>
-    apiRequest<AllianceMutationResponse>(`/api/game/alliances/members/${userId}/role`, {
+  updateAllianceRole: (userId: string, role: "LEADER" | "OFFICER" | "MEMBER" | "RECRUIT") =>
+    apiRequest<AllianceMutationResponse>(`/api/alliance/members/${userId}/role`, {
       method: "POST",
       body: JSON.stringify({ role }),
     }),

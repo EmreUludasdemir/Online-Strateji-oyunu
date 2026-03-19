@@ -195,6 +195,43 @@ async function upsertTroopLedgerTx(
   }
 }
 
+async function syncPoiOccupancyStateTx(tx: Prisma.TransactionClient, poiId: string) {
+  const poi = await tx.mapPoi.findUnique({
+    where: { id: poiId },
+    select: {
+      state: true,
+    },
+  });
+
+  if (!poi || (poi.state !== "ACTIVE" && poi.state !== "OCCUPIED")) {
+    return;
+  }
+
+  const [activeMarches, openWindows] = await Promise.all([
+    tx.march.count({
+      where: {
+        targetPoiId: poiId,
+        state: {
+          in: ["ENROUTE", "STAGING", "GATHERING"],
+        },
+      },
+    }),
+    tx.battleWindow.count({
+      where: {
+        targetPoiId: poiId,
+        resolvedAt: null,
+      },
+    }),
+  ]);
+
+  await tx.mapPoi.update({
+    where: { id: poiId },
+    data: {
+      state: activeMarches > 0 || openWindows > 0 ? "OCCUPIED" : "ACTIVE",
+    },
+  });
+}
+
 function buildTimeline(
   city: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
   now: Date,
@@ -594,6 +631,7 @@ async function stageCityBattleMarchTx(
     existingWindow ??
     (await tx.battleWindow.create({
       data: {
+        objective: "CITY_ATTACK",
         targetCityId: defenderCity.id,
         closesAt: new Date(now.getTime() + BATTLE_WINDOW_DURATION_MS),
       },
@@ -612,6 +650,105 @@ async function stageCityBattleMarchTx(
     cityIds: [attackerCity.id, defenderCity.id],
     marchId: march.id,
     poiId: null,
+  });
+}
+
+async function stagePoiBattleMarchTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  poi: Awaited<ReturnType<typeof loadMapPoiRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const existingWindow = await tx.battleWindow.findFirst({
+    where: {
+      targetPoiId: poi.id,
+      objective: march.objective,
+      resolvedAt: null,
+      closesAt: {
+        gt: now,
+      },
+    },
+    orderBy: {
+      openedAt: "asc",
+    },
+  });
+
+  const battleWindow =
+    existingWindow ??
+    (await tx.battleWindow.create({
+      data: {
+        objective: march.objective,
+        targetPoiId: poi.id,
+        closesAt: new Date(now.getTime() + BATTLE_WINDOW_DURATION_MS),
+      },
+    }));
+
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "STAGING",
+      battleWindowId: battleWindow.id,
+    },
+  });
+  await syncPoiOccupancyStateTx(tx, poi.id);
+
+  worldEvents.marchTransitions.push({
+    userIds: [attackerCity.ownerId],
+    cityIds: [attackerCity.id],
+    marchId: march.id,
+    poiId: poi.id,
+  });
+}
+
+async function cancelStagedPoiMarchTx(
+  tx: Prisma.TransactionClient,
+  march: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>["outgoingMarches"][number],
+  attackerCity: Awaited<ReturnType<typeof loadCityStateRecordOrThrow>>,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const attackerGarrison = getTroopLedger(
+    attackerCity.troopGarrisons.map((troop) => ({
+      troopType: troop.troopType,
+      quantity: troop.quantity,
+    })),
+  );
+
+  await upsertTroopLedgerTx(
+    tx,
+    attackerCity.id,
+    addTroops(attackerGarrison, {
+      INFANTRY: march.infantryCount,
+      ARCHER: march.archerCount,
+      CAVALRY: march.cavalryCount,
+    }),
+  );
+
+  await tx.march.update({
+    where: { id: march.id },
+    data: {
+      state: "RECALLED",
+      battleWindowId: null,
+      cargoAmount: 0,
+      resolvedAt: now,
+    },
+  });
+  await tx.rally.updateMany({
+    where: {
+      launchedMarchId: march.id,
+    },
+    data: {
+      state: "RESOLVED",
+    },
+  });
+
+  worldEvents.marchTransitions.push({
+    userIds: [attackerCity.ownerId],
+    cityIds: [attackerCity.id],
+    marchId: march.id,
+    poiId: march.targetPoiId,
   });
 }
 
@@ -707,6 +844,7 @@ async function reconcileBarbarianBattleTx(
     where: { id: march.id },
     data: {
       state: "RESOLVED",
+      battleWindowId: null,
       resolvedAt: now,
       defenderPowerSnapshot: getTroopDefensePower(defenderTroops),
       battleResult: baseBattle.result,
@@ -750,6 +888,7 @@ async function reconcileGatherArrivalTx(
     where: { id: march.id },
     data: {
       state: "GATHERING",
+      battleWindowId: null,
       gatherStartedAt: now,
       etaAt: gatherCompleteAt,
       returnEtaAt,
@@ -1243,6 +1382,19 @@ async function reconcileBattleWindowsTx(
       },
       include: {
         commander: true,
+        ownerUser: {
+          include: {
+            allianceMembership: {
+              include: {
+                alliance: {
+                  select: {
+                    tag: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         targetCity: {
           include: {
             owner: true,
@@ -1254,21 +1406,58 @@ async function reconcileBattleWindowsTx(
       orderBy: [{ etaAt: "asc" }, { startsAt: "asc" }],
     });
 
-    for (const march of stagedMarches) {
-      if (!march.targetCityId) {
-        continue;
-      }
+    if (window.objective === "CITY_ATTACK") {
+      for (const march of stagedMarches) {
+        if (!march.targetCityId) {
+          continue;
+        }
 
-      const attackerCity = await loadCityStateRecordOrThrow(tx, march.ownerCityId);
-      const defenderCity = await loadCityStateRecordOrThrow(tx, march.targetCityId);
-      const battleStartedAt = Date.now();
-      await reconcileCityBattleTx(tx, march, attackerCity, defenderCity, now, worldEvents);
-      observeDuration("game_battle_resolve_duration_ms", Date.now() - battleStartedAt, {
-        objective: "CITY_ATTACK",
-      });
-      incrementCounter("game_battle_resolve_total", {
-        objective: "CITY_ATTACK",
-      });
+        const attackerCity = await loadCityStateRecordOrThrow(tx, march.ownerCityId);
+        const defenderCity = await loadCityStateRecordOrThrow(tx, march.targetCityId);
+        const battleStartedAt = Date.now();
+        await reconcileCityBattleTx(tx, march, attackerCity, defenderCity, now, worldEvents);
+        observeDuration("game_battle_resolve_duration_ms", Date.now() - battleStartedAt, {
+          objective: "CITY_ATTACK",
+        });
+        incrementCounter("game_battle_resolve_total", {
+          objective: "CITY_ATTACK",
+        });
+      }
+    } else if (window.objective === "BARBARIAN_ATTACK" && window.targetPoiId) {
+      for (const march of stagedMarches) {
+        const attackerCity = await loadCityStateRecordOrThrow(tx, march.ownerCityId);
+        const poi = await loadMapPoiRecordOrThrow(tx, window.targetPoiId);
+
+        if (poi.state === "RESPAWNING" || poi.state === "DEPLETED") {
+          await cancelStagedPoiMarchTx(tx, march, attackerCity, now, worldEvents);
+          continue;
+        }
+
+        const battleStartedAt = Date.now();
+        await reconcileBarbarianBattleTx(tx, march, attackerCity, now, worldEvents);
+        observeDuration("game_battle_resolve_duration_ms", Date.now() - battleStartedAt, {
+          objective: "BARBARIAN_ATTACK",
+        });
+        incrementCounter("game_battle_resolve_total", {
+          objective: "BARBARIAN_ATTACK",
+        });
+      }
+    } else if (window.objective === "RESOURCE_GATHER" && window.targetPoiId) {
+      const poi = await loadMapPoiRecordOrThrow(tx, window.targetPoiId);
+      const leadMarchId =
+        poi.state !== "RESPAWNING" && poi.state !== "DEPLETED" && (poi.remainingAmount ?? 0) > 0
+          ? stagedMarches[0]?.id ?? null
+          : null;
+
+      for (const march of stagedMarches) {
+        const attackerCity = await loadCityStateRecordOrThrow(tx, march.ownerCityId);
+        if (march.id === leadMarchId) {
+          await reconcileGatherArrivalTx(tx, march, attackerCity, now, worldEvents);
+          continue;
+        }
+
+        await cancelStagedPoiMarchTx(tx, march, attackerCity, now, worldEvents);
+      }
     }
 
     await tx.battleWindow.update({
@@ -1277,6 +1466,9 @@ async function reconcileBattleWindowsTx(
         resolvedAt: now,
       },
     });
+    if (window.targetPoiId) {
+      await syncPoiOccupancyStateTx(tx, window.targetPoiId);
+    }
 
     observeDuration("game_battle_window_duration_ms", Date.now() - windowStartedAt, {
       windowState: "closed",
@@ -1311,6 +1503,19 @@ async function reconcileMarchesTx(
     },
     include: {
       commander: true,
+      ownerUser: {
+        include: {
+          allianceMembership: {
+            include: {
+              alliance: {
+                select: {
+                  tag: true,
+                },
+              },
+            },
+          },
+        },
+      },
       targetCity: {
         include: {
           owner: true,
@@ -1366,19 +1571,14 @@ async function reconcileMarchesTx(
     }
 
     if (march.state === "ENROUTE" && march.objective === "BARBARIAN_ATTACK" && march.targetPoiId) {
-      const battleStartedAt = Date.now();
-      await reconcileBarbarianBattleTx(tx, march, attackerCity, now, worldEvents);
-      observeDuration("game_battle_resolve_duration_ms", Date.now() - battleStartedAt, {
-        objective: "BARBARIAN_ATTACK",
-      });
-      incrementCounter("game_battle_resolve_total", {
-        objective: "BARBARIAN_ATTACK",
-      });
+      const poi = await loadMapPoiRecordOrThrow(tx, march.targetPoiId);
+      await stagePoiBattleMarchTx(tx, march, attackerCity, poi, now, worldEvents);
       continue;
     }
 
     if (march.state === "ENROUTE" && march.objective === "RESOURCE_GATHER" && march.targetPoiId) {
-      await reconcileGatherArrivalTx(tx, march, attackerCity, now, worldEvents);
+      const poi = await loadMapPoiRecordOrThrow(tx, march.targetPoiId);
+      await stagePoiBattleMarchTx(tx, march, attackerCity, poi, now, worldEvents);
       continue;
     }
 

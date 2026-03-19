@@ -92,6 +92,7 @@ enum AllianceRole {
   LEADER
   OFFICER
   MEMBER
+  RECRUIT
 }
 
 enum AllianceHelpKind {
@@ -175,6 +176,7 @@ model User {
   liveEventScores        LiveEventScore[]
   allianceMarkers        AllianceMarker[]
   allianceContributions  AllianceContribution[]
+  allianceDonations      AllianceDonation[]
   allianceLogs           AllianceLogEntry[]      @relation("AllianceActorLogs")
   updatedAnnouncements   AllianceAnnouncement[]  @relation("AllianceAnnouncementUpdater")
   idempotencyKeys        IdempotencyKey[]
@@ -204,7 +206,7 @@ model City {
   marchReports      MarchReport[]       @relation("OwnerCityMarchReports")
   scoutReports      ScoutReport[]       @relation("OwnerCityScoutReports")
   targetScoutReports ScoutReport[]      @relation("TargetCityScoutReports")
-  battleWindows     BattleWindow[]
+  battleWindows     BattleWindow[]       @relation("CityBattleWindows")
   outgoingMarches   March[]             @relation("OriginCityMarches")
   incomingMarches   March[]             @relation("TargetCityMarches")
   outgoingScouts    ScoutMission[]      @relation("OriginCityScoutMissions")
@@ -237,6 +239,7 @@ model Alliance {
   markers       AllianceMarker[]
   logs          AllianceLogEntry[]
   contributions AllianceContribution[]
+  donations     AllianceDonation[]
   rallies       Rally[]
 }
 
@@ -264,6 +267,23 @@ model AllianceChatMessage {
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([allianceId, createdAt])
+}
+
+model AllianceDonation {
+  id         String   @id @default(cuid())
+  allianceId String
+  userId     String
+  wood       Int      @default(0)
+  stone      Int      @default(0)
+  food       Int      @default(0)
+  gold       Int      @default(0)
+  totalValue Int      @default(0)
+  createdAt  DateTime @default(now())
+  alliance   Alliance @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([allianceId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model AllianceHelpRequest {
@@ -437,23 +457,28 @@ model MapPoi {
   targetScouts   ScoutMission[]  @relation("TargetPoiScoutMissions")
   scoutReports   ScoutReport[]   @relation("TargetPoiScoutReports")
   rallies        Rally[]         @relation("RallyTargetPoi")
+  battleWindows  BattleWindow[]  @relation("PoiBattleWindows")
 
   @@unique([x, y])
   @@index([kind, state])
 }
 
 model BattleWindow {
-  id          String    @id @default(cuid())
-  targetCityId String
-  openedAt    DateTime  @default(now())
-  closesAt    DateTime
-  resolvedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  targetCity  City      @relation(fields: [targetCityId], references: [id], onDelete: Cascade)
-  marches     March[]
+  id           String         @id @default(cuid())
+  objective    MarchObjective @default(CITY_ATTACK)
+  targetCityId String?
+  targetPoiId  String?
+  openedAt     DateTime       @default(now())
+  closesAt     DateTime
+  resolvedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  targetCity   City?          @relation("CityBattleWindows", fields: [targetCityId], references: [id], onDelete: Cascade)
+  targetPoi    MapPoi?        @relation("PoiBattleWindows", fields: [targetPoiId], references: [id], onDelete: Cascade)
+  marches      March[]
 
   @@index([targetCityId, closesAt])
+  @@index([targetPoiId, closesAt])
   @@index([resolvedAt, closesAt])
 }
 

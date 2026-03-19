@@ -15,11 +15,14 @@ import {
   type AllianceHelpRequestView,
   type AllianceListItemView,
   type AllianceContributionView,
+  type AllianceDonationView,
   type AllianceLogEntryView,
   type AllianceMarkerView,
   type AllianceSummaryView,
   type AllianceView,
   type AuthUser,
+  type BattleWindowParticipantView,
+  type BattleWindowView,
   type BattleReportsResponse,
   type BuildingType,
   type BuildingView,
@@ -77,6 +80,29 @@ import { buildCommanderPresetLabel, COMMANDER_TEMPLATES } from "./content";
 
 export const battleWindowInclude = Prisma.validator<Prisma.BattleWindowInclude>()({
   targetCity: true,
+  targetPoi: true,
+  marches: {
+    where: {
+      state: "STAGING",
+    },
+    include: {
+      commander: true,
+      ownerUser: {
+        include: {
+          allianceMembership: {
+            include: {
+              alliance: {
+                select: {
+                  tag: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ etaAt: "asc" }, { startsAt: "asc" }],
+  },
 });
 
 export const cityStateInclude = Prisma.validator<Prisma.CityInclude>()({
@@ -136,6 +162,19 @@ export const cityStateInclude = Prisma.validator<Prisma.CityInclude>()({
     },
     include: {
       commander: true,
+      ownerUser: {
+        include: {
+          allianceMembership: {
+            include: {
+              alliance: {
+                select: {
+                  tag: true,
+                },
+              },
+            },
+          },
+        },
+      },
       targetCity: {
         include: {
           owner: true,
@@ -169,16 +208,7 @@ export const mapCityInclude = Prisma.validator<Prisma.CityInclude>()({
       closesAt: "asc",
     },
     take: 1,
-    include: {
-      marches: {
-        where: {
-          state: "STAGING",
-        },
-        select: {
-          id: true,
-        },
-      },
-    },
+    include: battleWindowInclude,
   },
 });
 
@@ -199,13 +229,25 @@ export const mapPoiInclude = Prisma.validator<Prisma.MapPoiInclude>()({
   targetMarches: {
     where: {
       state: {
-        in: ["ENROUTE", "GATHERING"],
+        in: ["ENROUTE", "STAGING", "GATHERING"],
       },
     },
     select: {
       id: true,
+      state: true,
+      objective: true,
+    },
+    take: 8,
+  },
+  battleWindows: {
+    where: {
+      resolvedAt: null,
+    },
+    orderBy: {
+      closesAt: "asc",
     },
     take: 1,
+    include: battleWindowInclude,
   },
 });
 
@@ -257,6 +299,15 @@ export const allianceStateInclude = Prisma.validator<Prisma.AllianceInclude>()({
       user: true,
     },
     orderBy: [{ points: "desc" }, { userId: "asc" }],
+    take: 12,
+  },
+  donations: {
+    include: {
+      user: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
     take: 12,
   },
   chatMessages: {
@@ -557,6 +608,9 @@ export function mapMarchView(
     state: march.state,
     battleWindowId: march.battleWindowId,
     battleWindowClosesAt: march.battleWindow?.closesAt.toISOString() ?? null,
+    ownerUserId: march.ownerUserId,
+    ownerName: march.ownerUser.username,
+    ownerAllianceTag: march.ownerUser.allianceMembership?.alliance?.tag ?? null,
     targetCityId: march.targetCityId,
     targetCityName: march.targetCity?.name ?? null,
     targetPoiId: march.targetPoiId,
@@ -583,6 +637,61 @@ export function mapMarchView(
         : march.attackerPowerSnapshot > march.defenderPowerSnapshot
           ? ("ATTACKER_WIN" as const)
           : ("DEFENDER_HOLD" as const),
+  };
+}
+
+function mapBattleWindowParticipant(
+  march: BattleWindowRecord["marches"][number],
+): BattleWindowParticipantView {
+  return {
+    marchId: march.id,
+    ownerUserId: march.ownerUserId,
+    ownerName: march.ownerUser.username,
+    ownerAllianceTag: march.ownerUser.allianceMembership?.alliance?.tag ?? null,
+    commanderName: march.commander.name,
+    troops: {
+      INFANTRY: march.infantryCount,
+      ARCHER: march.archerCount,
+      CAVALRY: march.cavalryCount,
+    },
+    objective: march.objective,
+    etaAt: march.etaAt.toISOString(),
+  };
+}
+
+export function mapBattleWindowView(window: BattleWindowRecord | null, now: Date): BattleWindowView | null {
+  if (!window) {
+    return null;
+  }
+
+  const participants = window.marches.map(mapBattleWindowParticipant);
+  const targetKind = window.targetPoiId ? "POI" : "CITY";
+  const attackerLabel =
+    window.objective === "RESOURCE_GATHER"
+      ? "Gathering crews"
+      : window.objective === "BARBARIAN_ATTACK"
+        ? "Expedition force"
+        : "Assault force";
+  const defenderLabel =
+    targetKind === "CITY"
+      ? window.targetCity?.name ?? "Frontier City"
+      : window.objective === "RESOURCE_GATHER"
+        ? `${window.targetPoi?.label ?? "Resource Node"} claim`
+        : window.targetPoi?.label ?? "Barbarian Camp";
+
+  return {
+    id: window.id,
+    objective: window.objective,
+    targetKind,
+    targetCityId: window.targetCityId,
+    targetPoiId: window.targetPoiId,
+    label: window.targetCity?.name ?? window.targetPoi?.label ?? "Battle Window",
+    attackerLabel,
+    defenderLabel,
+    closesAt: window.closesAt.toISOString(),
+    remainingSeconds: Math.max(0, Math.ceil((window.closesAt.getTime() - now.getTime()) / 1000)),
+    participantCount: participants.length,
+    participants,
   };
 }
 
@@ -821,6 +930,7 @@ export function mapMapCity(
   const distance = isCurrentPlayer ? null : Math.abs(currentCity.x - city.x) + Math.abs(currentCity.y - city.y);
   const townHall = city.buildings.find((building) => building.buildingType === "TOWN_HALL");
   const battleWindow = city.battleWindows[0] ?? null;
+  const battleWindowView = mapBattleWindowView(battleWindow, now);
 
   return {
     cityId: city.id,
@@ -837,6 +947,7 @@ export function mapMapCity(
     defensePower: targetDefense,
     battleWindowClosesAt: battleWindow?.closesAt.toISOString() ?? null,
     stagedMarchCount: battleWindow?.marches.length ?? 0,
+    battleWindow: battleWindowView,
     projectedOutcome:
       isCurrentPlayer || fogState === "HIDDEN"
         ? null
@@ -850,6 +961,7 @@ export function mapPoiView(
   poi: MapPoiRecord,
   currentCity: CityStateRecord,
   fogState: PoiView["fogState"],
+  now: Date,
 ): PoiView {
   const currentCommander = getPrimaryCommander(currentCity);
   const currentCommanderBonuses = toCommanderBonuses(currentCommander);
@@ -868,6 +980,8 @@ export function mapPoiView(
   const currentAttack = getAttackPower(currentTroops, currentCommanderBonuses, currentResearchLevels);
   const distance = Math.abs(currentCity.x - poi.x) + Math.abs(currentCity.y - poi.y);
   const occupantMarchId = poi.targetMarches[0]?.id ?? null;
+  const battleWindow = poi.battleWindows[0] ?? null;
+  const hasLockedOccupant = poi.targetMarches.some((entry) => entry.state === "GATHERING");
   const campTroops = poi.kind === "BARBARIAN_CAMP" ? getBarbarianCampTroops(poi.level) : null;
   const projectedOutcome =
     poi.kind === "BARBARIAN_CAMP" && fogState !== "HIDDEN" && poi.state === "ACTIVE" && campTroops
@@ -895,15 +1009,18 @@ export function mapPoiView(
       fogState !== "HIDDEN" &&
       distance <= MAX_MARCH_DISTANCE &&
       poi.kind === "BARBARIAN_CAMP" &&
-      poi.state === "ACTIVE" &&
-      occupantMarchId == null,
+      (poi.state === "ACTIVE" || poi.state === "OCCUPIED" || battleWindow != null) &&
+      !hasLockedOccupant,
     canGather:
       fogState !== "HIDDEN" &&
       distance <= MAX_MARCH_DISTANCE &&
       poi.kind === "RESOURCE_NODE" &&
-      poi.state === "ACTIVE" &&
-      occupantMarchId == null &&
+      (poi.state === "ACTIVE" || poi.state === "OCCUPIED" || battleWindow != null) &&
+      !hasLockedOccupant &&
       (poi.remainingAmount ?? 0) > 0,
+    battleWindowClosesAt: battleWindow?.closesAt.toISOString() ?? null,
+    stagedMarchCount: battleWindow?.marches.length ?? 0,
+    battleWindow: mapBattleWindowView(battleWindow, now),
     projectedOutcome,
     projectedLoad: getCarryCapacity(currentTroops, currentCommanderBonuses),
   };
@@ -1125,6 +1242,19 @@ export function mapAllianceView(
       userId: entry.userId,
       username: entry.user.username,
       points: entry.points,
+    })),
+    donations: alliance.donations.map<AllianceDonationView>((entry) => ({
+      id: entry.id,
+      userId: entry.userId,
+      username: entry.user.username,
+      resources: {
+        wood: entry.wood,
+        stone: entry.stone,
+        food: entry.food,
+        gold: entry.gold,
+      },
+      totalValue: entry.totalValue,
+      createdAt: entry.createdAt.toISOString(),
     })),
   };
 }

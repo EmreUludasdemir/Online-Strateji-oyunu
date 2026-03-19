@@ -4,6 +4,8 @@
 }
 
 .hero {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 1rem;
   padding: 1.05rem;
@@ -13,6 +15,16 @@
     linear-gradient(180deg, rgba(94, 57, 37, 0.48), rgba(30, 17, 12, 0.96)),
     linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent 70%);
   box-shadow: var(--shadow-soft);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -18% auto auto -8%;
+  width: 32%;
+  height: 76%;
+  background: radial-gradient(circle, rgba(255, 244, 220, 0.1), transparent 70%);
+  pointer-events: none;
 }
 
 .heroTop {
@@ -50,14 +62,42 @@
   gap: 0.8rem;
 }
 
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.filterRow select {
+  min-height: var(--touch-target);
+  padding: 0 0.9rem;
+  border-radius: 18px;
+  border: 1px solid var(--color-panel-edge);
+  background: rgba(28, 16, 11, 0.86);
+  color: var(--color-ink-100);
+  font: inherit;
+}
+
 .summaryCard,
 .metricCard {
+  position: relative;
+  overflow: hidden;
   padding: 0.95rem 1rem;
   border: 1px solid var(--color-panel-edge);
   border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(63, 37, 24, 0.82), rgba(29, 16, 11, 0.94)),
     linear-gradient(90deg, rgba(255, 244, 220, 0.04), transparent);
+}
+
+.summaryCard::after,
+.metricCard::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 244, 220, 0.06);
+  pointer-events: none;
 }
 
 .summaryValue {
@@ -82,6 +122,11 @@
 
 .entryCard {
   min-width: 0;
+}
+
+.focusedEntry {
+  border-color: rgba(75, 158, 160, 0.42);
+  box-shadow: var(--glow-teal);
 }
 
 .entryMeta {

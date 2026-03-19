@@ -1,0 +1,88 @@
+.card {
+  min-width: 0;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.summaryItem {
+  padding: 0.85rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(74, 42, 27, 0.74), rgba(26, 15, 11, 0.94));
+}
+
+.summaryLabel {
+  display: block;
+  color: var(--color-ink-300);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.28rem;
+  color: var(--color-ink-100);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.body {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.metaRow,
+.sectionHeader,
+.participantRow,
+.participantBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.metaRow,
+.sectionHeader,
+.participantRow {
+  justify-content: space-between;
+}
+
+.metaText,
+.participantMeta,
+.empty {
+  color: var(--color-ink-300);
+}
+
+.section {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 18px;
+  background: rgba(18, 11, 8, 0.48);
+}
+
+.participantList {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 760px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metaRow,
+  .sectionHeader,
+  .participantRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

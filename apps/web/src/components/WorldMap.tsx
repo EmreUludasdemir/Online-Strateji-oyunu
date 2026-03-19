@@ -27,6 +27,15 @@ const poiResourceLabels: Record<PoiResourceType, string> = {
 type MapFilter = "ALL" | "CITIES" | "CAMPS" | "NODES";
 type AnimatedMarchPhase = "moving" | "staging" | "gathering" | "returning";
 
+export interface MapReportMarkerView {
+  id: string;
+  kind: "CITY_BATTLE" | "BARBARIAN_BATTLE" | "RESOURCE_GATHER";
+  label: string;
+  x: number;
+  y: number;
+  resultTone: "success" | "warning" | "info";
+}
+
 interface WorldMapProps {
   worldSize: number;
   initialCenter: {
@@ -38,7 +47,11 @@ interface WorldMapProps {
   pois: PoiView[];
   marches: MarchView[];
   scoutTrails: ScoutTrailView[];
+  reportMarkers: MapReportMarkerView[];
   filter: MapFilter;
+  showPaths: boolean;
+  showScoutTrails: boolean;
+  showReports: boolean;
   alliedOwnerNames: string[];
   allianceTag: string | null;
   allianceMarkers: AllianceMarkerView[];
@@ -48,6 +61,7 @@ interface WorldMapProps {
   onSelectCity: (cityId: string) => void;
   onSelectPoi: (poiId: string) => void;
   onSelectMarch: (marchId: string) => void;
+  onOpenReport?: (reportId: string) => void;
   onOpenFieldCommand?: (command: MapFieldCommand) => void;
   onCameraChange: (state: MapCameraState) => void;
   commandHandleRef?: MutableRefObject<WorldMapHandle | null>;
@@ -138,7 +152,11 @@ interface SceneConfig {
   pois: PoiView[];
   marches: MarchView[];
   scoutTrails: ScoutTrailView[];
+  reportMarkers: MapReportMarkerView[];
   filter: MapFilter;
+  showPaths: boolean;
+  showScoutTrails: boolean;
+  showReports: boolean;
   alliedOwnerNames: string[];
   allianceTag: string | null;
   allianceMarkers: AllianceMarkerView[];
@@ -148,6 +166,7 @@ interface SceneConfig {
   onSelectCity: (cityId: string) => void;
   onSelectPoi: (poiId: string) => void;
   onSelectMarch: (marchId: string) => void;
+  onOpenReport?: (reportId: string) => void;
   onOpenFieldCommand?: (command: MapFieldCommand) => void;
   onCameraChange: (state: MapCameraState) => void;
 }
@@ -206,7 +225,11 @@ class FrontierMapScene extends Phaser.Scene {
   private pois: PoiView[] = [];
   private marches: MarchView[] = [];
   private scoutTrails: ScoutTrailView[] = [];
+  private reportMarkers: MapReportMarkerView[] = [];
   private filter: MapFilter = "ALL";
+  private showPaths = true;
+  private showScoutTrails = true;
+  private showReports = true;
   private alliedOwnerNames = new Set<string>();
   private allianceTag: string | null = null;
   private allianceMarkers: AllianceMarkerView[] = [];
@@ -216,6 +239,7 @@ class FrontierMapScene extends Phaser.Scene {
   private onSelectCity: (cityId: string) => void = () => undefined;
   private onSelectPoi: (poiId: string) => void = () => undefined;
   private onSelectMarch: (marchId: string) => void = () => undefined;
+  private onOpenReport: (reportId: string) => void = () => undefined;
   private onOpenFieldCommand: (command: MapFieldCommand) => void = () => undefined;
   private onCameraChange: (state: MapCameraState) => void = () => undefined;
 
@@ -232,6 +256,7 @@ class FrontierMapScene extends Phaser.Scene {
 
   private cityLookup = new Map<string, PointLookup<MapCity>>();
   private poiLookup = new Map<string, PointLookup<PoiView>>();
+  private reportLookup = new Map<string, PointLookup<MapReportMarkerView>>();
   private marchEntities = new Map<string, AnimatedMarchEntity>();
   private scoutEntities = new Map<string, ScoutTrailEntity>();
   private selectionObjects: Phaser.GameObjects.GameObject[] = [];
@@ -313,7 +338,11 @@ class FrontierMapScene extends Phaser.Scene {
     this.pois = config.pois;
     this.marches = config.marches;
     this.scoutTrails = config.scoutTrails;
+    this.reportMarkers = config.reportMarkers;
     this.filter = config.filter;
+    this.showPaths = config.showPaths;
+    this.showScoutTrails = config.showScoutTrails;
+    this.showReports = config.showReports;
     this.alliedOwnerNames = new Set(config.alliedOwnerNames);
     this.allianceTag = config.allianceTag;
     this.allianceMarkers = config.allianceMarkers;
@@ -323,6 +352,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.onSelectCity = config.onSelectCity;
     this.onSelectPoi = config.onSelectPoi;
     this.onSelectMarch = config.onSelectMarch;
+    this.onOpenReport = config.onOpenReport ?? (() => undefined);
     this.onOpenFieldCommand = config.onOpenFieldCommand ?? (() => undefined);
     this.onCameraChange = config.onCameraChange;
 
@@ -612,6 +642,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.clearLayer(this.uiLayer);
     this.cityLookup.clear();
     this.poiLookup.clear();
+    this.reportLookup.clear();
 
     if (!this.objectLayer || !this.uiLayer) {
       return;
@@ -668,6 +699,47 @@ class FrontierMapScene extends Phaser.Scene {
           .setOrigin(0.5, 0);
         this.uiLayer.add(label);
         this.addLabelFloat(label, point.y + 20, hashCoordinate(marker.x + 3, marker.y + 7));
+      }
+    }
+
+    if (this.showReports) {
+      for (const report of this.reportMarkers) {
+        const point = tileToWorld(report.x, report.y);
+        this.reportLookup.set(report.id, { worldX: point.x, worldY: point.y, data: report });
+        const bubbleColor =
+          report.resultTone === "success" ? 0x4fb07d : report.resultTone === "warning" ? 0xd66c43 : 0x5e9fcb;
+        const bubble = this.add.circle(point.x, point.y - 18, this.currentDetailLevel === "far" ? 10 : 12, bubbleColor, 0.92);
+        const ping = this.add.circle(point.x, point.y - 18, this.currentDetailLevel === "far" ? 14 : 18, bubbleColor, 0.08);
+        const glyph = this.add
+          .text(point.x, point.y - 18, report.kind === "RESOURCE_GATHER" ? "G" : report.kind === "BARBARIAN_BATTLE" ? "B" : "R", {
+            color: "#f8f0dd",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: this.currentDetailLevel === "far" ? "10px" : "11px",
+            fontStyle: "700",
+          })
+          .setOrigin(0.5);
+        this.objectLayer.add([ping, bubble]);
+        this.uiLayer.add(glyph);
+        this.addAmbientPulse(ping, {
+          minScale: 0.96,
+          maxScale: 1.12,
+          minAlpha: 0.03,
+          maxAlpha: 0.12,
+          duration: 2200 + (hashCoordinate(report.x, report.y) % 5) * 120,
+        });
+
+        if (showLabels && this.currentDetailLevel !== "far") {
+          const label = this.add
+            .text(point.x, point.y - 40, report.label, {
+              color: "#f8f0dd",
+              fontFamily: "'Inter', sans-serif",
+              fontSize: showNearDetail ? "11px" : "10px",
+              backgroundColor: "rgba(20, 13, 11, 0.58)",
+              padding: { x: 5, y: 3 },
+            })
+            .setOrigin(0.5, 1);
+          this.uiLayer.add(label);
+        }
       }
     }
 
@@ -1015,6 +1087,15 @@ class FrontierMapScene extends Phaser.Scene {
       }
     }
 
+    if (!this.showScoutTrails) {
+      for (const [trailId, entity] of this.scoutEntities) {
+        entity.routeGraphic.destroy();
+        entity.container.destroy(true);
+        this.scoutEntities.delete(trailId);
+      }
+      return;
+    }
+
     if (!this.unitLayer || !this.routeLayer) {
       return;
     }
@@ -1063,6 +1144,9 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     this.routeGraphics.clear();
+    if (!this.showPaths) {
+      return;
+    }
     const dashOffset = (this.time.now / 36) % 20;
 
     for (const march of this.marches) {
@@ -1166,6 +1250,10 @@ class FrontierMapScene extends Phaser.Scene {
   }
 
   private updateScoutTrails() {
+    if (!this.showScoutTrails) {
+      return;
+    }
+
     const nowMs = Date.now();
 
     for (const entity of this.scoutEntities.values()) {
@@ -1401,6 +1489,11 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const report = this.showReports ? this.findNearestReport(worldPoint.x, worldPoint.y) : null;
+    if (report) {
+      this.onOpenReport(report.data.id);
+      return;
+    }
     const marchId = this.findNearestMarch(worldPoint.x, worldPoint.y);
     if (marchId) {
       this.onSelectMarch(marchId);
@@ -1491,6 +1584,19 @@ class FrontierMapScene extends Phaser.Scene {
     return best;
   }
 
+  private findNearestReport(worldX: number, worldY: number) {
+    let best: PointLookup<MapReportMarkerView> | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const report of this.reportLookup.values()) {
+      const distance = Phaser.Math.Distance.Between(worldX, worldY, report.worldX, report.worldY - 18);
+      if (distance < 24 && distance < bestDistance) {
+        best = report;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
   private findNearestCity(worldX: number, worldY: number) {
     let best: PointLookup<MapCity> | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -1517,7 +1623,11 @@ export default function WorldMap({
   pois,
   marches,
   scoutTrails,
+  reportMarkers,
   filter,
+  showPaths,
+  showScoutTrails,
+  showReports,
   alliedOwnerNames,
   allianceTag,
   allianceMarkers,
@@ -1527,6 +1637,7 @@ export default function WorldMap({
   onSelectCity,
   onSelectPoi,
   onSelectMarch,
+  onOpenReport,
   onOpenFieldCommand,
   onCameraChange,
   commandHandleRef,
@@ -1534,6 +1645,7 @@ export default function WorldMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<FrontierMapScene | null>(null);
+  const hoverRef = useRef(false);
   const [viewport, setViewport] = useState({ width: 900, height: 560 });
 
   useEffect(() => {
@@ -1572,8 +1684,27 @@ export default function WorldMap({
     const preventContextMenu = (event: MouseEvent) => {
       event.preventDefault();
     };
+    const preventWheelScroll = (event: WheelEvent) => {
+      event.preventDefault();
+    };
+    const handlePointerEnter = () => {
+      hoverRef.current = true;
+    };
+    const handlePointerLeave = () => {
+      hoverRef.current = false;
+    };
+    const handleGlobalWheel = (event: WheelEvent) => {
+      if (!hoverRef.current) {
+        return;
+      }
+      event.preventDefault();
+    };
 
     containerRef.current.addEventListener("contextmenu", preventContextMenu);
+    containerRef.current.addEventListener("wheel", preventWheelScroll, { passive: false });
+    containerRef.current.addEventListener("pointerenter", handlePointerEnter);
+    containerRef.current.addEventListener("pointerleave", handlePointerLeave);
+    window.addEventListener("wheel", handleGlobalWheel, { passive: false, capture: true });
 
     const observer = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
@@ -1586,6 +1717,11 @@ export default function WorldMap({
     observer.observe(containerRef.current);
     return () => {
       containerRef.current?.removeEventListener("contextmenu", preventContextMenu);
+      containerRef.current?.removeEventListener("wheel", preventWheelScroll);
+      containerRef.current?.removeEventListener("pointerenter", handlePointerEnter);
+      containerRef.current?.removeEventListener("pointerleave", handlePointerLeave);
+      hoverRef.current = false;
+      window.removeEventListener("wheel", handleGlobalWheel, true);
       observer.disconnect();
     };
   }, []);
@@ -1618,7 +1754,11 @@ export default function WorldMap({
       pois,
       marches,
       scoutTrails,
+      reportMarkers,
       filter,
+      showPaths,
+      showScoutTrails,
+      showReports,
       alliedOwnerNames,
       allianceTag,
       allianceMarkers,
@@ -1628,12 +1768,17 @@ export default function WorldMap({
       onSelectCity,
       onSelectPoi,
       onSelectMarch,
+      onOpenReport,
       onOpenFieldCommand,
       onCameraChange,
     });
   }, [
     cities,
     filter,
+    reportMarkers,
+    showPaths,
+    showReports,
+    showScoutTrails,
     initialCenter,
     alliedOwnerNames,
     allianceMarkers,
@@ -1644,6 +1789,7 @@ export default function WorldMap({
     onSelectCity,
     onSelectMarch,
     onSelectPoi,
+    onOpenReport,
     pois,
     scoutTrails,
     selectedCityId,

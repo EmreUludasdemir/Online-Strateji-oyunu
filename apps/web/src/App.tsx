@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ApiClientError } from "./api";
 import { AuthPage } from "./components/AuthPage";
 import { GameLayout } from "./components/GameLayout";
+import { ThemeProvider } from "./components/ThemeProvider";
 import { DashboardPage } from "./pages/DashboardPage";
 
 const MapPage = lazy(async () => {
@@ -20,6 +21,16 @@ const ReportsPage = lazy(async () => {
 const AlliancePage = lazy(async () => {
   const module = await import("./pages/AlliancePage");
   return { default: module.AlliancePage };
+});
+
+const AllianceRolesPage = lazy(async () => {
+  const module = await import("./pages/AllianceRolesPage");
+  return { default: module.AllianceRolesPage };
+});
+
+const CommanderPage = lazy(async () => {
+  const module = await import("./pages/CommanderPage");
+  return { default: module.CommanderPage };
 });
 
 const queryClient = new QueryClient({
@@ -40,23 +51,27 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Suspense fallback={<div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>Loading route...</div>}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
-            <Route path="/login" element={<AuthPage mode="login" />} />
-            <Route path="/register" element={<AuthPage mode="register" />} />
-            <Route path="/app" element={<GameLayout />}>
-              <Route index element={<Navigate to="/app/dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="map" element={<MapPage />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="alliance" element={<AlliancePage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Suspense fallback={<div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>Loading route...</div>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
+              <Route path="/login" element={<AuthPage mode="login" />} />
+              <Route path="/register" element={<AuthPage mode="register" />} />
+              <Route path="/app" element={<GameLayout />}>
+                <Route index element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="commanders" element={<CommanderPage />} />
+                <Route path="map" element={<MapPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="alliance" element={<AlliancePage />} />
+                <Route path="alliance/roles" element={<AllianceRolesPage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

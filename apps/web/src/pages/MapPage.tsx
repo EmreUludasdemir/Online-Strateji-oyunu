@@ -4,6 +4,7 @@ import type {
   MapCity,
   MarchView,
   PoiView,
+  ReportEntryView,
   ScoutMutationResponse,
   TroopStock,
   TroopType,
@@ -11,10 +12,12 @@ import type {
 } from "@frontier/shared";
 import type { MouseEvent } from "react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
-import type { MapFieldCommand, WorldMapHandle } from "../components/WorldMap";
+import { BattleWindowPanel } from "../components/map/BattleWindowPanel";
+import type { MapFieldCommand, MapReportMarkerView, WorldMapHandle } from "../components/WorldMap";
 import { Badge } from "../components/ui/Badge";
 import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
@@ -174,8 +177,16 @@ function formatMarkerAge(isoTime: string, now: number) {
   return `${elapsedDays}d ago`;
 }
 
+function getReportMarkerTone(report: ReportEntryView): "success" | "warning" | "info" {
+  if (report.kind === "RESOURCE_GATHER") {
+    return "info";
+  }
+  return report.result === "ATTACKER_WIN" ? "success" : "warning";
+}
+
 export function MapPage() {
   const now = useNow();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const {
     state,
@@ -196,6 +207,9 @@ export function MapPage() {
   const markerCycleIndexRef = useRef(0);
 
   const [filter, setFilter] = useState<MapFilter>("ALL");
+  const [showPaths, setShowPaths] = useState(true);
+  const [showScoutTrails, setShowScoutTrails] = useState(true);
+  const [showReports, setShowReports] = useState(true);
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
   const [openedTargetKey, setOpenedTargetKey] = useState<string | null>(null);
   const [composerMode, setComposerMode] = useState<ComposerMode>(null);
@@ -228,6 +242,12 @@ export function MapPage() {
       }),
     placeholderData: (previous) => previous,
     staleTime: 5_000,
+  });
+
+  const reportsQuery = useQuery({
+    queryKey: ["battle-reports"],
+    queryFn: api.reports,
+    staleTime: 10_000,
   });
 
   const allianceQuery = useQuery({
@@ -513,6 +533,33 @@ export function MapPage() {
     () => state.city.activeMarches.find((march) => march.id === selectedMarchId) ?? null,
     [selectedMarchId, state.city.activeMarches],
   );
+  const activeBattleWindow = selectedCity?.battleWindow ?? selectedPoi?.battleWindow ?? null;
+  const reportMarkers = useMemo<MapReportMarkerView[]>(() => {
+    if (!worldChunk || !reportsQuery.data) {
+      return [];
+    }
+
+    const tileStates = new Map(worldChunk.tiles.map((tile) => [`${tile.x}:${tile.y}`, tile.state] as const));
+    return reportsQuery.data.reports
+      .filter((report) => {
+        const state = tileStates.get(`${report.location.to.x}:${report.location.to.y}`);
+        return state === "VISIBLE" || state === "DISCOVERED";
+      })
+      .slice(0, 18)
+      .map((report) => ({
+        id: report.id,
+        kind: report.kind,
+        label:
+          report.kind === "CITY_BATTLE"
+            ? `${report.attackerCityName} → ${report.defenderCityName}`
+            : report.kind === "BARBARIAN_BATTLE"
+              ? `${report.poiName} resolved`
+              : `${report.poiName} return`,
+        x: report.location.to.x,
+        y: report.location.to.y,
+        resultTone: getReportMarkerTone(report),
+      }));
+  }, [reportsQuery.data, worldChunk]);
 
   const visibleTiles = worldChunk?.tiles.filter((tile) => tile.state === "VISIBLE").length ?? 0;
   const discoveredTiles = worldChunk?.tiles.filter((tile) => tile.state !== "HIDDEN").length ?? 0;
@@ -713,6 +760,13 @@ export function MapPage() {
     }, 900);
     mapCommandRef.current?.focusTile(marker.x, marker.y);
   }, []);
+
+  const handleOpenReport = useCallback(
+    (reportId: string) => {
+      navigate(`/app/reports?focus=${encodeURIComponent(reportId)}`);
+    },
+    [navigate],
+  );
 
   const handleMarkerDelete = useCallback(
     (event: MouseEvent<HTMLButtonElement>, marker: AllianceMarkerView) => {
@@ -1107,385 +1161,451 @@ export function MapPage() {
         <Button type="button" size="small" variant={filter === "NODES" ? "primary" : "secondary"} onClick={() => setFilter("NODES")}>
           Nodes
         </Button>
+        <Button type="button" size="small" variant={showPaths ? "primary" : "secondary"} onClick={() => setShowPaths((current) => !current)}>
+          Show Paths
+        </Button>
+        <Button
+          type="button"
+          size="small"
+          variant={showScoutTrails ? "primary" : "secondary"}
+          onClick={() => setShowScoutTrails((current) => !current)}
+        >
+          Show Scout Trails
+        </Button>
+        <Button type="button" size="small" variant={showReports ? "primary" : "secondary"} onClick={() => setShowReports((current) => !current)}>
+          Show Reports
+        </Button>
       </div>
 
-      <section className={styles.commandStrip}>
-        <article className={styles.commandCard}>
-          <div className={styles.commandHeader}>
-            <strong className={styles.cardTitle}>Command Search</strong>
-            <Badge tone="info">{searchResults.length} matches</Badge>
-          </div>
-          <input
-            ref={searchInputRef}
-            className={styles.commandInput}
-            type="search"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search cities, camps, nodes, or markers"
-          />
-          {searchResults.length > 0 ? (
-            <div className={styles.searchResults}>
-              {searchResults.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  className={styles.searchButton}
-                  onClick={() => {
-                    entry.action();
-                    setSearchTerm("");
-                  }}
-                >
-                  <strong>{entry.label}</strong>
-                  <span>{entry.meta}</span>
-                </button>
-              ))}
+      <section className={styles.battlefieldLayout}>
+        <div className={styles.mapStage}>
+          <article className={styles.mapFrame}>
+            <div className={styles.controls}>
+              <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomIn()}>
+                {copy.map.zoomIn}
+              </Button>
+              <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomOut()}>
+                {copy.map.zoomOut}
+              </Button>
+              <Button
+                type="button"
+                size="small"
+                variant="secondary"
+                onClick={() => mapCommandRef.current?.focusTile(state.city.coordinates.x, state.city.coordinates.y)}
+              >
+                Recenter
+              </Button>
             </div>
-          ) : (
-            <p className={styles.commandHint}>Search the current chunk to jump between cities, POIs, and alliance markers.</p>
-          )}
-        </article>
-        <article className={styles.commandCard}>
-          <div className={styles.commandHeader}>
-            <strong className={styles.cardTitle}>Alliance Markers</strong>
-            <Badge tone={alliance ? "success" : "warning"}>{alliance ? alliance.tag : "No alliance"}</Badge>
-          </div>
-          <input
-            ref={markerInputRef}
-            className={styles.commandInput}
-            type="text"
-            value={markerDraft}
-            onChange={(event) => setMarkerDraft(event.target.value)}
-            placeholder={selectedMarkerTarget ? `Label for ${selectedMarkerTarget.label}` : "Marker label"}
-          />
-          <div className={styles.actionRow}>
-            <Button
-              type="button"
-              size="small"
-              variant="secondary"
-              disabled={createMarkerMutation.isPending}
-              onClick={() => handleQuickMarkerCreate("CAMERA")}
-            >
-              {createMarkerMutation.isPending ? "Posting" : "Mark Camera"}
-            </Button>
-            <Button
-              type="button"
-              size="small"
-              variant="primary"
-              disabled={createMarkerMutation.isPending || !selectedMarkerTarget}
-              onClick={() => handleQuickMarkerCreate("TARGET")}
-            >
-              Mark Target
-            </Button>
-          </div>
-          <p className={styles.commandHint}>
-            {selectedMarkerTarget
-              ? `Selected target: ${selectedMarkerTarget.label} at ${selectedMarkerTarget.x}, ${selectedMarkerTarget.y}.`
-              : "Select a city or POI to post a focused target marker."}
-          </p>
-          {mapNotice ? <p className={styles.commandNotice}>{mapNotice}</p> : null}
-        </article>
-        <article className={styles.commandCard}>
-          <div className={styles.commandHeader}>
-            <strong className={styles.cardTitle}>Rapid Orders</strong>
-            <Badge tone="info">{recentAllianceMarkers.length} markers</Badge>
-          </div>
-          <div className={styles.shortcutGrid}>
-            {shortcuts.map((shortcut) => (
-              <div key={shortcut.id} className={styles.shortcutItem}>
-                <span>{shortcut.label}</span>
-                <kbd className={styles.kbd}>{shortcut.keys}</kbd>
+            <aside className={styles.minimapCard}>
+              <div className={styles.minimapHeader}>
+                <strong className={styles.cardTitle}>Minimap</strong>
+                <Badge tone="info">{cameraView.detailLevel}</Badge>
               </div>
-            ))}
-          </div>
-          <div className={styles.markerList}>
-            {recentAllianceMarkers.length > 0 ? (
-              recentAllianceMarkers.map((marker) => (
-                <div key={marker.id} className={styles.markerRow}>
-                  <button type="button" className={styles.markerFocus} onClick={() => handleMarkerFocus(marker)}>
-                    <strong>{marker.label}</strong>
-                    <span className={styles.markerMeta}>
-                      {marker.x}, {marker.y} · {formatMarkerAge(marker.createdAt, now)}
-                      {marker.expiresAt ? ` · ${formatTimeRemaining(marker.expiresAt, now)} left` : ""}
-                    </span>
-                  </button>
-                  {marker.canDelete ? (
-                    <Button
-                      type="button"
-                      size="small"
-                      variant="ghost"
-                      disabled={deleteMarkerMutation.isPending}
-                      onClick={(event) => handleMarkerDelete(event, marker)}
-                    >
-                      Remove
-                    </Button>
-                  ) : null}
-                </div>
-              ))
-            ) : (
-              <p className={styles.commandHint}>Alliance markers posted from the map will appear here for rapid focus.</p>
-            )}
-          </div>
-        </article>
-      </section>
-
-      <article className={styles.mapFrame}>
-        <div className={styles.controls}>
-          <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomIn()}>
-            {copy.map.zoomIn}
-          </Button>
-          <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomOut()}>
-            {copy.map.zoomOut}
-          </Button>
-          <Button
-            type="button"
-            size="small"
-            variant="secondary"
-            onClick={() => mapCommandRef.current?.focusTile(state.city.coordinates.x, state.city.coordinates.y)}
-          >
-            Recenter
-          </Button>
-        </div>
-        <aside className={styles.minimapCard}>
-          <div className={styles.minimapHeader}>
-            <strong className={styles.cardTitle}>Minimap</strong>
-            <Badge tone="info">{cameraView.detailLevel}</Badge>
-          </div>
-          <div className={styles.minimapFrame}>
-            <svg
-              className={styles.minimap}
-              viewBox={`0 0 ${worldChunk.size} ${worldChunk.size}`}
-              role="img"
-              aria-label="World minimap"
-            >
-              {minimapCells.map((cell) => (
-                <rect
-                  key={`${cell.x}:${cell.y}`}
-                  x={cell.x}
-                  y={cell.y}
-                  width={minimapStep}
-                  height={minimapStep}
-                  fill={getMinimapStateColor(cell.state)}
-                />
-              ))}
-              {worldRegions.map((region) => (
-                <g key={region.id}>
+              <div className={styles.minimapFrame}>
+                <svg
+                  className={styles.minimap}
+                  viewBox={`0 0 ${worldChunk.size} ${worldChunk.size}`}
+                  role="img"
+                  aria-label="World minimap"
+                >
+                  {minimapCells.map((cell) => (
+                    <rect
+                      key={`${cell.x}:${cell.y}`}
+                      x={cell.x}
+                      y={cell.y}
+                      width={minimapStep}
+                      height={minimapStep}
+                      fill={getMinimapStateColor(cell.state)}
+                    />
+                  ))}
+                  {worldRegions.map((region) => (
+                    <g key={region.id}>
+                      <rect
+                        x={region.x0}
+                        y={region.y0}
+                        width={region.x1 - region.x0 + 1}
+                        height={region.y1 - region.y0 + 1}
+                        fill="none"
+                        stroke={region.color}
+                        strokeOpacity="0.18"
+                        strokeWidth="0.6"
+                        strokeDasharray="1.2 1.4"
+                      />
+                      <text
+                        x={region.anchorX}
+                        y={region.anchorY}
+                        textAnchor="middle"
+                        fontSize="2.7"
+                        fill={region.color}
+                        opacity="0.45"
+                      >
+                        {region.label}
+                      </text>
+                    </g>
+                  ))}
+                  {worldChunk.pois.map((poi) => (
+                    <circle
+                      key={poi.id}
+                      cx={poi.x + 0.5}
+                      cy={poi.y + 0.5}
+                      r={poi.kind === "BARBARIAN_CAMP" ? 0.72 : 0.5}
+                      fill={poi.kind === "BARBARIAN_CAMP" ? "#d47b5a" : "#e2bb72"}
+                      opacity={poi.id === selectedPoiId ? 1 : 0.72}
+                    />
+                  ))}
+                  {worldChunk.cities.map((city) => (
+                    <circle
+                      key={city.cityId}
+                      cx={city.x + 0.5}
+                      cy={city.y + 0.5}
+                      r={city.isCurrentPlayer ? 0.95 : 0.75}
+                      fill={
+                        city.isCurrentPlayer ? "#72ced1" : alliedOwnerNames.includes(city.ownerName) ? "#5fc8da" : "#f4d79c"
+                      }
+                      opacity={city.cityId === selectedCityId ? 1 : 0.84}
+                    />
+                  ))}
+                  {allianceMarkers.map((marker) => (
+                    <g key={marker.id}>
+                      <polygon
+                        points={`${marker.x + 0.5},${marker.y - 0.35} ${marker.x + 1.1},${marker.y + 0.5} ${marker.x + 0.5},${marker.y + 1.35} ${marker.x - 0.1},${marker.y + 0.5}`}
+                        fill="#72ced1"
+                        fillOpacity="0.92"
+                        stroke="#f4d79c"
+                        strokeWidth="0.24"
+                      />
+                      <circle cx={marker.x + 0.5} cy={marker.y + 0.5} r="0.24" fill="#f8f0dd" opacity="0.95" />
+                      <title>{marker.label}</title>
+                    </g>
+                  ))}
                   <rect
-                    x={region.x0}
-                    y={region.y0}
-                    width={region.x1 - region.x0 + 1}
-                    height={region.y1 - region.y0 + 1}
+                    x={minimapViewport.x}
+                    y={minimapViewport.y}
+                    width={minimapViewport.width}
+                    height={minimapViewport.height}
                     fill="none"
-                    stroke={region.color}
-                    strokeOpacity="0.18"
-                    strokeWidth="0.6"
-                    strokeDasharray="1.2 1.4"
-                  />
-                  <text
-                    x={region.anchorX}
-                    y={region.anchorY}
-                    textAnchor="middle"
-                    fontSize="2.7"
-                    fill={region.color}
-                    opacity="0.45"
-                  >
-                    {region.label}
-                  </text>
-                </g>
-              ))}
-              {worldChunk.pois.map((poi) => (
-                <circle
-                  key={poi.id}
-                  cx={poi.x + 0.5}
-                  cy={poi.y + 0.5}
-                  r={poi.kind === "BARBARIAN_CAMP" ? 0.72 : 0.5}
-                  fill={poi.kind === "BARBARIAN_CAMP" ? "#d47b5a" : "#e2bb72"}
-                  opacity={poi.id === selectedPoiId ? 1 : 0.72}
-                />
-              ))}
-              {worldChunk.cities.map((city) => (
-                <circle
-                  key={city.cityId}
-                  cx={city.x + 0.5}
-                  cy={city.y + 0.5}
-                  r={city.isCurrentPlayer ? 0.95 : 0.75}
-                  fill={city.isCurrentPlayer ? "#72ced1" : alliedOwnerNames.includes(city.ownerName) ? "#5fc8da" : "#f4d79c"}
-                  opacity={city.cityId === selectedCityId ? 1 : 0.84}
-                />
-              ))}
-              {allianceMarkers.map((marker) => (
-                <g key={marker.id}>
-                  <polygon
-                    points={`${marker.x + 0.5},${marker.y - 0.35} ${marker.x + 1.1},${marker.y + 0.5} ${marker.x + 0.5},${marker.y + 1.35} ${marker.x - 0.1},${marker.y + 0.5}`}
-                    fill="#72ced1"
-                    fillOpacity="0.92"
-                    stroke="#f4d79c"
-                    strokeWidth="0.24"
-                  />
-                  <circle cx={marker.x + 0.5} cy={marker.y + 0.5} r="0.24" fill="#f8f0dd" opacity="0.95" />
-                  <title>{marker.label}</title>
-                </g>
-              ))}
-              <rect
-                x={minimapViewport.x}
-                y={minimapViewport.y}
-                width={minimapViewport.width}
-                height={minimapViewport.height}
-                fill="none"
-                stroke="#f8f0dd"
-                strokeWidth="1"
-                rx="1.4"
-                opacity="0.95"
-              />
-              <circle
-                cx={cameraView.centerTileX + 0.5}
-                cy={cameraView.centerTileY + 0.5}
-                r="1.15"
-                fill="#7dd3fc"
-                opacity="0.92"
-              />
-              {minimapPing ? (
-                <>
-                  <circle
-                    className={styles.minimapPing}
-                    cx={minimapPing.x + 0.5}
-                    cy={minimapPing.y + 0.5}
-                    r="1.4"
-                    fill="none"
-                    stroke="#7dd3fc"
-                    strokeWidth="0.9"
+                    stroke="#f8f0dd"
+                    strokeWidth="1"
+                    rx="1.4"
+                    opacity="0.95"
                   />
                   <circle
-                    className={styles.minimapPingCore}
-                    cx={minimapPing.x + 0.5}
-                    cy={minimapPing.y + 0.5}
-                    r="0.95"
-                    fill="#f4d79c"
+                    cx={cameraView.centerTileX + 0.5}
+                    cy={cameraView.centerTileY + 0.5}
+                    r="1.15"
+                    fill="#7dd3fc"
                     opacity="0.92"
                   />
-                </>
-              ) : null}
-            </svg>
-            <button type="button" className={styles.minimapHotspot} aria-label="Re-center with minimap" onClick={handleMinimapClick} />
-          </div>
-          <p className={styles.minimapHint}>Click the minimap to re-center the camera.</p>
-          {visibleAllianceMarkers.length > 0 ? (
-            <div className={styles.minimapMarkerRow}>
-              {visibleAllianceMarkers.map((marker) => (
+                  {minimapPing ? (
+                    <>
+                      <circle
+                        className={styles.minimapPing}
+                        cx={minimapPing.x + 0.5}
+                        cy={minimapPing.y + 0.5}
+                        r="1.4"
+                        fill="none"
+                        stroke="#7dd3fc"
+                        strokeWidth="0.9"
+                      />
+                      <circle
+                        className={styles.minimapPingCore}
+                        cx={minimapPing.x + 0.5}
+                        cy={minimapPing.y + 0.5}
+                        r="0.95"
+                        fill="#f4d79c"
+                        opacity="0.92"
+                      />
+                    </>
+                  ) : null}
+                </svg>
                 <button
-                  key={marker.id}
                   type="button"
-                  className={styles.minimapMarkerButton}
-                  onClick={() => handleMarkerFocus(marker)}
-                >
-                  {marker.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </aside>
-        <Suspense fallback={<div className={styles.hero}>Opening map...</div>}>
-          <WorldMap
-            worldSize={worldChunk.size}
-            initialCenter={state.city.coordinates}
-            tiles={worldChunk.tiles}
-            cities={worldChunk.cities}
-            pois={worldChunk.pois}
-            marches={worldChunk.marches}
-            scoutTrails={scoutTrails}
-            filter={filter}
-            alliedOwnerNames={alliedOwnerNames}
-            allianceTag={alliance?.tag ?? null}
-            allianceMarkers={allianceMarkers}
-            selectedCityId={selectedCityId}
-            selectedPoiId={selectedPoiId}
-            selectedMarchId={selectedMarchId}
-            onSelectCity={(cityId) => {
-              const city = worldChunk.cities.find((entry) => entry.cityId === cityId);
-              if (city) {
-                handleCitySelect(city);
-              }
-            }}
-            onSelectPoi={(poiId) => {
-              const poi = worldChunk.pois.find((entry) => entry.id === poiId);
-              if (poi) {
-                handlePoiSelect(poi);
-              }
-            }}
-            onSelectMarch={handleMarchSelect}
-            onOpenFieldCommand={handleFieldCommandOpen}
-            onCameraChange={handleCameraChange}
-            commandHandleRef={mapCommandRef}
-          />
-        </Suspense>
-      </article>
-
-      <section className={styles.rail}>
-        {targetCards.map((entry) => (
-          <button
-            key={entry.id}
-            className={styles.targetCard}
-            type="button"
-            onClick={() =>
-              entry.kind === "CITY"
-                ? handleCitySelect(entry.city, { focus: true })
-                : handlePoiSelect(entry.poi, { focus: true })
-            }
-          >
-            <strong className={styles.cardTitle}>{entry.label}</strong>
-            <p className={styles.targetMeta}>{entry.meta}</p>
-          </button>
-        ))}
-      </section>
-
-      <SectionCard kicker={copy.map.activeMarches} title="Orders in the field">
-        <div className={styles.marchList}>
-          {state.city.activeMarches.map((march) => (
-            <article
-              key={march.id}
-              className={styles.marchCard}
-              role="button"
-              tabIndex={0}
-              onClick={() => handleMarchSelect(march.id)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  handleMarchSelect(march.id);
-                }
-              }}
-            >
-              <div className={styles.marchMeta}>
-                <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Target"}</strong>
-                <Badge tone={march.state === "STAGING" ? "warning" : march.state === "RETURNING" ? "info" : "success"}>
-                  {march.state.toLowerCase()}
-                </Badge>
+                  className={styles.minimapHotspot}
+                  aria-label="Re-center with minimap"
+                  onClick={handleMinimapClick}
+                />
               </div>
-              <p className={styles.muted}>
-                {getMarchTimingLabel(march, now)} | Distance {formatNumber(march.distance)} tiles
-              </p>
+              <p className={styles.minimapHint}>Click the minimap to re-center the camera.</p>
+              {visibleAllianceMarkers.length > 0 ? (
+                <div className={styles.minimapMarkerRow}>
+                  {visibleAllianceMarkers.map((marker) => (
+                    <button
+                      key={marker.id}
+                      type="button"
+                      className={styles.minimapMarkerButton}
+                      onClick={() => handleMarkerFocus(marker)}
+                    >
+                      {marker.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </aside>
+            <Suspense fallback={<div className={styles.hero}>Opening map...</div>}>
+              <WorldMap
+                worldSize={worldChunk.size}
+                initialCenter={state.city.coordinates}
+                tiles={worldChunk.tiles}
+                cities={worldChunk.cities}
+                pois={worldChunk.pois}
+                marches={worldChunk.marches}
+                scoutTrails={scoutTrails}
+                reportMarkers={reportMarkers}
+                filter={filter}
+                showPaths={showPaths}
+                showScoutTrails={showScoutTrails}
+                showReports={showReports}
+                alliedOwnerNames={alliedOwnerNames}
+                allianceTag={alliance?.tag ?? null}
+                allianceMarkers={allianceMarkers}
+                selectedCityId={selectedCityId}
+                selectedPoiId={selectedPoiId}
+                selectedMarchId={selectedMarchId}
+                onSelectCity={(cityId) => {
+                  const city = worldChunk.cities.find((entry) => entry.cityId === cityId);
+                  if (city) {
+                    handleCitySelect(city);
+                  }
+                }}
+                onSelectPoi={(poiId) => {
+                  const poi = worldChunk.pois.find((entry) => entry.id === poiId);
+                  if (poi) {
+                    handlePoiSelect(poi);
+                  }
+                }}
+                onSelectMarch={handleMarchSelect}
+                onOpenReport={handleOpenReport}
+                onOpenFieldCommand={handleFieldCommandOpen}
+                onCameraChange={handleCameraChange}
+                commandHandleRef={mapCommandRef}
+              />
+            </Suspense>
+          </article>
+        </div>
+
+        <aside className={styles.sideRail}>
+          <section className={styles.commandStrip}>
+            <article className={styles.commandCard}>
+              <div className={styles.commandHeader}>
+                <strong className={styles.cardTitle}>Command Search</strong>
+                <Badge tone="info">{searchResults.length} matches</Badge>
+              </div>
+              <input
+                ref={searchInputRef}
+                className={styles.commandInput}
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search cities, camps, nodes, or markers"
+              />
+              {searchResults.length > 0 ? (
+                <div className={styles.searchResults}>
+                  {searchResults.map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      className={styles.searchButton}
+                      onClick={() => {
+                        entry.action();
+                        setSearchTerm("");
+                      }}
+                    >
+                      <strong>{entry.label}</strong>
+                      <span>{entry.meta}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.commandHint}>Search the current chunk to jump between cities, POIs, and alliance markers.</p>
+              )}
+            </article>
+            <article className={styles.commandCard}>
+              <div className={styles.commandHeader}>
+                <strong className={styles.cardTitle}>Alliance Markers</strong>
+                <Badge tone={alliance ? "success" : "warning"}>{alliance ? alliance.tag : "No alliance"}</Badge>
+              </div>
+              <input
+                ref={markerInputRef}
+                className={styles.commandInput}
+                type="text"
+                value={markerDraft}
+                onChange={(event) => setMarkerDraft(event.target.value)}
+                placeholder={selectedMarkerTarget ? `Label for ${selectedMarkerTarget.label}` : "Marker label"}
+              />
               <div className={styles.actionRow}>
-                <Button type="button" size="small" variant="ghost" disabled={isRecallingMarch} onClick={() => recallMarch(march.id)}>
-                  {isRecallingMarch ? "Please wait" : "Recall"}
-                </Button>
                 <Button
                   type="button"
                   size="small"
                   variant="secondary"
-                  disabled={retargetMutation.isPending || !canRetargetMarch(march, selectedCity, selectedPoi)}
-                  onClick={() =>
-                    retargetMutation.mutate({
-                      marchId: march.id,
-                      targetCityId: march.objective === "CITY_ATTACK" ? selectedCity?.cityId : undefined,
-                      targetPoiId: march.objective !== "CITY_ATTACK" ? selectedPoi?.id : undefined,
-                    })
-                  }
+                  disabled={createMarkerMutation.isPending}
+                  onClick={() => handleQuickMarkerCreate("CAMERA")}
                 >
-                  {copy.map.retarget}
+                  {createMarkerMutation.isPending ? "Posting" : "Mark Camera"}
+                </Button>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="primary"
+                  disabled={createMarkerMutation.isPending || !selectedMarkerTarget}
+                  onClick={() => handleQuickMarkerCreate("TARGET")}
+                >
+                  Mark Target
                 </Button>
               </div>
+              <p className={styles.commandHint}>
+                {selectedMarkerTarget
+                  ? `Selected target: ${selectedMarkerTarget.label} at ${selectedMarkerTarget.x}, ${selectedMarkerTarget.y}.`
+                  : "Select a city or POI to post a focused target marker."}
+              </p>
+              {mapNotice ? <p className={styles.commandNotice}>{mapNotice}</p> : null}
             </article>
-          ))}
-        </div>
-      </SectionCard>
+            <article className={styles.commandCard}>
+              <div className={styles.commandHeader}>
+                <strong className={styles.cardTitle}>Rapid Orders</strong>
+                <Badge tone="info">{recentAllianceMarkers.length} markers</Badge>
+              </div>
+              <div className={styles.shortcutGrid}>
+                {shortcuts.map((shortcut) => (
+                  <div key={shortcut.id} className={styles.shortcutItem}>
+                    <span>{shortcut.label}</span>
+                    <kbd className={styles.kbd}>{shortcut.keys}</kbd>
+                  </div>
+                ))}
+              </div>
+              <div className={styles.markerList}>
+                {recentAllianceMarkers.length > 0 ? (
+                  recentAllianceMarkers.map((marker) => (
+                    <div key={marker.id} className={styles.markerRow}>
+                      <button type="button" className={styles.markerFocus} onClick={() => handleMarkerFocus(marker)}>
+                        <strong>{marker.label}</strong>
+                        <span className={styles.markerMeta}>
+                          {marker.x}, {marker.y} · {formatMarkerAge(marker.createdAt, now)}
+                          {marker.expiresAt ? ` · ${formatTimeRemaining(marker.expiresAt, now)} left` : ""}
+                        </span>
+                      </button>
+                      {marker.canDelete ? (
+                        <Button
+                          type="button"
+                          size="small"
+                          variant="ghost"
+                          disabled={deleteMarkerMutation.isPending}
+                          onClick={(event) => handleMarkerDelete(event, marker)}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.commandHint}>Alliance markers posted from the map will appear here for rapid focus.</p>
+                )}
+              </div>
+            </article>
+          </section>
+
+          <section className={styles.rail}>
+            {targetCards.map((entry) => (
+              <button
+                key={entry.id}
+                className={styles.targetCard}
+                type="button"
+                onClick={() =>
+                  entry.kind === "CITY"
+                    ? handleCitySelect(entry.city, { focus: true })
+                    : handlePoiSelect(entry.poi, { focus: true })
+                }
+              >
+                <strong className={styles.cardTitle}>{entry.label}</strong>
+                <p className={styles.targetMeta}>{entry.meta}</p>
+              </button>
+            ))}
+          </section>
+
+          {activeBattleWindow ? (
+            <BattleWindowPanel battleWindow={activeBattleWindow} now={now} allianceTag={alliance?.tag ?? null} />
+          ) : null}
+
+          {showReports ? (
+            <SectionCard kicker="Report Beacons" title="Visible history">
+              <div className={styles.markerList}>
+                {reportMarkers.length === 0 ? (
+                  <p className={styles.commandHint}>Resolved battles and returns inside the current visible chunk will appear here.</p>
+                ) : (
+                  reportMarkers.slice(0, 6).map((report) => (
+                    <button
+                      key={report.id}
+                      type="button"
+                      className={styles.markerFocus}
+                      onClick={() => handleOpenReport(report.id)}
+                    >
+                      <strong>{report.label}</strong>
+                      <span className={styles.markerMeta}>
+                        {report.x}, {report.y} · {report.kind.toLowerCase().replaceAll("_", " ")}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </SectionCard>
+          ) : null}
+
+          <SectionCard kicker={copy.map.activeMarches} title="Orders in the field" className={styles.marchSection}>
+            <div className={styles.marchList}>
+              {state.city.activeMarches.map((march) => (
+                <article
+                  key={march.id}
+                  className={styles.marchCard}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleMarchSelect(march.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleMarchSelect(march.id);
+                    }
+                  }}
+                >
+                  <div className={styles.marchMeta}>
+                    <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Target"}</strong>
+                    <Badge tone={march.state === "STAGING" ? "warning" : march.state === "RETURNING" ? "info" : "success"}>
+                      {march.state.toLowerCase()}
+                    </Badge>
+                  </div>
+                  <p className={styles.muted}>
+                    {getMarchTimingLabel(march, now)} | Distance {formatNumber(march.distance)} tiles
+                  </p>
+                  <div className={styles.actionRow}>
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="ghost"
+                      disabled={isRecallingMarch}
+                      onClick={() => recallMarch(march.id)}
+                    >
+                      {isRecallingMarch ? "Please wait" : "Recall"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="secondary"
+                      disabled={retargetMutation.isPending || !canRetargetMarch(march, selectedCity, selectedPoi)}
+                      onClick={() =>
+                        retargetMutation.mutate({
+                          marchId: march.id,
+                          targetCityId: march.objective === "CITY_ATTACK" ? selectedCity?.cityId : undefined,
+                          targetPoiId: march.objective !== "CITY_ATTACK" ? selectedPoi?.id : undefined,
+                        })
+                      }
+                    >
+                      {copy.map.retarget}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
+        </aside>
+      </section>
 
       <TargetDetailSheet
         open={targetSheetOpen}
