@@ -9,6 +9,7 @@ import { prisma } from "../lib/prisma";
 import { incrementCounter, observeDuration } from "../lib/metrics";
 import { HttpError } from "../lib/http";
 import {
+  emitAllianceUpdated,
   emitBattleResolved,
   emitCityUpdated,
   emitFogUpdated,
@@ -41,6 +42,7 @@ import {
   spendTroops,
 } from "./engine";
 import {
+  ALLIANCE_MARKER_DURATION_MS,
   BATTLE_WINDOW_DURATION_MS,
   BARBARIAN_CAMP_RESPAWN_MS,
   MARCH_VISION_RADIUS,
@@ -96,6 +98,10 @@ interface WorldEvents {
     marchId: string | null;
   }>;
   poiUpdates: string[];
+  allianceUpdates: Array<{
+    userIds: string[];
+    allianceId: string;
+  }>;
 }
 
 function createEmptyResearchLevels() {
@@ -140,6 +146,15 @@ function pushUniqueCity(events: Array<{ userId: string; cityId: string }>, item:
 function pushUniquePoi(events: string[], poiId: string | null) {
   if (poiId && !events.includes(poiId)) {
     events.push(poiId);
+  }
+}
+
+function pushUniqueAllianceUpdate(
+  events: Array<{ userIds: string[]; allianceId: string }>,
+  item: { userIds: string[]; allianceId: string },
+) {
+  if (!events.some((entry) => entry.allianceId === item.allianceId)) {
+    events.push(item);
   }
 }
 
@@ -1380,6 +1395,71 @@ async function reconcileMarchesTx(
   await reconcileBattleWindowsTx(tx, now, worldEvents);
 }
 
+async function reconcileAllianceMarkersTx(
+  tx: Prisma.TransactionClient,
+  now: Date,
+  worldEvents: WorldEvents,
+) {
+  const markersWithoutExpiry = await tx.allianceMarker.findMany({
+    where: {
+      expiresAt: null,
+    },
+    select: {
+      id: true,
+      createdAt: true,
+    },
+  });
+
+  for (const marker of markersWithoutExpiry) {
+    await tx.allianceMarker.update({
+      where: { id: marker.id },
+      data: {
+        expiresAt: new Date(marker.createdAt.getTime() + ALLIANCE_MARKER_DURATION_MS),
+      },
+    });
+  }
+
+  const expiredMarkers = await tx.allianceMarker.findMany({
+    where: {
+      expiresAt: {
+        lte: now,
+      },
+    },
+    select: {
+      id: true,
+      allianceId: true,
+      alliance: {
+        select: {
+          members: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (expiredMarkers.length === 0) {
+    return;
+  }
+
+  await tx.allianceMarker.deleteMany({
+    where: {
+      id: {
+        in: expiredMarkers.map((marker) => marker.id),
+      },
+    },
+  });
+
+  for (const marker of expiredMarkers) {
+    pushUniqueAllianceUpdate(worldEvents.allianceUpdates, {
+      allianceId: marker.allianceId,
+      userIds: marker.alliance.members.map((member) => member.userId),
+    });
+  }
+}
+
 export async function reconcileWorld(now: Date = new Date()): Promise<void> {
   const startedAt = Date.now();
   const worldEvents = await prisma.$transaction(async (tx) => {
@@ -1393,6 +1473,7 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
       mailboxUpdates: [],
       rallyUpdates: [],
       poiUpdates: [],
+      allianceUpdates: [],
     };
 
     const dueCityIds = new Set<string>();
@@ -1447,6 +1528,7 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
     }
 
     await reconcilePoiRespawnsTx(tx, now, events);
+    await reconcileAllianceMarkersTx(tx, now, events);
     await reconcileOpenRalliesTx(tx, now, events);
     await reconcileMarchesTx(tx, now, events);
     await reconcileScoutsTx(tx, now, events);
@@ -1518,6 +1600,10 @@ export async function reconcileWorld(now: Date = new Date()): Promise<void> {
     if (item.marchId && item.cityId) {
       emitMarchUpdated(item.userIds, item.cityId, item.marchId);
     }
+  }
+
+  for (const item of worldEvents.allianceUpdates) {
+    emitAllianceUpdated(item.userIds, item.allianceId);
   }
 
   observeDuration("game_reconcile_world_duration_ms", Date.now() - startedAt);

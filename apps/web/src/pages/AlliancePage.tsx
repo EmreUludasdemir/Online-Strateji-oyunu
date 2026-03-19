@@ -8,7 +8,8 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { SectionCard } from "../components/ui/SectionCard";
-import { formatDateTime, formatNumber } from "../lib/formatters";
+import { formatDateTime, formatNumber, formatTimeRemaining } from "../lib/formatters";
+import { useNow } from "../lib/useNow";
 import styles from "./AlliancePage.module.css";
 
 const RESOURCE_OPTIONS: ResourceKey[] = ["wood", "stone", "food", "gold"];
@@ -28,6 +29,7 @@ function formatResourceLabel(resource: string): string {
 }
 
 export function AlliancePage() {
+  const now = useNow();
   const queryClient = useQueryClient();
   const { state } = useGameLayoutContext();
   const [name, setName] = useState("");
@@ -143,6 +145,14 @@ export function AlliancePage() {
       await invalidateAlliance();
       setNotice("Map marker added.");
       setMarkerLabel("");
+    },
+  });
+
+  const deleteMarkerMutation = useMutation({
+    mutationFn: (markerId: string) => api.deleteAllianceMarker(markerId),
+    onSuccess: async () => {
+      await invalidateAlliance();
+      setNotice("Map marker removed.");
     },
   });
 
@@ -465,7 +475,24 @@ export function AlliancePage() {
                         <strong>{marker.label}</strong>
                         <span>{marker.x}, {marker.y}</span>
                       </div>
-                      <p>{formatDateTime(marker.createdAt)}</p>
+                      <p>
+                        {formatDateTime(marker.createdAt)}
+                        {marker.expiresAt ? ` · expires in ${formatTimeRemaining(marker.expiresAt, now)}` : ""}
+                      </p>
+                      {marker.canDelete ? (
+                        <div className={styles.actions}>
+                          <span>{marker.createdByUserId === state.player.id ? "Your marker" : "Officer action"}</span>
+                          <Button
+                            type="button"
+                            size="small"
+                            variant="ghost"
+                            disabled={deleteMarkerMutation.isPending}
+                            onClick={() => deleteMarkerMutation.mutate(marker.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ) : null}
                     </article>
                   ))
                 )}

@@ -69,6 +69,7 @@ import {
 import {
   ALLIANCE_CHAT_HISTORY_LIMIT,
   ALLIANCE_HELP_MAX_RESPONSES,
+  ALLIANCE_MARKER_DURATION_MS,
   ALLIANCE_HELP_REDUCTION_MS,
   ALLIANCE_MAX_MEMBERS,
   BARBARIAN_CAMP_RESPAWN_MS,
@@ -2064,6 +2065,7 @@ export async function updateAllianceAnnouncement(userId: string, content: string
 
 export async function createAllianceMarker(userId: string, payload: { label: string; x: number; y: number }): Promise<AllianceView> {
   await reconcileWorld();
+  const now = new Date();
 
   const result = await prisma.$transaction(async (tx) => {
     const membership = await getAllianceMembershipTx(tx, userId);
@@ -2083,6 +2085,7 @@ export async function createAllianceMarker(userId: string, payload: { label: str
         label: payload.label,
         x: payload.x,
         y: payload.y,
+        expiresAt: new Date(now.getTime() + ALLIANCE_MARKER_DURATION_MS),
       },
     });
     await appendAllianceLogTx(tx, membership.alliance.id, "MARKER_CREATED", `${user.username} placed a frontier marker.`, userId);
@@ -2098,6 +2101,56 @@ export async function createAllianceMarker(userId: string, payload: { label: str
   writeAuditEntry("alliance.marker.create", { userId, ...payload });
   emitAllianceUpdated(result.memberIds, result.alliance.id);
   emitLeaderboardUpdated(result.memberIds);
+  return result.alliance;
+}
+
+export async function deleteAllianceMarker(userId: string, markerId: string): Promise<AllianceView> {
+  await reconcileWorld();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const membership = await getAllianceMembershipTx(tx, userId);
+    if (!membership?.alliance) {
+      throw new HttpError(409, "ALLIANCE_REQUIRED", "Only alliance members can remove markers.");
+    }
+
+    const marker = await tx.allianceMarker.findFirst({
+      where: {
+        id: markerId,
+        allianceId: membership.alliance.id,
+      },
+      select: {
+        id: true,
+        userId: true,
+      },
+    });
+
+    if (!marker) {
+      throw new HttpError(404, "MARKER_NOT_FOUND", "That alliance marker could not be found.");
+    }
+
+    if (marker.userId !== userId && membership.role === "MEMBER") {
+      throw new HttpError(403, "ALLIANCE_FORBIDDEN", "Only officers can remove another member's marker.");
+    }
+
+    const user = await tx.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { username: true },
+    });
+
+    await tx.allianceMarker.delete({
+      where: { id: marker.id },
+    });
+    await appendAllianceLogTx(tx, membership.alliance.id, "MARKER_REMOVED", `${user.username} removed a frontier marker.`, userId);
+
+    const refreshed = await getAllianceMembershipTx(tx, userId);
+    return {
+      alliance: mapAllianceView(refreshed!.alliance, userId),
+      memberIds: refreshed!.alliance.members.map((member) => member.userId),
+    };
+  });
+
+  writeAuditEntry("alliance.marker.delete", { userId, markerId });
+  emitAllianceUpdated(result.memberIds, result.alliance.id);
   return result.alliance;
 }
 

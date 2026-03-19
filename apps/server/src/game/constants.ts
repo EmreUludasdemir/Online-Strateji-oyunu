@@ -131,6 +131,7 @@ export const ALLIANCE_MAX_MEMBERS = 12;
 export const ALLIANCE_CHAT_HISTORY_LIMIT = 20;
 export const ALLIANCE_HELP_MAX_RESPONSES = 3;
 export const ALLIANCE_HELP_REDUCTION_MS = 20_000;
+export const ALLIANCE_MARKER_DURATION_MS = 6 * 60 * 60 * 1000;
 
 export const JWT_COOKIE_NAME = "frontier_session";
 

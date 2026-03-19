@@ -23,6 +23,29 @@ export function formatDateTime(value: string): string {
   }).format(new Date(value));
 }
 
+export function formatTimeRemaining(value: string, now: number): string {
+  const difference = Math.max(0, new Date(value).getTime() - now);
+  const totalMinutes = Math.ceil(difference / 60_000);
+
+  if (totalMinutes < 1) {
+    return "<1m";
+  }
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes}m`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours < 24) {
+    return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+  }
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  return remainingHours === 0 ? `${days}d` : `${days}d ${remainingHours}h`;
+}
+
 export function formatPercent(value: number): string {
   return new Intl.NumberFormat(DEFAULT_LOCALE, {
     maximumFractionDigits: 0,

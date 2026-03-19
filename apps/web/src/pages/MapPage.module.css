@@ -4,7 +4,9 @@
 .chipRow,
 .detailList,
 .marchList,
-.composerGrid {
+.composerGrid,
+.commandStrip,
+.searchResults {
   display: grid;
   gap: 1rem;
 }
@@ -65,7 +67,8 @@
 .targetMeta,
 .marchMeta,
 .actionRow,
-.composerRow {
+.composerRow,
+.commandHeader {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -86,6 +89,154 @@
 
 .summaryGrid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.commandStrip {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.commandCard {
+  padding: 0.95rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(87, 52, 34, 0.45), rgba(28, 16, 11, 0.96)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.08), transparent 78%);
+  box-shadow: var(--shadow-soft);
+  animation: liftIn 380ms var(--motion-smooth) both;
+}
+
+.commandInput {
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(244, 215, 156, 0.18);
+  border-radius: 18px;
+  background: rgba(25, 14, 10, 0.82);
+  color: var(--color-ink-100);
+}
+
+.commandInput::placeholder {
+  color: var(--color-ink-300);
+}
+
+.searchResults {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.searchButton {
+  min-height: 56px;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(244, 215, 156, 0.18);
+  border-radius: 18px;
+  background: rgba(19, 11, 8, 0.88);
+  color: var(--color-ink-100);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--motion-base),
+    border-color var(--motion-base),
+    box-shadow var(--motion-base);
+}
+
+.searchButton:hover,
+.searchButton:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(114, 206, 209, 0.45);
+  box-shadow: 0 0 0 1px rgba(114, 206, 209, 0.12), 0 0 18px rgba(114, 206, 209, 0.12);
+}
+
+.searchButton strong,
+.searchButton span {
+  display: block;
+}
+
+.searchButton span,
+.commandHint {
+  color: var(--color-ink-300);
+}
+
+.commandNotice {
+  margin: 0;
+  color: #baf4d5;
+  font-size: 0.82rem;
+}
+
+.fieldCommandMeta,
+.fieldCommandLabel {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fieldCommandLabel input {
+  width: 100%;
+}
+
+.shortcutGrid,
+.markerList {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.shortcutGrid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.shortcutItem,
+.markerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 52px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(244, 215, 156, 0.15);
+  border-radius: 16px;
+  background: rgba(19, 11, 8, 0.72);
+}
+
+.markerRow {
+  width: 100%;
+  color: var(--color-ink-100);
+}
+
+.markerFocus {
+  flex: 1;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--motion-base);
+}
+
+.markerFocus:hover,
+.markerFocus:focus-visible {
+  transform: translateY(-1px);
+}
+
+.markerFocus strong,
+.markerMeta {
+  display: block;
+}
+
+.markerMeta {
+  color: var(--color-ink-300);
+  font-size: 0.76rem;
+}
+
+.kbd {
+  min-width: 2.4rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid rgba(244, 215, 156, 0.2);
+  border-radius: 999px;
+  background: rgba(244, 215, 156, 0.08);
+  color: var(--color-ink-100);
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  text-align: center;
 }
 
 .summaryCard {
@@ -133,6 +284,106 @@
   z-index: 4;
   display: flex;
   gap: 0.5rem;
+}
+
+.minimapCard {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 4;
+  width: min(240px, calc(100% - 2rem));
+  padding: 0.75rem;
+  border-radius: 22px;
+  border: 1px solid rgba(244, 215, 156, 0.18);
+  background:
+    linear-gradient(180deg, rgba(45, 24, 17, 0.92), rgba(20, 11, 8, 0.95)),
+    linear-gradient(90deg, rgba(75, 158, 160, 0.08), transparent);
+  box-shadow: var(--shadow-soft), 0 0 24px rgba(0, 0, 0, 0.18);
+  animation: liftIn 420ms var(--motion-smooth) both;
+}
+
+.minimapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.minimap {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(244, 215, 156, 0.18);
+  background: rgba(11, 7, 6, 0.9);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 220, 0.04);
+}
+
+.minimapFrame {
+  position: relative;
+}
+
+.minimapHotspot {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.minimapHotspot:focus-visible {
+  outline: 2px solid rgba(108, 177, 166, 0.9);
+  outline-offset: 2px;
+}
+
+.minimapHint {
+  margin-top: 0.55rem;
+  color: var(--color-ink-300);
+  font-size: 0.78rem;
+}
+
+.minimapMarkerRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.minimapMarkerButton {
+  min-height: 36px;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(114, 206, 209, 0.32);
+  border-radius: 999px;
+  background: rgba(19, 34, 37, 0.92);
+  color: var(--color-ink-100);
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition:
+    transform var(--motion-base),
+    border-color var(--motion-base),
+    box-shadow var(--motion-base);
+}
+
+.minimapMarkerButton:hover,
+.minimapMarkerButton:focus-visible {
+  border-color: rgba(114, 206, 209, 0.7);
+  box-shadow: 0 0 0 1px rgba(114, 206, 209, 0.18), 0 0 18px rgba(114, 206, 209, 0.18);
+  transform: translateY(-1px);
+}
+
+.minimapPing {
+  animation: minimapPingPulse 900ms ease-out forwards;
+  transform-origin: center;
+}
+
+.minimapPingCore {
+  animation: minimapPingCore 900ms ease-out forwards;
+  transform-origin: center;
 }
 
 .rail {
@@ -186,5 +437,47 @@
 @media (max-width: 768px) {
   .summaryGrid {
     grid-template-columns: 1fr;
+  }
+
+  .commandStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .controls {
+    left: 1rem;
+    right: 1rem;
+    top: 1rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .minimapCard {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    width: 100%;
+    margin-top: 4.25rem;
+  }
+}
+
+@keyframes minimapPingPulse {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+@keyframes minimapPingCore {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
   }
 }

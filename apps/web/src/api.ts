@@ -220,6 +220,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  deleteAllianceMarker: (markerId: string) =>
+    apiRequest<AllianceMutationResponse>(`/api/game/alliance/markers/${markerId}`, {
+      method: "DELETE",
+    }),
   donateAllianceResources: (body: { wood: number; stone: number; food: number; gold: number }) =>
     apiRequest<AllianceMutationResponse>("/api/game/alliance/donate", {
       method: "POST",

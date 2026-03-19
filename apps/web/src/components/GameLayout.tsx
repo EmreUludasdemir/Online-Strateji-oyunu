@@ -68,8 +68,22 @@ declare global {
     advanceTime?: (ms: number) => void;
     select_map_city?: (cityId: string | null) => void;
     select_map_poi?: (poiId: string | null) => void;
+    open_map_field_command?: (command: {
+      kind?: "TILE" | "CITY" | "POI";
+      label?: string;
+      x: number;
+      y: number;
+      cityId?: string;
+      poiId?: string;
+    }) => void;
     frontierMapCamera?: MapCameraState | null;
     frontierActiveChunk?: ActiveMapChunkMeta | null;
+    frontierMapFieldCommand?: {
+      kind: string;
+      label: string;
+      x: number;
+      y: number;
+    } | null;
   }
 }
 
@@ -467,6 +481,7 @@ export function GameLayout() {
       const selectedCity = worldChunk?.cities.find((city) => city.cityId === selectedCityId) ?? null;
       const selectedPoi = worldChunk?.pois.find((poi) => poi.id === selectedPoiId) ?? null;
       const cameraView = window.frontierMapCamera ?? null;
+      const fieldCommand = window.frontierMapFieldCommand ?? null;
 
       return JSON.stringify({
         screen: location.pathname,
@@ -501,12 +516,14 @@ export function GameLayout() {
           memberCount: allianceState?.alliance?.memberCount ?? 0,
           openHelpRequests: allianceState?.alliance?.helpRequests.length ?? 0,
           treasury: allianceState?.alliance?.treasury ?? null,
+          markers: allianceState?.alliance?.markers ?? [],
         },
         selectedCity,
         selectedPoi,
         map: {
           loaded: Boolean(worldChunk),
           camera: cameraView,
+          fieldCommand,
           center: worldChunk?.center,
           radius: worldChunk?.radius ?? null,
           tiles: {
@@ -544,6 +561,7 @@ export function GameLayout() {
               projectedOutcome: poi.projectedOutcome,
             })) ?? [],
           marches: worldChunk?.marches ?? [],
+          allianceMarkers: allianceState?.alliance?.markers ?? [],
         },
         coordinateSystem: {
           origin: "top-left",
@@ -574,6 +592,7 @@ export function GameLayout() {
       delete window.advanceTime;
       delete window.select_map_city;
       delete window.select_map_poi;
+      delete window.open_map_field_command;
     };
   }, [location.pathname, queryClient, selectCity, selectPoi, selectedCityId, selectedPoiId, stateQuery.data]);
 

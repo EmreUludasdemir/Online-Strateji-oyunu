@@ -307,6 +307,9 @@ export interface AllianceMarkerView {
   x: number;
   y: number;
   createdAt: string;
+  expiresAt: string | null;
+  createdByUserId: string;
+  canDelete: boolean;
 }
 
 export interface AllianceLogEntryView {

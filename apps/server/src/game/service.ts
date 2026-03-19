@@ -1,6 +1,7 @@
 export {
   claimMailboxReward,
   claimTaskReward,
+  deleteAllianceMarker,
   createAllianceMarker,
   createMarch,
   createMarchFromAttack,

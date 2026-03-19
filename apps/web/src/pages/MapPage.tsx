@@ -1,5 +1,6 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  AllianceMarkerView,
   MapCity,
   MarchView,
   PoiView,
@@ -8,17 +9,19 @@ import type {
   TroopType,
   WorldChunkResponse,
 } from "@frontier/shared";
+import type { MouseEvent } from "react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
-import type { WorldMapHandle } from "../components/WorldMap";
+import type { MapFieldCommand, WorldMapHandle } from "../components/WorldMap";
 import { Badge } from "../components/ui/Badge";
 import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TargetDetailSheet } from "../components/ui/TargetDetailSheet";
 import { buildChunkPrefetchRequests, mergeWorldChunks } from "../components/worldMapData";
+import { getWorldRegions } from "../components/worldRegions";
 import {
   MAP_CAMERA_DEFAULT_ZOOM,
   type ActiveMapChunkMeta,
@@ -29,7 +32,7 @@ import {
 } from "../components/worldMapShared";
 import { trackAnalyticsEvent } from "../lib/analytics";
 import { copy } from "../lib/i18n";
-import { formatNumber, formatRelativeTimer } from "../lib/formatters";
+import { formatNumber, formatRelativeTimer, formatTimeRemaining } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
 import styles from "./MapPage.module.css";
 
@@ -43,6 +46,12 @@ interface ScoutAnimationTarget {
   x: number;
   y: number;
   label: string;
+}
+
+interface ShortcutDefinition {
+  id: string;
+  label: string;
+  keys: string;
 }
 
 function createTroopPayload(stateTroops: Array<{ type: TroopType; quantity: number }>): TroopStock {
@@ -129,6 +138,42 @@ function getScoutTarget(selectedCity: MapCity | null, selectedPoi: PoiView | nul
   return null;
 }
 
+function getMinimapStateColor(state: "VISIBLE" | "DISCOVERED" | "HIDDEN") {
+  if (state === "VISIBLE") {
+    return "#4d7d72";
+  }
+  if (state === "DISCOVERED") {
+    return "#564339";
+  }
+  return "#17100d";
+}
+
+function isEditableElement(target: EventTarget | null) {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function formatMarkerAge(isoTime: string, now: number) {
+  const elapsedMs = Math.max(0, now - new Date(isoTime).getTime());
+  const elapsedMinutes = Math.floor(elapsedMs / 60_000);
+  if (elapsedMinutes < 1) {
+    return "just now";
+  }
+  if (elapsedMinutes < 60) {
+    return `${elapsedMinutes}m ago`;
+  }
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `${elapsedHours}h ago`;
+  }
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `${elapsedDays}d ago`;
+}
+
 export function MapPage() {
   const now = useNow();
   const queryClient = useQueryClient();
@@ -145,6 +190,10 @@ export function MapPage() {
   } = useGameLayoutContext();
   const mapCommandRef = useRef<WorldMapHandle | null>(null);
   const scoutTrailTimersRef = useRef<number[]>([]);
+  const minimapPingTimerRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const markerInputRef = useRef<HTMLInputElement | null>(null);
+  const markerCycleIndexRef = useRef(0);
 
   const [filter, setFilter] = useState<MapFilter>("ALL");
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
@@ -152,6 +201,11 @@ export function MapPage() {
   const [composerMode, setComposerMode] = useState<ComposerMode>(null);
   const [commanderId, setCommanderId] = useState(state.city.commanders[0]?.id ?? "");
   const [troopPayload, setTroopPayload] = useState<TroopStock>(() => createTroopPayload(state.city.troops));
+  const [searchTerm, setSearchTerm] = useState("");
+  const [markerDraft, setMarkerDraft] = useState("");
+  const [mapNotice, setMapNotice] = useState<string | null>(null);
+  const [fieldCommand, setFieldCommand] = useState<MapFieldCommand | null>(null);
+  const [fieldMarkerDraft, setFieldMarkerDraft] = useState("");
   const [cameraView, setCameraView] = useState<MapCameraState>(() =>
     createInitialCameraState(state.city.coordinates.x, state.city.coordinates.y),
   );
@@ -173,6 +227,12 @@ export function MapPage() {
         radius: chunkRequest.radius,
       }),
     placeholderData: (previous) => previous,
+    staleTime: 5_000,
+  });
+
+  const allianceQuery = useQuery({
+    queryKey: ["alliance-state"],
+    queryFn: api.allianceState,
     staleTime: 5_000,
   });
 
@@ -199,6 +259,30 @@ export function MapPage() {
         queryClient.invalidateQueries({ queryKey: ["rallies"] }),
         queryClient.invalidateQueries({ queryKey: ["alliance-state"] }),
       ]);
+    },
+  });
+
+  const createMarkerMutation = useMutation({
+    mutationFn: api.createAllianceMarker,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["alliance-state"] }),
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+      ]);
+      setMapNotice("Alliance marker posted to the frontier map.");
+      setMarkerDraft("");
+    },
+  });
+
+  const deleteMarkerMutation = useMutation({
+    mutationFn: (markerId: string) => api.deleteAllianceMarker(markerId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["alliance-state"] }),
+        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+        queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
+      ]);
+      setMapNotice("Marker removed from the frontier map.");
     },
   });
 
@@ -254,8 +338,21 @@ export function MapPage() {
         window.clearTimeout(timeout);
       }
       scoutTrailTimersRef.current = [];
+      if (minimapPingTimerRef.current) {
+        window.clearTimeout(minimapPingTimerRef.current);
+        minimapPingTimerRef.current = null;
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!mapNotice) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => setMapNotice(null), 2_800);
+    return () => window.clearTimeout(timer);
+  }, [mapNotice]);
 
   useEffect(() => {
     setTroopPayload(createTroopPayload(state.city.troops));
@@ -341,6 +438,41 @@ export function MapPage() {
   }, [cameraView]);
 
   useEffect(() => {
+    window.frontierMapFieldCommand = fieldCommand
+      ? {
+          kind: fieldCommand.kind,
+          label: fieldCommand.label,
+          x: fieldCommand.x,
+          y: fieldCommand.y,
+        }
+      : null;
+
+    return () => {
+      window.frontierMapFieldCommand = null;
+    };
+  }, [fieldCommand]);
+
+  useEffect(() => {
+    window.open_map_field_command = (command) => {
+      setTargetSheetOpen(false);
+      setSelectedMarchId(null);
+      setFieldCommand({
+        kind: command.kind ?? "TILE",
+        label: command.label ?? `Frontier ${command.x},${command.y}`,
+        x: command.x,
+        y: command.y,
+        cityId: command.cityId,
+        poiId: command.poiId,
+      });
+      setFieldMarkerDraft(command.label ?? `Frontier ${command.x},${command.y}`);
+    };
+
+    return () => {
+      delete window.open_map_field_command;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!worldChunkQuery.data) {
       return undefined;
     }
@@ -386,6 +518,71 @@ export function MapPage() {
   const discoveredTiles = worldChunk?.tiles.filter((tile) => tile.state !== "HIDDEN").length ?? 0;
   const totalAssignedTroops = Object.values(troopPayload).reduce((sum, value) => sum + value, 0);
   const activeMarchCount = worldChunk?.marches.length ?? state.city.activeMarches.length;
+  const alliance = allianceQuery.data?.alliance ?? null;
+  const alliedOwnerNames = useMemo(() => alliance?.members.map((member) => member.username) ?? [], [alliance]);
+  const allianceMarkers = alliance?.markers ?? [];
+  const [minimapPing, setMinimapPing] = useState<{ x: number; y: number } | null>(null);
+  const minimapWorldSize = worldChunk?.size ?? 64;
+  const minimapTiles = worldChunk?.tiles ?? [];
+  const minimapStep = useMemo(() => Math.max(1, Math.ceil(minimapWorldSize / 32)), [minimapWorldSize]);
+  const minimapCells = useMemo(() => {
+    const tileMap = new Map(minimapTiles.map((tile) => [`${tile.x}:${tile.y}`, tile.state] as const));
+    const cells: Array<{ x: number; y: number; state: "VISIBLE" | "DISCOVERED" | "HIDDEN" }> = [];
+
+    for (let y = 0; y < minimapWorldSize; y += minimapStep) {
+      for (let x = 0; x < minimapWorldSize; x += minimapStep) {
+        let state: "VISIBLE" | "DISCOVERED" | "HIDDEN" = "HIDDEN";
+        for (let sampleY = y; sampleY < Math.min(minimapWorldSize, y + minimapStep); sampleY += 1) {
+          for (let sampleX = x; sampleX < Math.min(minimapWorldSize, x + minimapStep); sampleX += 1) {
+            const sampleState = tileMap.get(`${sampleX}:${sampleY}`);
+            if (sampleState === "VISIBLE") {
+              state = "VISIBLE";
+              break;
+            } else if (sampleState === "DISCOVERED") {
+              state = "DISCOVERED";
+            }
+          }
+          if (state === "VISIBLE") {
+            break;
+          }
+        }
+        cells.push({ x, y, state });
+      }
+    }
+
+    return cells;
+  }, [minimapStep, minimapTiles, minimapWorldSize]);
+  const worldRegions = useMemo(() => getWorldRegions(minimapWorldSize), [minimapWorldSize]);
+  const visibleAllianceMarkers = useMemo(() => allianceMarkers.slice(0, 4), [allianceMarkers]);
+  const recentAllianceMarkers = useMemo(() => allianceMarkers.slice(0, 6), [allianceMarkers]);
+  const selectedMarkerTarget = useMemo(() => {
+    if (selectedCity && !selectedCity.isCurrentPlayer) {
+      return {
+        label: selectedCity.cityName,
+        x: selectedCity.x,
+        y: selectedCity.y,
+      };
+    }
+
+    if (selectedPoi) {
+      return {
+        label: selectedPoi.label,
+        x: selectedPoi.x,
+        y: selectedPoi.y,
+      };
+    }
+
+    return null;
+  }, [selectedCity, selectedPoi]);
+  const minimapViewport = useMemo(() => {
+    const halfSpan = Math.max(3, chunkRequest.radius);
+    return {
+      x: Math.max(0, cameraView.centerTileX - halfSpan),
+      y: Math.max(0, cameraView.centerTileY - halfSpan),
+      width: Math.min(minimapWorldSize, halfSpan * 2 + 1),
+      height: Math.min(minimapWorldSize, halfSpan * 2 + 1),
+    };
+  }, [cameraView.centerTileX, cameraView.centerTileY, chunkRequest.radius, minimapWorldSize]);
 
   const targetCards = useMemo(() => {
     if (!worldChunk) {
@@ -482,7 +679,338 @@ export function MapPage() {
   const handleMarchSelect = useCallback((marchId: string) => {
     setTargetSheetOpen(false);
     setSelectedMarchId(marchId);
+    mapCommandRef.current?.focusMarch(marchId);
   }, []);
+
+  const handleMinimapClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const ratioX = (event.clientX - bounds.left) / bounds.width;
+      const ratioY = (event.clientY - bounds.top) / bounds.height;
+      const nextX = Math.max(0, Math.min(minimapWorldSize - 1, Math.floor(ratioX * minimapWorldSize)));
+      const nextY = Math.max(0, Math.min(minimapWorldSize - 1, Math.floor(ratioY * minimapWorldSize)));
+      setMinimapPing({ x: nextX, y: nextY });
+      if (minimapPingTimerRef.current) {
+        window.clearTimeout(minimapPingTimerRef.current);
+      }
+      minimapPingTimerRef.current = window.setTimeout(() => {
+        setMinimapPing(null);
+        minimapPingTimerRef.current = null;
+      }, 900);
+      mapCommandRef.current?.focusTile(nextX, nextY);
+    },
+    [minimapWorldSize],
+  );
+
+  const handleMarkerFocus = useCallback((marker: AllianceMarkerView) => {
+    setMinimapPing({ x: marker.x, y: marker.y });
+    if (minimapPingTimerRef.current) {
+      window.clearTimeout(minimapPingTimerRef.current);
+    }
+    minimapPingTimerRef.current = window.setTimeout(() => {
+      setMinimapPing(null);
+      minimapPingTimerRef.current = null;
+    }, 900);
+    mapCommandRef.current?.focusTile(marker.x, marker.y);
+  }, []);
+
+  const handleMarkerDelete = useCallback(
+    (event: MouseEvent<HTMLButtonElement>, marker: AllianceMarkerView) => {
+      event.stopPropagation();
+      void deleteMarkerMutation.mutateAsync(marker.id);
+    },
+    [deleteMarkerMutation],
+  );
+
+  const postAllianceMarker = useCallback(
+    async (payload: { label: string; x: number; y: number }) => {
+      if (!alliance) {
+        setMapNotice("Join an alliance to drop map markers.");
+        return false;
+      }
+
+      await createMarkerMutation.mutateAsync(payload);
+      return true;
+    },
+    [alliance, createMarkerMutation],
+  );
+
+  const handleQuickMarkerCreate = useCallback(
+    async (mode: "CAMERA" | "TARGET") => {
+      const target =
+        mode === "TARGET" && selectedMarkerTarget
+          ? selectedMarkerTarget
+          : {
+              label: `Frontier ${cameraView.centerTileX},${cameraView.centerTileY}`,
+              x: cameraView.centerTileX,
+              y: cameraView.centerTileY,
+            };
+
+      await postAllianceMarker({
+        label: markerDraft.trim() || target.label,
+        x: target.x,
+        y: target.y,
+      });
+    },
+    [cameraView.centerTileX, cameraView.centerTileY, markerDraft, postAllianceMarker, selectedMarkerTarget],
+  );
+
+  const handleFocusSearch = useCallback(() => {
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, []);
+
+  const handleFocusMarkerInput = useCallback(() => {
+    markerInputRef.current?.focus();
+    markerInputRef.current?.select();
+  }, []);
+
+  const handleCycleMarker = useCallback(
+    (direction: 1 | -1) => {
+      if (recentAllianceMarkers.length === 0) {
+        return;
+      }
+
+      const nextIndex =
+        (markerCycleIndexRef.current + direction + recentAllianceMarkers.length) % recentAllianceMarkers.length;
+      markerCycleIndexRef.current = nextIndex;
+      handleMarkerFocus(recentAllianceMarkers[nextIndex]);
+    },
+    [handleMarkerFocus, recentAllianceMarkers],
+  );
+
+  const closeMapPanels = useCallback(() => {
+    setFieldCommand(null);
+    setComposerMode(null);
+    setTargetSheetOpen(false);
+    setSelectedMarchId(null);
+  }, []);
+
+  const handleFieldCommandOpen = useCallback((command: MapFieldCommand) => {
+    setTargetSheetOpen(false);
+    setSelectedMarchId(null);
+    setFieldCommand(command);
+    setFieldMarkerDraft(command.label);
+    trackAnalyticsEvent("target_sheet_opened", {
+      targetType: "FIELD_COMMAND",
+      commandKind: command.kind,
+      x: command.x,
+      y: command.y,
+    });
+  }, []);
+
+  const handleFieldCommandFocus = useCallback(() => {
+    if (!fieldCommand) {
+      return;
+    }
+    mapCommandRef.current?.focusTile(fieldCommand.x, fieldCommand.y);
+    setFieldCommand(null);
+  }, [fieldCommand]);
+
+  const handleFieldCommandOpenTarget = useCallback(() => {
+    if (!fieldCommand || !worldChunk) {
+      return;
+    }
+
+    if (fieldCommand.kind === "CITY" && fieldCommand.cityId) {
+      const city = worldChunk.cities.find((entry) => entry.cityId === fieldCommand.cityId);
+      if (city) {
+        handleCitySelect(city, { focus: true });
+        setFieldCommand(null);
+      }
+      return;
+    }
+
+    if (fieldCommand.kind === "POI" && fieldCommand.poiId) {
+      const poi = worldChunk.pois.find((entry) => entry.id === fieldCommand.poiId);
+      if (poi) {
+        handlePoiSelect(poi, { focus: true });
+        setFieldCommand(null);
+      }
+    }
+  }, [fieldCommand, handleCitySelect, handlePoiSelect, worldChunk]);
+
+  const handleFieldCommandScout = useCallback(() => {
+    if (!fieldCommand) {
+      return;
+    }
+
+    if (fieldCommand.kind === "CITY" && fieldCommand.cityId) {
+      selectCity(fieldCommand.cityId);
+      setOpenedTargetKey(`city:${fieldCommand.cityId}`);
+      mapCommandRef.current?.focusCity(fieldCommand.cityId);
+      setTargetSheetOpen(false);
+      setComposerMode("SCOUT");
+      setFieldCommand(null);
+      return;
+    }
+
+    if (fieldCommand.kind === "POI" && fieldCommand.poiId) {
+      selectPoi(fieldCommand.poiId);
+      setOpenedTargetKey(`poi:${fieldCommand.poiId}`);
+      mapCommandRef.current?.focusPoi(fieldCommand.poiId);
+      setTargetSheetOpen(false);
+      setComposerMode("SCOUT");
+      setFieldCommand(null);
+    }
+  }, [fieldCommand, selectCity, selectPoi]);
+
+  const handleFieldMarkerCreate = useCallback(async () => {
+    if (!fieldCommand) {
+      return;
+    }
+
+    const created = await postAllianceMarker({
+      label: fieldMarkerDraft.trim() || fieldCommand.label,
+      x: fieldCommand.x,
+      y: fieldCommand.y,
+    });
+
+    if (created) {
+      setFieldCommand(null);
+    }
+  }, [fieldCommand, fieldMarkerDraft, postAllianceMarker]);
+
+  const searchResults = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term || !worldChunk) {
+      return [];
+    }
+
+    const cityResults = worldChunk.cities
+      .filter((city) => !city.isCurrentPlayer)
+      .map((city) => ({
+        id: `city:${city.cityId}`,
+        label: city.cityName,
+        meta: `${city.ownerName} | ${city.distance ?? "-"} tiles`,
+        action: () => handleCitySelect(city, { focus: true }),
+      }));
+
+    const poiResults = worldChunk.pois.map((poi) => ({
+      id: `poi:${poi.id}`,
+      label: poi.label,
+      meta: `${poi.kind.toLowerCase()} | ${poi.distance ?? "-"} tiles`,
+      action: () => handlePoiSelect(poi, { focus: true }),
+    }));
+
+    const markerResults = allianceMarkers.map((marker) => ({
+      id: `marker:${marker.id}`,
+      label: marker.label,
+      meta: `${marker.x}, ${marker.y}`,
+      action: () => handleMarkerFocus(marker),
+    }));
+
+    return [...cityResults, ...poiResults, ...markerResults]
+      .filter((entry) => entry.label.toLowerCase().includes(term) || entry.meta.toLowerCase().includes(term))
+      .slice(0, 8);
+  }, [allianceMarkers, handleCitySelect, handleMarkerFocus, handlePoiSelect, searchTerm, worldChunk]);
+
+  const shortcuts = useMemo<ShortcutDefinition[]>(
+    () => [
+      { id: "search", label: "Focus Search", keys: "/" },
+      { id: "marker", label: "Focus Marker Label", keys: "M" },
+      { id: "camera", label: "Post Camera Marker", keys: "C" },
+      { id: "recenter", label: "Recenter", keys: "R" },
+      { id: "zoom-in", label: "Zoom In", keys: "+" },
+      { id: "zoom-out", label: "Zoom Out", keys: "-" },
+      { id: "marker-prev", label: "Previous Marker", keys: "[" },
+      { id: "marker-next", label: "Next Marker", keys: "]" },
+      { id: "filters", label: "Filters", keys: "1-4" },
+      { id: "close", label: "Close Panels", keys: "Esc" },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
+      }
+
+      const editable = isEditableElement(event.target);
+
+      if (event.key === "Escape") {
+        if (event.target instanceof HTMLElement) {
+          event.target.blur();
+        }
+        closeMapPanels();
+        return;
+      }
+
+      if (editable) {
+        return;
+      }
+
+      if (event.code === "Slash" || event.code === "KeyF") {
+        event.preventDefault();
+        handleFocusSearch();
+        return;
+      }
+
+      if (event.code === "KeyM") {
+        event.preventDefault();
+        handleFocusMarkerInput();
+        return;
+      }
+
+      if (event.code === "KeyC") {
+        event.preventDefault();
+        void handleQuickMarkerCreate("CAMERA");
+        return;
+      }
+
+      if (event.code === "KeyR") {
+        event.preventDefault();
+        mapCommandRef.current?.focusTile(state.city.coordinates.x, state.city.coordinates.y);
+        return;
+      }
+
+      if (event.code === "Equal" || event.code === "NumpadAdd") {
+        event.preventDefault();
+        mapCommandRef.current?.zoomIn();
+        return;
+      }
+
+      if (event.code === "Minus" || event.code === "NumpadSubtract") {
+        event.preventDefault();
+        mapCommandRef.current?.zoomOut();
+        return;
+      }
+
+      if (event.code === "BracketLeft") {
+        event.preventDefault();
+        handleCycleMarker(-1);
+        return;
+      }
+
+      if (event.code === "BracketRight") {
+        event.preventDefault();
+        handleCycleMarker(1);
+        return;
+      }
+
+      if (event.code === "Digit1") {
+        setFilter("ALL");
+      } else if (event.code === "Digit2") {
+        setFilter("CITIES");
+      } else if (event.code === "Digit3") {
+        setFilter("CAMPS");
+      } else if (event.code === "Digit4") {
+        setFilter("NODES");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    closeMapPanels,
+    handleCycleMarker,
+    handleFocusMarkerInput,
+    handleFocusSearch,
+    handleQuickMarkerCreate,
+    state.city.coordinates.x,
+    state.city.coordinates.y,
+  ]);
 
   if (worldChunkQuery.isPending && !worldChunk) {
     return <div className={styles.hero}>Loading map...</div>;
@@ -581,6 +1109,125 @@ export function MapPage() {
         </Button>
       </div>
 
+      <section className={styles.commandStrip}>
+        <article className={styles.commandCard}>
+          <div className={styles.commandHeader}>
+            <strong className={styles.cardTitle}>Command Search</strong>
+            <Badge tone="info">{searchResults.length} matches</Badge>
+          </div>
+          <input
+            ref={searchInputRef}
+            className={styles.commandInput}
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search cities, camps, nodes, or markers"
+          />
+          {searchResults.length > 0 ? (
+            <div className={styles.searchResults}>
+              {searchResults.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className={styles.searchButton}
+                  onClick={() => {
+                    entry.action();
+                    setSearchTerm("");
+                  }}
+                >
+                  <strong>{entry.label}</strong>
+                  <span>{entry.meta}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.commandHint}>Search the current chunk to jump between cities, POIs, and alliance markers.</p>
+          )}
+        </article>
+        <article className={styles.commandCard}>
+          <div className={styles.commandHeader}>
+            <strong className={styles.cardTitle}>Alliance Markers</strong>
+            <Badge tone={alliance ? "success" : "warning"}>{alliance ? alliance.tag : "No alliance"}</Badge>
+          </div>
+          <input
+            ref={markerInputRef}
+            className={styles.commandInput}
+            type="text"
+            value={markerDraft}
+            onChange={(event) => setMarkerDraft(event.target.value)}
+            placeholder={selectedMarkerTarget ? `Label for ${selectedMarkerTarget.label}` : "Marker label"}
+          />
+          <div className={styles.actionRow}>
+            <Button
+              type="button"
+              size="small"
+              variant="secondary"
+              disabled={createMarkerMutation.isPending}
+              onClick={() => handleQuickMarkerCreate("CAMERA")}
+            >
+              {createMarkerMutation.isPending ? "Posting" : "Mark Camera"}
+            </Button>
+            <Button
+              type="button"
+              size="small"
+              variant="primary"
+              disabled={createMarkerMutation.isPending || !selectedMarkerTarget}
+              onClick={() => handleQuickMarkerCreate("TARGET")}
+            >
+              Mark Target
+            </Button>
+          </div>
+          <p className={styles.commandHint}>
+            {selectedMarkerTarget
+              ? `Selected target: ${selectedMarkerTarget.label} at ${selectedMarkerTarget.x}, ${selectedMarkerTarget.y}.`
+              : "Select a city or POI to post a focused target marker."}
+          </p>
+          {mapNotice ? <p className={styles.commandNotice}>{mapNotice}</p> : null}
+        </article>
+        <article className={styles.commandCard}>
+          <div className={styles.commandHeader}>
+            <strong className={styles.cardTitle}>Rapid Orders</strong>
+            <Badge tone="info">{recentAllianceMarkers.length} markers</Badge>
+          </div>
+          <div className={styles.shortcutGrid}>
+            {shortcuts.map((shortcut) => (
+              <div key={shortcut.id} className={styles.shortcutItem}>
+                <span>{shortcut.label}</span>
+                <kbd className={styles.kbd}>{shortcut.keys}</kbd>
+              </div>
+            ))}
+          </div>
+          <div className={styles.markerList}>
+            {recentAllianceMarkers.length > 0 ? (
+              recentAllianceMarkers.map((marker) => (
+                <div key={marker.id} className={styles.markerRow}>
+                  <button type="button" className={styles.markerFocus} onClick={() => handleMarkerFocus(marker)}>
+                    <strong>{marker.label}</strong>
+                    <span className={styles.markerMeta}>
+                      {marker.x}, {marker.y} · {formatMarkerAge(marker.createdAt, now)}
+                      {marker.expiresAt ? ` · ${formatTimeRemaining(marker.expiresAt, now)} left` : ""}
+                    </span>
+                  </button>
+                  {marker.canDelete ? (
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="ghost"
+                      disabled={deleteMarkerMutation.isPending}
+                      onClick={(event) => handleMarkerDelete(event, marker)}
+                    >
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <p className={styles.commandHint}>Alliance markers posted from the map will appear here for rapid focus.</p>
+            )}
+          </div>
+        </article>
+      </section>
+
       <article className={styles.mapFrame}>
         <div className={styles.controls}>
           <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomIn()}>
@@ -589,7 +1236,153 @@ export function MapPage() {
           <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomOut()}>
             {copy.map.zoomOut}
           </Button>
+          <Button
+            type="button"
+            size="small"
+            variant="secondary"
+            onClick={() => mapCommandRef.current?.focusTile(state.city.coordinates.x, state.city.coordinates.y)}
+          >
+            Recenter
+          </Button>
         </div>
+        <aside className={styles.minimapCard}>
+          <div className={styles.minimapHeader}>
+            <strong className={styles.cardTitle}>Minimap</strong>
+            <Badge tone="info">{cameraView.detailLevel}</Badge>
+          </div>
+          <div className={styles.minimapFrame}>
+            <svg
+              className={styles.minimap}
+              viewBox={`0 0 ${worldChunk.size} ${worldChunk.size}`}
+              role="img"
+              aria-label="World minimap"
+            >
+              {minimapCells.map((cell) => (
+                <rect
+                  key={`${cell.x}:${cell.y}`}
+                  x={cell.x}
+                  y={cell.y}
+                  width={minimapStep}
+                  height={minimapStep}
+                  fill={getMinimapStateColor(cell.state)}
+                />
+              ))}
+              {worldRegions.map((region) => (
+                <g key={region.id}>
+                  <rect
+                    x={region.x0}
+                    y={region.y0}
+                    width={region.x1 - region.x0 + 1}
+                    height={region.y1 - region.y0 + 1}
+                    fill="none"
+                    stroke={region.color}
+                    strokeOpacity="0.18"
+                    strokeWidth="0.6"
+                    strokeDasharray="1.2 1.4"
+                  />
+                  <text
+                    x={region.anchorX}
+                    y={region.anchorY}
+                    textAnchor="middle"
+                    fontSize="2.7"
+                    fill={region.color}
+                    opacity="0.45"
+                  >
+                    {region.label}
+                  </text>
+                </g>
+              ))}
+              {worldChunk.pois.map((poi) => (
+                <circle
+                  key={poi.id}
+                  cx={poi.x + 0.5}
+                  cy={poi.y + 0.5}
+                  r={poi.kind === "BARBARIAN_CAMP" ? 0.72 : 0.5}
+                  fill={poi.kind === "BARBARIAN_CAMP" ? "#d47b5a" : "#e2bb72"}
+                  opacity={poi.id === selectedPoiId ? 1 : 0.72}
+                />
+              ))}
+              {worldChunk.cities.map((city) => (
+                <circle
+                  key={city.cityId}
+                  cx={city.x + 0.5}
+                  cy={city.y + 0.5}
+                  r={city.isCurrentPlayer ? 0.95 : 0.75}
+                  fill={city.isCurrentPlayer ? "#72ced1" : alliedOwnerNames.includes(city.ownerName) ? "#5fc8da" : "#f4d79c"}
+                  opacity={city.cityId === selectedCityId ? 1 : 0.84}
+                />
+              ))}
+              {allianceMarkers.map((marker) => (
+                <g key={marker.id}>
+                  <polygon
+                    points={`${marker.x + 0.5},${marker.y - 0.35} ${marker.x + 1.1},${marker.y + 0.5} ${marker.x + 0.5},${marker.y + 1.35} ${marker.x - 0.1},${marker.y + 0.5}`}
+                    fill="#72ced1"
+                    fillOpacity="0.92"
+                    stroke="#f4d79c"
+                    strokeWidth="0.24"
+                  />
+                  <circle cx={marker.x + 0.5} cy={marker.y + 0.5} r="0.24" fill="#f8f0dd" opacity="0.95" />
+                  <title>{marker.label}</title>
+                </g>
+              ))}
+              <rect
+                x={minimapViewport.x}
+                y={minimapViewport.y}
+                width={minimapViewport.width}
+                height={minimapViewport.height}
+                fill="none"
+                stroke="#f8f0dd"
+                strokeWidth="1"
+                rx="1.4"
+                opacity="0.95"
+              />
+              <circle
+                cx={cameraView.centerTileX + 0.5}
+                cy={cameraView.centerTileY + 0.5}
+                r="1.15"
+                fill="#7dd3fc"
+                opacity="0.92"
+              />
+              {minimapPing ? (
+                <>
+                  <circle
+                    className={styles.minimapPing}
+                    cx={minimapPing.x + 0.5}
+                    cy={minimapPing.y + 0.5}
+                    r="1.4"
+                    fill="none"
+                    stroke="#7dd3fc"
+                    strokeWidth="0.9"
+                  />
+                  <circle
+                    className={styles.minimapPingCore}
+                    cx={minimapPing.x + 0.5}
+                    cy={minimapPing.y + 0.5}
+                    r="0.95"
+                    fill="#f4d79c"
+                    opacity="0.92"
+                  />
+                </>
+              ) : null}
+            </svg>
+            <button type="button" className={styles.minimapHotspot} aria-label="Re-center with minimap" onClick={handleMinimapClick} />
+          </div>
+          <p className={styles.minimapHint}>Click the minimap to re-center the camera.</p>
+          {visibleAllianceMarkers.length > 0 ? (
+            <div className={styles.minimapMarkerRow}>
+              {visibleAllianceMarkers.map((marker) => (
+                <button
+                  key={marker.id}
+                  type="button"
+                  className={styles.minimapMarkerButton}
+                  onClick={() => handleMarkerFocus(marker)}
+                >
+                  {marker.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </aside>
         <Suspense fallback={<div className={styles.hero}>Opening map...</div>}>
           <WorldMap
             worldSize={worldChunk.size}
@@ -600,6 +1393,9 @@ export function MapPage() {
             marches={worldChunk.marches}
             scoutTrails={scoutTrails}
             filter={filter}
+            alliedOwnerNames={alliedOwnerNames}
+            allianceTag={alliance?.tag ?? null}
+            allianceMarkers={allianceMarkers}
             selectedCityId={selectedCityId}
             selectedPoiId={selectedPoiId}
             selectedMarchId={selectedMarchId}
@@ -616,6 +1412,7 @@ export function MapPage() {
               }
             }}
             onSelectMarch={handleMarchSelect}
+            onOpenFieldCommand={handleFieldCommandOpen}
             onCameraChange={handleCameraChange}
             commandHandleRef={mapCommandRef}
           />
@@ -648,11 +1445,11 @@ export function MapPage() {
               className={styles.marchCard}
               role="button"
               tabIndex={0}
-              onClick={() => setSelectedMarchId(march.id)}
+              onClick={() => handleMarchSelect(march.id)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  setSelectedMarchId(march.id);
+                  handleMarchSelect(march.id);
                 }
               }}
             >
@@ -707,6 +1504,68 @@ export function MapPage() {
         onScout={() => setComposerMode("SCOUT")}
         onRally={selectedCity || selectedPoi?.kind === "BARBARIAN_CAMP" ? () => setComposerMode("RALLY") : null}
       />
+
+      <BottomSheet
+        open={Boolean(fieldCommand)}
+        title={fieldCommand ? `Field Command: ${fieldCommand.label}` : "Field Command"}
+        onClose={() => setFieldCommand(null)}
+        actions={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setFieldCommand(null)}>
+              Close
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={createMarkerMutation.isPending}
+              onClick={() => void handleFieldMarkerCreate()}
+            >
+              {createMarkerMutation.isPending ? "Posting" : "Post Marker"}
+            </Button>
+          </>
+        }
+      >
+        {fieldCommand ? (
+          <div className={styles.detailList}>
+            <div className={styles.fieldCommandMeta}>
+              <p className={styles.muted}>Target type: {fieldCommand.kind.toLowerCase()}</p>
+              <p className={styles.muted}>
+                Coordinates: {fieldCommand.x}, {fieldCommand.y}
+              </p>
+            </div>
+            <div className={styles.actionRow}>
+              <Button type="button" size="small" variant="secondary" onClick={handleFieldCommandFocus}>
+                Focus
+              </Button>
+              {fieldCommand.kind !== "TILE" ? (
+                <Button type="button" size="small" variant="secondary" onClick={handleFieldCommandOpenTarget}>
+                  Open Target
+                </Button>
+              ) : null}
+              {fieldCommand.kind !== "TILE" ? (
+                <Button type="button" size="small" variant="primary" onClick={handleFieldCommandScout}>
+                  Scout
+                </Button>
+              ) : null}
+            </div>
+            <label className={styles.fieldCommandLabel}>
+              <span className={styles.muted}>Alliance marker label</span>
+              <input
+                className={styles.commandInput}
+                type="text"
+                value={fieldMarkerDraft}
+                onChange={(event) => setFieldMarkerDraft(event.target.value)}
+                placeholder={`Marker for ${fieldCommand.label}`}
+              />
+            </label>
+            <p className={styles.commandHint}>
+              {alliance
+                ? "Right-click lets you tag the frontier without leaving the map route."
+                : "Join an alliance to turn field commands into persistent map markers."}
+            </p>
+          </div>
+        ) : null}
+      </BottomSheet>
 
       <BottomSheet
         open={Boolean(selectedMarch)}

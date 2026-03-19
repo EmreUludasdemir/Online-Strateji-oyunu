@@ -1,0 +1,31 @@
+{
+  "before": {
+    "kind": "POI",
+    "label": "Barbarian Camp 5",
+    "x": 30,
+    "y": 30
+  },
+  "afterMarkers": [
+    {
+      "id": "cmmxagyjv2c9jo7t83wk5rv4i",
+      "label": "Field ping 1481",
+      "x": 30,
+      "y": 30,
+      "createdAt": "2026-03-19T09:49:52.747Z"
+    },
+    {
+      "id": "cmmwe0ym91eglo7t8zx9zrrzz",
+      "label": "Smoke flank",
+      "x": 28,
+      "y": 32,
+      "createdAt": "2026-03-18T18:41:38.626Z"
+    },
+    {
+      "id": "cmmwdh05l0pcro7t81zbq43mo",
+      "label": "South Pass",
+      "x": 30,
+      "y": 30,
+      "createdAt": "2026-03-18T18:26:07.497Z"
+    }
+  ]
+}

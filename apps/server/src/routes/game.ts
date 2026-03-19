@@ -31,6 +31,7 @@ import { parseOrThrow } from "../lib/http";
 import {
   claimMailboxReward,
   claimTaskReward,
+  deleteAllianceMarker,
   createAllianceMarker,
   createMarch,
   createMarchFromAttack,
@@ -195,6 +196,11 @@ gameRouter.post("/alliance/announcement", mutationRateLimit, async (request, res
 gameRouter.post("/alliance/markers", mutationRateLimit, async (request, response) => {
   const payload = parseOrThrow(allianceMarkerSchema, request.body);
   const alliance = await createAllianceMarker(request.authUserId!, payload);
+  response.json({ alliance });
+});
+
+gameRouter.delete("/alliance/markers/:id", mutationRateLimit, async (request, response) => {
+  const alliance = await deleteAllianceMarker(request.authUserId!, String(request.params.id));
   response.json({ alliance });
 });
 

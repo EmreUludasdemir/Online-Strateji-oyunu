@@ -1111,6 +1111,9 @@ export function mapAllianceView(
       x: marker.x,
       y: marker.y,
       createdAt: marker.createdAt.toISOString(),
+      expiresAt: marker.expiresAt?.toISOString() ?? null,
+      createdByUserId: marker.userId,
+      canDelete: marker.userId === currentUserId || membership.role !== "MEMBER",
     })),
     logs: alliance.logs.map<AllianceLogEntryView>((entry) => ({
       id: entry.id,

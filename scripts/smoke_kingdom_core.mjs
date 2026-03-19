@@ -1,11 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 
 function parseArgs(argv) {
   const args = {
     baseUrl: "http://localhost:5173",
-    username: "demo_alpha",
+    username: "demo_smoke",
     password: "demo12345",
     screenshotPath: path.resolve("output", "kingdom-core-e2e.png"),
   };
@@ -29,6 +30,24 @@ function parseArgs(argv) {
   }
 
   return args;
+}
+
+function prepareSmokeFixture(username) {
+  if (username !== "demo_smoke") {
+    return;
+  }
+
+  const serverDir = path.resolve("apps", "server");
+  const tsxCli = path.join(serverDir, "node_modules", "tsx", "dist", "cli.mjs");
+
+  execFileSync(
+    process.execPath,
+    [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username],
+    {
+      cwd: serverDir,
+      stdio: "inherit",
+    },
+  );
 }
 
 async function waitFor(check, timeoutMs, label) {
@@ -65,7 +84,7 @@ async function login(page, baseUrl, username, password) {
   } else {
     await page.getByLabel("Username").fill(username);
     await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Log in" }).click();
+    await page.locator("form").getByRole("button", { name: "Log in" }).click();
   }
 
   await page.waitForURL("**/app/dashboard");
@@ -197,6 +216,7 @@ async function dispatchMarch(page) {
 async function main() {
   const args = parseArgs(process.argv);
   await fs.mkdir(path.dirname(args.screenshotPath), { recursive: true });
+  prepareSmokeFixture(args.username);
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
