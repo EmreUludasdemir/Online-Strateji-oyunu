@@ -6,6 +6,7 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { ResourcePill } from "../components/ui/ResourcePill";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
 import { trackAnalyticsOnce } from "../lib/analytics";
@@ -69,9 +70,16 @@ export function DashboardPage() {
   const liveEvents = eventsQuery.data?.events ?? [];
   const storeOffers = storeCatalogQuery.data?.catalog.offers ?? [];
   const activeUpgrade = state.city.activeUpgrade;
+  const activeTraining = state.city.activeTraining;
+  const activeResearch = state.city.activeResearch;
   const totalStores = Object.values(state.city.resources).reduce((sum, value) => sum + value, 0);
   const primaryCommander = state.city.commanders.find((commander) => commander.isPrimary) ?? state.city.commanders[0];
   const selectedTroop = state.city.troops.find((troop) => troop.type === selectedTroopType) ?? state.city.troops[0];
+  const townHall = state.city.buildings.find((building) => building.type === "TOWN_HALL");
+  const activeTrainingLabel =
+    state.city.troops.find((troop) => troop.type === activeTraining?.troopType)?.label ?? "Open";
+  const activeResearchLabel =
+    state.city.research.find((entry) => entry.type === activeResearch?.researchType)?.label ?? "Ready";
   const suggestedResearch = useMemo(
     () => state.city.research.find((entry) => entry.level < entry.maxLevel) ?? null,
     [state.city.research],
@@ -94,11 +102,39 @@ export function DashboardPage() {
             <p className={styles.statLabel}>{copy.dashboard.title}</p>
             <h2 className={styles.heroTitle}>{state.city.cityName}</h2>
             <p className={styles.heroLead}>
-              Coordinates {state.city.coordinates.x}, {state.city.coordinates.y}. This screen keeps building,
-              training, research, tasks, and inbox flow in one operations layer.
+              Coordinates {state.city.coordinates.x}, {state.city.coordinates.y}. City growth, queues, research,
+              commanders, and social pressure now sit in one premium operations deck.
             </p>
           </div>
           {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Queue idle</Badge>}
+        </div>
+        <div className={styles.heroSignals}>
+          <article className={styles.signalCard}>
+            <span className={styles.statLabel}>Town Hall</span>
+            <strong className={styles.signalValue}>L{townHall?.level ?? 0}</strong>
+            <span className={styles.stackHint}>Empire tier and district cap.</span>
+          </article>
+          <article className={styles.signalCard}>
+            <span className={styles.statLabel}>Primary Commander</span>
+            <strong className={styles.signalValue}>{primaryCommander?.name ?? "Unassigned"}</strong>
+            <span className={styles.stackHint}>Lead frame for field control.</span>
+          </article>
+          <article className={styles.signalCard}>
+            <span className={styles.statLabel}>Training Queue</span>
+            <strong className={styles.signalValue}>{activeTraining ? activeTrainingLabel : "Open"}</strong>
+            <span className={styles.stackHint}>{activeTraining ? `${activeTraining.quantity} units in progress.` : "Barracks ready for a fresh batch."}</span>
+          </article>
+          <article className={styles.signalCard}>
+            <span className={styles.statLabel}>Research</span>
+            <strong className={styles.signalValue}>{activeResearch ? activeResearchLabel : "Ready"}</strong>
+            <span className={styles.stackHint}>{activeResearch ? "Academy queue is active." : "Open a doctrine lane for the next boost."}</span>
+          </article>
+        </div>
+        <div className={styles.resourceStrip}>
+          <ResourcePill label="Wood" value={state.city.resources.wood} />
+          <ResourcePill label="Stone" value={state.city.resources.stone} />
+          <ResourcePill label="Food" value={state.city.resources.food} />
+          <ResourcePill label="Gold" value={state.city.resources.gold} />
         </div>
         <div className={styles.heroStats}>
           <div className={styles.statCard}><span className={styles.statLabel}>Attack</span><strong className={styles.statValue}>{formatNumber(state.city.attackPower)}</strong></div>
@@ -137,7 +173,7 @@ export function DashboardPage() {
                 </select>
                 <input type="number" min={1} max={120} value={trainingQuantity} onChange={(event) => setTrainingQuantity(Number(event.target.value))} />
               </div>
-              <p className={styles.stackHint}>Current stock {formatNumber(selectedTroop?.quantity ?? 0)} | Carry {formatNumber(selectedTroop?.carry ?? 0)} | Speed {formatNumber(selectedTroop?.speed ?? 0)}</p>
+              <p className={styles.stackHint}>Current stock {formatNumber(selectedTroop?.quantity ?? 0)} | Carry {formatNumber(selectedTroop?.carry ?? 0)} | Speed {selectedTroop?.speed.toFixed(2) ?? "0.00"}</p>
               <div className={styles.actionRow}>
                 <Button type="button" disabled={isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1} onClick={() => train(selectedTroopType, trainingQuantity)}>
                   {state.city.activeTraining ? "Barracks busy" : isTraining ? "Submitting" : "Start Training"}

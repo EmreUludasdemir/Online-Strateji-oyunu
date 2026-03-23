@@ -1,21 +1,21 @@
 export const frontierColors = {
-  parchmentYellow: "#f4d79c",
-  brass: "#c69244",
-  copper: "#a25f3c",
-  iznikBlue: "#4b8fcb",
-  imperialTeal: "#4b9ea0",
-  emberRed: "#d4644f",
-  nightCanvas: "#130a07",
+  parchmentYellow: "#f4dca6",
+  brass: "#c2923e",
+  copper: "#965a3b",
+  iznikBlue: "#598bc0",
+  imperialTeal: "#51a3a1",
+  emberRed: "#d86851",
+  nightCanvas: "#0a0807",
   dayCanvas: "#f7efe1",
   highContrastCanvas: "#050505",
-  inkDark: "#1e100a",
-  inkLight: "#f7efe1",
+  inkDark: "#120d0a",
+  inkLight: "#fdf6ea",
 } as const;
 
 export const frontierFonts = {
-  display: "Cinzel, Baskerville Old Face, Palatino Linotype, Book Antiqua, Georgia, serif",
-  body: "Inter, Segoe UI, Noto Sans, Trebuchet MS, Helvetica Neue, Arial, sans-serif",
-  mono: "Cascadia Mono, Consolas, Courier New, monospace",
+  display: "Cinzel, Cormorant Garamond, Baskerville Old Face, Palatino Linotype, Georgia, serif",
+  body: "Inter, Segoe UI, Noto Sans, Helvetica Neue, Arial, sans-serif",
+  mono: "JetBrains Mono, Cascadia Mono, Consolas, Courier New, monospace",
 } as const;
 
 export const frontierSpacing = {
@@ -30,10 +30,10 @@ export const frontierSpacing = {
 } as const;
 
 export const frontierRadii = {
-  xs: "12px",
-  sm: "18px",
+  xs: "10px",
+  sm: "16px",
   md: "24px",
-  lg: "30px",
+  lg: "32px",
   pill: "999px",
 } as const;
 
@@ -46,7 +46,7 @@ export const frontierThemes = {
   },
   night: {
     background: frontierColors.nightCanvas,
-    surface: "#24120c",
+    surface: "#1c1410",
     text: frontierColors.inkLight,
     accent: frontierColors.brass,
   },

@@ -17,12 +17,14 @@
   gap: 0.55rem;
   border-radius: var(--radius-pill);
   font-weight: 700;
+  letter-spacing: 0.02em;
   transition:
     transform var(--motion-fast),
     box-shadow var(--motion-base),
     background var(--motion-fast),
     border-color var(--motion-fast),
-    opacity var(--motion-fast);
+    opacity var(--motion-fast),
+    color var(--motion-fast);
   cursor: pointer;
   will-change: transform;
   position: relative;
@@ -46,10 +48,18 @@
   cursor: not-allowed;
 }
 
+.button:focus-visible,
+.iconButton:focus-visible {
+  outline: none;
+  border-color: rgba(244, 220, 166, 0.6);
+  box-shadow: var(--shadow-soft), 0 0 0 1px rgba(244, 220, 166, 0.3), var(--glow-gold);
+}
+
 .button {
   min-height: var(--touch-target);
-  padding: 0 1.1rem;
+  padding: 0 1.2rem;
   font-size: 0.98rem;
+  text-transform: none;
 }
 
 .button::after,
@@ -66,7 +76,7 @@
 .iconButton::after {
   inset: -40% auto -40% -30%;
   width: 36%;
-  background: linear-gradient(90deg, transparent, rgba(255, 248, 232, 0.24), transparent);
+  background: linear-gradient(90deg, transparent, rgba(253, 246, 234, 0.28), transparent);
   transform: translateX(-180%) skewX(-18deg);
   opacity: 0;
 }
@@ -78,66 +88,70 @@
 
 .primary {
   background:
-    linear-gradient(180deg, rgba(226, 187, 114, 0.92), rgba(164, 111, 52, 0.95)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
-  color: #26140d;
-  box-shadow: 0 4px 14px rgba(164, 111, 52, 0.28), var(--shadow-inset);
+    linear-gradient(180deg, rgba(244, 220, 166, 0.96), rgba(194, 146, 62, 0.94) 54%, rgba(120, 75, 30, 0.98)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.14), transparent);
+  color: #24160f;
+  box-shadow: 0 8px 22px rgba(60, 35, 15, 0.32), var(--shadow-inset);
 }
 
 .primary:hover:not(:disabled) {
-  box-shadow: 0 6px 22px rgba(164, 111, 52, 0.42), var(--glow-gold), var(--shadow-inset);
+  box-shadow: 0 12px 28px rgba(60, 35, 15, 0.45), var(--glow-gold), var(--shadow-inset);
 }
 
 .secondary {
   background:
-    linear-gradient(180deg, rgba(76, 158, 160, 0.28), rgba(51, 32, 24, 0.92)),
-    linear-gradient(90deg, rgba(255, 244, 220, 0.03), transparent);
+    radial-gradient(circle at 22% 18%, rgba(244, 220, 166, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(90, 65, 50, 0.86), rgba(30, 21, 16, 0.96)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.14), transparent 72%);
   color: var(--color-ink-100);
 }
 
 .ghost {
-  background: rgba(255, 244, 220, 0.03);
+  background:
+    linear-gradient(180deg, rgba(247, 239, 223, 0.05), rgba(247, 239, 223, 0.02)),
+    rgba(20, 14, 12, 0.68);
   color: var(--color-ink-100);
 }
 
 .danger {
   background:
-    linear-gradient(180deg, rgba(212, 100, 79, 0.88), rgba(132, 53, 38, 0.94)),
-    linear-gradient(90deg, rgba(255, 244, 220, 0.04), transparent);
+    linear-gradient(180deg, rgba(216, 104, 81, 0.92), rgba(130, 55, 38, 0.96)),
+    linear-gradient(90deg, rgba(247, 239, 223, 0.05), transparent);
   color: #fff8f4;
 }
 
 .danger:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(212, 100, 79, 0.36), var(--glow-danger);
+  box-shadow: 0 6px 20px rgba(216, 104, 81, 0.36), var(--glow-danger);
 }
 
 .small {
-  min-height: 40px;
-  padding: 0 0.95rem;
+  min-height: 42px;
+  padding: 0 1rem;
   font-size: 0.88rem;
 }
 
 .large {
-  min-height: 54px;
-  padding: 0 1.35rem;
+  min-height: 56px;
+  padding: 0 1.4rem;
 }
 
 .iconButton {
   min-width: var(--touch-target);
   min-height: var(--touch-target);
   padding: 0;
-  border-radius: 18px;
+  border-radius: var(--radius-sm);
   background:
-    radial-gradient(circle at 30% 25%, rgba(255, 245, 224, 0.16), transparent 34%),
-    linear-gradient(180deg, rgba(76, 45, 27, 0.9), rgba(34, 19, 13, 0.95)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent);
+    radial-gradient(circle at 30% 25%, rgba(247, 239, 223, 0.14), transparent 34%),
+    linear-gradient(180deg, var(--surface-panel-top), var(--surface-panel-mid) 48%, var(--surface-panel-bottom)),
+    linear-gradient(90deg, var(--surface-panel-glow), transparent);
   color: var(--color-ink-100);
-  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 .iconButton:hover:not(:disabled) {
-  box-shadow: 0 4px 16px rgba(226, 187, 114, 0.2), var(--shadow-inset);
-  border-color: rgba(244, 215, 156, 0.26);
+  box-shadow: 0 8px 18px rgba(10, 5, 4, 0.28), var(--glow-gold), var(--shadow-inset);
+  border-color: rgba(244, 220, 166, 0.35);
 }
 
 .iconButton svg {
@@ -149,7 +163,7 @@
 
 .iconButton:hover:not(:disabled) svg {
   transform: translateY(-1px) scale(1.08);
-  filter: drop-shadow(0 0 8px rgba(244, 215, 156, 0.22));
+  filter: drop-shadow(0 0 8px rgba(244, 220, 166, 0.28));
 }
 
 .badge,
@@ -160,35 +174,36 @@
   padding: 0 0.8rem;
   border-radius: var(--radius-pill);
   font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-ink-100);
   background:
-    linear-gradient(180deg, rgba(81, 48, 30, 0.9), rgba(37, 21, 15, 0.96)),
-    linear-gradient(90deg, rgba(255, 244, 220, 0.05), transparent);
+    linear-gradient(180deg, rgba(82, 59, 45, 0.9), rgba(30, 21, 16, 0.96)),
+    linear-gradient(90deg, rgba(247, 239, 223, 0.05), transparent),
+    linear-gradient(180deg, var(--surface-panel-glow), transparent);
 }
 
 .badgeInfo {
-  border-color: rgba(75, 158, 160, 0.34);
+  border-color: rgba(81, 163, 161, 0.38);
 }
 
 .badgeSuccess {
-  border-color: rgba(65, 168, 119, 0.34);
+  border-color: rgba(84, 169, 120, 0.38);
 }
 
 .badgeWarning {
-  border-color: rgba(226, 187, 114, 0.34);
+  border-color: rgba(218, 176, 101, 0.38);
 }
 
 .badgeDanger {
-  border-color: rgba(212, 100, 79, 0.34);
+  border-color: rgba(216, 104, 81, 0.38);
 }
 
 .timerChip {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   animation: pulseGold 2.8s ease-in-out infinite;
-  border-color: rgba(226, 187, 114, 0.38) !important;
+  border-color: rgba(218, 176, 101, 0.42) !important;
 }
 
 .sectionCard,
@@ -197,12 +212,13 @@
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(87, 52, 34, 0.42), rgba(37, 21, 15, 0.92)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent 72%);
+    radial-gradient(circle at 16% 0%, rgba(244, 220, 166, 0.08), transparent 22%),
+    linear-gradient(180deg, var(--surface-panel-top), var(--surface-panel-mid) 46%, var(--surface-panel-bottom)),
+    linear-gradient(90deg, var(--surface-panel-glow), transparent 72%);
 }
 
 .sectionCard {
-  padding: 1.1rem;
+  padding: 1.15rem;
   border-radius: var(--radius-md);
   transition:
     border-color var(--motion-base),
@@ -212,9 +228,9 @@
 }
 
 .sectionCard:hover {
-  border-color: rgba(244, 215, 156, 0.22);
-  box-shadow: var(--shadow-soft), 0 0 32px rgba(226, 187, 114, 0.08);
-  transform: translateY(-1px);
+  border-color: var(--surface-panel-border-strong);
+  box-shadow: var(--shadow-soft), 0 0 34px rgba(218, 176, 101, 0.12);
+  transform: translateY(-2px);
 }
 
 .sectionCard::after,
@@ -238,7 +254,7 @@
   left: -20%;
   width: 28%;
   bottom: -35%;
-  background: linear-gradient(90deg, transparent, rgba(255, 244, 220, 0.12), transparent);
+  background: linear-gradient(90deg, transparent, rgba(247, 239, 223, 0.12), transparent);
   transform: translateX(-170%) skewX(-22deg);
   opacity: 0;
 }
@@ -253,20 +269,20 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.95rem;
 }
 
 .sectionKicker {
   color: var(--color-gold-200);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 
 .sectionTitle {
   margin-top: 0.18rem;
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: clamp(1.2rem, 1rem + 0.6vw, 1.5rem);
 }
 
 .sectionBody {
@@ -279,7 +295,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.95rem 1rem;
-  border-radius: 22px;
+  border-radius: calc(var(--radius-sm) + 2px);
   transition:
     border-color var(--motion-base),
     box-shadow var(--motion-base),
@@ -288,15 +304,15 @@
 }
 
 .resourcePill:hover {
-  border-color: rgba(244, 215, 156, 0.28);
-  box-shadow: var(--shadow-soft), 0 0 20px rgba(226, 187, 114, 0.1);
+  border-color: var(--surface-panel-border-strong);
+  box-shadow: var(--shadow-soft), 0 0 22px rgba(218, 176, 101, 0.12);
   transform: translateY(-2px);
 }
 
 .resourceLabel {
   color: var(--color-ink-300);
   font-size: 0.76rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 

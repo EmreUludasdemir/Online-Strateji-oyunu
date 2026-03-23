@@ -10,7 +10,7 @@
   content: "";
   position: fixed;
   inset: 14px;
-  border: 1px solid rgba(244, 215, 156, 0.12);
+  border: 1px solid rgba(244, 220, 166, 0.12);
   border-radius: 34px;
   pointer-events: none;
 }
@@ -24,8 +24,8 @@
   gap: 1rem;
   border-right: 1px solid var(--color-panel-edge);
   background:
-    linear-gradient(180deg, rgba(48, 26, 18, 0.98), rgba(23, 13, 10, 0.99)),
-    repeating-linear-gradient(180deg, rgba(255, 244, 220, 0.02) 0 1px, transparent 1px 7px);
+    linear-gradient(180deg, rgba(62, 44, 34, 0.98), rgba(20, 14, 11, 0.99)),
+    repeating-linear-gradient(180deg, rgba(253, 246, 234, 0.02) 0 1px, transparent 1px 7px);
   animation: fadeSlideDown 420ms var(--motion-smooth) both;
 }
 
@@ -37,8 +37,8 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-panel-edge);
   background:
-    linear-gradient(180deg, rgba(81, 48, 30, 0.44), rgba(32, 18, 13, 0.94)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.1), transparent 72%);
+    linear-gradient(180deg, rgba(105, 78, 54, 0.44), rgba(38, 25, 18, 0.94)),
+    linear-gradient(90deg, var(--surface-panel-glow), transparent 72%);
   box-shadow: var(--shadow-soft);
   animation: fadeSlideUp 480ms var(--motion-smooth) both;
 }
@@ -54,7 +54,7 @@
   position: absolute;
   inset: -45% auto -45% -16%;
   width: 32%;
-  background: linear-gradient(90deg, transparent, rgba(255, 244, 220, 0.14), transparent);
+  background: linear-gradient(90deg, transparent, rgba(253, 246, 234, 0.14), transparent);
   transform: translateX(-180%) skewX(-16deg);
   pointer-events: none;
   opacity: 0;
@@ -162,18 +162,18 @@
 
 .navLink {
   background:
-    linear-gradient(180deg, rgba(81, 48, 30, 0.3), rgba(32, 18, 13, 0.92)),
-    linear-gradient(90deg, rgba(255, 244, 220, 0.03), transparent);
+    linear-gradient(180deg, rgba(105, 78, 54, 0.3), rgba(38, 25, 18, 0.92)),
+    linear-gradient(90deg, rgba(253, 246, 234, 0.03), transparent);
 }
 
 .navLinkActive,
 .navLink:hover {
   background:
-    linear-gradient(180deg, rgba(226, 187, 114, 0.34), rgba(69, 39, 24, 0.92)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent);
+    linear-gradient(180deg, rgba(244, 220, 166, 0.34), rgba(105, 78, 54, 0.92)),
+    linear-gradient(90deg, var(--surface-panel-glow), transparent);
   border-color: rgba(244, 215, 156, 0.34);
   transform: translateX(4px);
-  box-shadow: var(--shadow-soft), inset 3px 0 0 rgba(226, 187, 114, 0.6);
+  box-shadow: var(--shadow-soft), inset 3px 0 0 rgba(244, 220, 166, 0.6);
 }
 
 .sidebarFooter {
@@ -254,8 +254,8 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--color-panel-edge);
   background:
-    linear-gradient(180deg, rgba(81, 48, 30, 0.42), rgba(29, 16, 11, 0.95)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.12), transparent 75%);
+    linear-gradient(180deg, rgba(105, 78, 54, 0.42), rgba(38, 25, 18, 0.95)),
+    linear-gradient(90deg, var(--surface-panel-glow), transparent 75%);
   box-shadow: var(--shadow-soft);
   transition:
     border-color var(--motion-base),
@@ -265,8 +265,8 @@
 }
 
 .queueCard:hover {
-  border-color: rgba(244, 215, 156, 0.24);
-  box-shadow: var(--shadow-soft), 0 0 18px rgba(75, 158, 160, 0.12);
+  border-color: rgba(244, 220, 166, 0.24);
+  box-shadow: var(--shadow-soft), 0 0 18px rgba(81, 163, 161, 0.12);
   transform: translateY(-2px);
 }
 
@@ -413,8 +413,8 @@
     border-radius: 24px;
     border: 1px solid var(--color-panel-edge);
     background:
-      linear-gradient(180deg, rgba(48, 26, 18, 0.98), rgba(23, 13, 10, 0.99)),
-      linear-gradient(90deg, rgba(75, 158, 160, 0.1), transparent);
+      linear-gradient(180deg, rgba(62, 44, 34, 0.98), rgba(20, 14, 11, 0.99)),
+      linear-gradient(90deg, var(--surface-panel-glow), transparent);
     box-shadow: var(--shadow-heavy);
     animation: slideUp 380ms var(--motion-smooth) both;
   }
@@ -432,8 +432,8 @@
   }
 
   .mobileLinkActive {
-    background: rgba(226, 187, 114, 0.18);
-    border-color: rgba(244, 215, 156, 0.28);
-    animation: pulseGold 2.8s ease-in-out infinite;
-  }
+  background: rgba(244, 220, 166, 0.18);
+  border-color: rgba(244, 220, 166, 0.28);
+  animation: pulseGold 2.8s ease-in-out infinite;
+}
 }

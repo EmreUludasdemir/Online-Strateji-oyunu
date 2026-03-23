@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AllianceMarkerView,
   MapCity,
@@ -22,7 +22,6 @@ import { Badge } from "../components/ui/Badge";
 import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
 import { SectionCard } from "../components/ui/SectionCard";
-import { TargetDetailSheet } from "../components/ui/TargetDetailSheet";
 import { buildChunkPrefetchRequests, mergeWorldChunks } from "../components/worldMapData";
 import { getWorldRegions } from "../components/worldRegions";
 import {
@@ -57,12 +56,111 @@ interface ShortcutDefinition {
   keys: string;
 }
 
+const BASE_MARCH_SECONDS_PER_TILE = 20;
+const MIN_MARCH_SECONDS = 15;
+
 function createTroopPayload(stateTroops: Array<{ type: TroopType; quantity: number }>): TroopStock {
   return {
     INFANTRY: Math.min(18, stateTroops.find((troop) => troop.type === "INFANTRY")?.quantity ?? 0),
     ARCHER: Math.min(12, stateTroops.find((troop) => troop.type === "ARCHER")?.quantity ?? 0),
     CAVALRY: Math.min(8, stateTroops.find((troop) => troop.type === "CAVALRY")?.quantity ?? 0),
   };
+}
+
+function getTargetDistance(
+  origin: { x: number; y: number },
+  selectedCity: MapCity | null,
+  selectedPoi: PoiView | null,
+) {
+  if (selectedCity?.distance != null) {
+    return selectedCity.distance;
+  }
+
+  if (selectedPoi?.distance != null) {
+    return selectedPoi.distance;
+  }
+
+  const target = selectedCity
+    ? { x: selectedCity.x, y: selectedCity.y }
+    : selectedPoi
+      ? { x: selectedPoi.x, y: selectedPoi.y }
+      : null;
+
+  if (!target) {
+    return null;
+  }
+
+  return Math.abs(origin.x - target.x) + Math.abs(origin.y - target.y);
+}
+
+function estimateMarchDurationMs(
+  distance: number,
+  troops: TroopStock,
+  troopViews: Array<{ type: TroopType; speed: number }>,
+  commanderSpeedBonusPct: number,
+  logisticsLevel: number,
+) {
+  const totalTroops = Object.values(troops).reduce((sum, value) => sum + value, 0);
+  if (distance <= 0 || totalTroops <= 0) {
+    return MIN_MARCH_SECONDS * 1000;
+  }
+
+  const weightedSpeed =
+    troopViews.reduce((sum, troop) => sum + troop.speed * troops[troop.type], 0) / totalTroops;
+  const speedModifier = Math.max(0.6, weightedSpeed) * (1 + commanderSpeedBonusPct / 100 + logisticsLevel * 0.08);
+
+  return Math.max(
+    MIN_MARCH_SECONDS * 1000,
+    Math.ceil((distance * BASE_MARCH_SECONDS_PER_TILE * 1000) / speedModifier),
+  );
+}
+
+function estimateTroopCarry(
+  troops: TroopStock,
+  troopViews: Array<{ type: TroopType; carry: number }>,
+  commanderCarryBonusPct: number,
+) {
+  const baseCarry = troopViews.reduce((sum, troop) => sum + troop.carry * troops[troop.type], 0);
+  return Math.round(baseCarry * (1 + commanderCarryBonusPct / 100));
+}
+
+function estimateTroopPower(
+  troops: TroopStock,
+  troopViews: Array<{ type: TroopType; attack: number; defense: number }>,
+) {
+  return troopViews.reduce((sum, troop) => sum + (troop.attack + troop.defense) * troops[troop.type], 0);
+}
+
+function getComposerTitle(mode: ComposerMode) {
+  if (mode === "SCOUT") {
+    return "Scout Mission";
+  }
+  if (mode === "RALLY") {
+    return "Rally Setup";
+  }
+  if (mode === "RESOURCE_GATHER") {
+    return "Gathering Orders";
+  }
+  if (mode === "BARBARIAN_ATTACK") {
+    return "Camp Assault";
+  }
+  return "March Orders";
+}
+
+function getComposerActionLabel(mode: ComposerMode) {
+  if (mode === "SCOUT") {
+    return "Send Scout";
+  }
+  if (mode === "RALLY") {
+    return "Open Rally";
+  }
+  if (mode === "RESOURCE_GATHER") {
+    return "Start Gathering";
+  }
+  if (mode === "BARBARIAN_ATTACK") {
+    return "March to Camp";
+  }
+  return "Send March";
 }
 
 function getMarchTimingLabel(
@@ -475,6 +573,7 @@ export function MapPage() {
   useEffect(() => {
     window.open_map_field_command = (command) => {
       setTargetSheetOpen(false);
+      setComposerMode(null);
       setSelectedMarchId(null);
       setFieldCommand({
         kind: command.kind ?? "TILE",
@@ -565,6 +664,9 @@ export function MapPage() {
   const discoveredTiles = worldChunk?.tiles.filter((tile) => tile.state !== "HIDDEN").length ?? 0;
   const totalAssignedTroops = Object.values(troopPayload).reduce((sum, value) => sum + value, 0);
   const activeMarchCount = worldChunk?.marches.length ?? state.city.activeMarches.length;
+  const logisticsLevel = state.city.research.find((entry) => entry.type === "LOGISTICS")?.level ?? 0;
+  const selectedCommander =
+    state.city.commanders.find((commander) => commander.id === commanderId) ?? state.city.commanders[0] ?? null;
   const alliance = allianceQuery.data?.alliance ?? null;
   const alliedOwnerNames = useMemo(() => alliance?.members.map((member) => member.username) ?? [], [alliance]);
   const allianceMarkers = alliance?.markers ?? [];
@@ -621,6 +723,47 @@ export function MapPage() {
 
     return null;
   }, [selectedCity, selectedPoi]);
+  const selectedTargetName = selectedCity
+    ? selectedCity.cityName
+    : selectedPoi
+      ? selectedPoi.label
+      : null;
+  const selectedTargetSubtitle = selectedCity
+    ? `${selectedCity.ownerName} | ${selectedCity.x}, ${selectedCity.y}`
+    : selectedPoi
+      ? `${selectedPoi.kind.toLowerCase().replaceAll("_", " ")} | ${selectedPoi.x}, ${selectedPoi.y}`
+      : "Drag to pan, wheel to zoom, and right-click on the frontier to open field commands.";
+  const selectedTargetDistance = getTargetDistance(state.city.coordinates, selectedCity, selectedPoi);
+  const estimatedMarchEtaMs =
+    composerMode && composerMode !== "SCOUT" && selectedTargetDistance != null && selectedCommander
+      ? estimateMarchDurationMs(
+          selectedTargetDistance,
+          troopPayload,
+          state.city.troops,
+          selectedCommander.marchSpeedBonusPct,
+          logisticsLevel,
+        )
+      : null;
+  const estimatedCarry =
+    composerMode && composerMode !== "SCOUT" && selectedCommander
+      ? estimateTroopCarry(troopPayload, state.city.troops, selectedCommander.carryBonusPct)
+      : 0;
+  const estimatedPower = composerMode && composerMode !== "SCOUT" ? estimateTroopPower(troopPayload, state.city.troops) : 0;
+  const composerTitle = getComposerTitle(composerMode);
+  const composerActionLabel = getComposerActionLabel(composerMode);
+  const overlaySelectionTone = selectedMarch ? "info" : selectedTargetName ? "warning" : "info";
+  const overlaySelectionLabel = selectedMarch
+    ? "March tracked"
+    : selectedCity
+      ? "City target"
+      : selectedPoi
+        ? selectedPoi.kind === "BARBARIAN_CAMP"
+          ? "Camp target"
+          : "Resource target"
+        : "Free camera";
+  const targetSheetVisible = targetSheetOpen && !composerMode && !fieldCommand && !selectedMarch;
+  const fieldCommandVisible = Boolean(fieldCommand) && !composerMode && !selectedMarch;
+  const selectedMarchVisible = Boolean(selectedMarch) && !composerMode && !fieldCommand;
   const minimapViewport = useMemo(() => {
     const halfSpan = Math.max(3, chunkRequest.radius);
     return {
@@ -698,6 +841,8 @@ export function MapPage() {
   const handleCitySelect = useCallback(
     (city: MapCity, options?: { focus?: boolean }) => {
       setSelectedMarchId(null);
+      setComposerMode(null);
+      setFieldCommand(null);
       selectCity(city.cityId);
       setOpenedTargetKey(null);
       if (options?.focus) {
@@ -713,6 +858,8 @@ export function MapPage() {
   const handlePoiSelect = useCallback(
     (poi: PoiView, options?: { focus?: boolean }) => {
       setSelectedMarchId(null);
+      setComposerMode(null);
+      setFieldCommand(null);
       selectPoi(poi.id);
       setOpenedTargetKey(null);
       if (options?.focus) {
@@ -725,8 +872,17 @@ export function MapPage() {
 
   const handleMarchSelect = useCallback((marchId: string) => {
     setTargetSheetOpen(false);
+    setComposerMode(null);
+    setFieldCommand(null);
     setSelectedMarchId(marchId);
     mapCommandRef.current?.focusMarch(marchId);
+  }, []);
+
+  const openComposer = useCallback((mode: ComposerMode) => {
+    setFieldCommand(null);
+    setSelectedMarchId(null);
+    setTargetSheetOpen(false);
+    setComposerMode(mode);
   }, []);
 
   const handleMinimapClick = useCallback(
@@ -842,6 +998,7 @@ export function MapPage() {
 
   const handleFieldCommandOpen = useCallback((command: MapFieldCommand) => {
     setTargetSheetOpen(false);
+    setComposerMode(null);
     setSelectedMarchId(null);
     setFieldCommand(command);
     setFieldMarkerDraft(command.label);
@@ -893,8 +1050,7 @@ export function MapPage() {
       selectCity(fieldCommand.cityId);
       setOpenedTargetKey(`city:${fieldCommand.cityId}`);
       mapCommandRef.current?.focusCity(fieldCommand.cityId);
-      setTargetSheetOpen(false);
-      setComposerMode("SCOUT");
+      openComposer("SCOUT");
       setFieldCommand(null);
       return;
     }
@@ -903,11 +1059,10 @@ export function MapPage() {
       selectPoi(fieldCommand.poiId);
       setOpenedTargetKey(`poi:${fieldCommand.poiId}`);
       mapCommandRef.current?.focusPoi(fieldCommand.poiId);
-      setTargetSheetOpen(false);
-      setComposerMode("SCOUT");
+      openComposer("SCOUT");
       setFieldCommand(null);
     }
-  }, [fieldCommand, selectCity, selectPoi]);
+  }, [fieldCommand, openComposer, selectCity, selectPoi]);
 
   const handleFieldMarkerCreate = useCallback(async () => {
     if (!fieldCommand) {
@@ -1125,7 +1280,7 @@ export function MapPage() {
             <p className={styles.muted}>{copy.map.title}</p>
             <h2 className={styles.heroTitle}>Frontier Theater</h2>
             <p className={styles.heroLead}>
-              The world now runs in camera space: drag to pan, zoom to change detail, watch marches move, and scout live routes across the frontier.
+              A premium command view for the frontier: sweep the kingdom with drag navigation, read the field in layered HUD lanes, and launch scouts or armies from a cleaner tactical flow.
             </p>
           </div>
           <Badge tone="info">
@@ -1148,57 +1303,80 @@ export function MapPage() {
         </div>
       </article>
 
-      <div className={styles.chipRow}>
-        <Button type="button" size="small" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>
-          All
-        </Button>
-        <Button type="button" size="small" variant={filter === "CITIES" ? "primary" : "secondary"} onClick={() => setFilter("CITIES")}>
-          Cities
-        </Button>
-        <Button type="button" size="small" variant={filter === "CAMPS" ? "primary" : "secondary"} onClick={() => setFilter("CAMPS")}>
-          Camps
-        </Button>
-        <Button type="button" size="small" variant={filter === "NODES" ? "primary" : "secondary"} onClick={() => setFilter("NODES")}>
-          Nodes
-        </Button>
-        <Button type="button" size="small" variant={showPaths ? "primary" : "secondary"} onClick={() => setShowPaths((current) => !current)}>
-          Show Paths
-        </Button>
-        <Button
-          type="button"
-          size="small"
-          variant={showScoutTrails ? "primary" : "secondary"}
-          onClick={() => setShowScoutTrails((current) => !current)}
-        >
-          Show Scout Trails
-        </Button>
-        <Button type="button" size="small" variant={showReports ? "primary" : "secondary"} onClick={() => setShowReports((current) => !current)}>
-          Show Reports
-        </Button>
-      </div>
-
       <section className={styles.battlefieldLayout}>
         <div className={styles.mapStage}>
           <article className={styles.mapFrame}>
-            <div className={styles.controls}>
-              <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomIn()}>
-                {copy.map.zoomIn}
-              </Button>
-              <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomOut()}>
-                {copy.map.zoomOut}
-              </Button>
-              <Button
-                type="button"
-                size="small"
-                variant="secondary"
-                onClick={() => mapCommandRef.current?.focusTile(state.city.coordinates.x, state.city.coordinates.y)}
-              >
-                Recenter
-              </Button>
+            <div className={styles.tacticalHud}>
+              <section className={styles.intelPanel}>
+                <div>
+                  <p className={styles.hudEyebrow}>Active Selection</p>
+                  <h3 className={styles.hudTitle}>{selectedTargetName ?? "Sweep the frontier"}</h3>
+                  <p className={styles.hudSubtitle}>{selectedTargetSubtitle}</p>
+                </div>
+                <div className={styles.statusCluster}>
+                  <Badge tone={overlaySelectionTone}>{overlaySelectionLabel}</Badge>
+                  <p className={styles.hudMeta}>
+                    {selectedTargetDistance != null
+                      ? `Distance ${formatNumber(selectedTargetDistance)} tiles`
+                      : "Drag to pan · Mousewheel to zoom"}
+                  </p>
+                </div>
+              </section>
+              <div className={styles.controlsDeck}>
+                <div className={styles.controls}>
+                  <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomIn()}>
+                    {copy.map.zoomIn}
+                  </Button>
+                  <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomOut()}>
+                    {copy.map.zoomOut}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="secondary"
+                    onClick={() => mapCommandRef.current?.focusTile(state.city.coordinates.x, state.city.coordinates.y)}
+                  >
+                    Recenter
+                  </Button>
+                </div>
+                <div className={styles.chipRow}>
+                  <Button type="button" size="small" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>
+                    All
+                  </Button>
+                  <Button type="button" size="small" variant={filter === "CITIES" ? "primary" : "secondary"} onClick={() => setFilter("CITIES")}>
+                    Cities
+                  </Button>
+                  <Button type="button" size="small" variant={filter === "CAMPS" ? "primary" : "secondary"} onClick={() => setFilter("CAMPS")}>
+                    Camps
+                  </Button>
+                  <Button type="button" size="small" variant={filter === "NODES" ? "primary" : "secondary"} onClick={() => setFilter("NODES")}>
+                    Nodes
+                  </Button>
+                  <Button type="button" size="small" variant={showPaths ? "primary" : "secondary"} onClick={() => setShowPaths((current) => !current)}>
+                    Paths
+                  </Button>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant={showScoutTrails ? "primary" : "secondary"}
+                    onClick={() => setShowScoutTrails((current) => !current)}
+                  >
+                    Scouts
+                  </Button>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant={showReports ? "primary" : "secondary"}
+                    onClick={() => setShowReports((current) => !current)}
+                  >
+                    Reports
+                  </Button>
+                </div>
+              </div>
             </div>
             <aside className={styles.minimapCard}>
               <div className={styles.minimapHeader}>
-                <strong className={styles.cardTitle}>Minimap</strong>
+                <strong className={styles.cardTitle}>Frontier Lens</strong>
                 <Badge tone="info">{cameraView.detailLevel}</Badge>
               </div>
               <div className={styles.minimapFrame}>
@@ -1325,7 +1503,7 @@ export function MapPage() {
                   onClick={handleMinimapClick}
                 />
               </div>
-              <p className={styles.minimapHint}>Click the minimap to re-center the camera.</p>
+              <p className={styles.minimapHint}>Click the minimap to re-center the camera and bounce the battlefield focus.</p>
               {visibleAllianceMarkers.length > 0 ? (
                 <div className={styles.minimapMarkerRow}>
                   {visibleAllianceMarkers.map((marker) => (
@@ -1341,6 +1519,27 @@ export function MapPage() {
                 </div>
               ) : null}
             </aside>
+            <div className={styles.mapDock}>
+              <article className={styles.dockCard}>
+                <span className={styles.dockEyebrow}>Field Lens</span>
+                <strong className={styles.dockStrong}>{cameraView.detailLevel.toUpperCase()}</strong>
+                <p className={styles.dockCopy}>Chunk radius {chunkRequest.radius} · center {cameraView.centerTileX},{cameraView.centerTileY}</p>
+              </article>
+              <article className={styles.dockCard}>
+                <span className={styles.dockEyebrow}>Route Grid</span>
+                <strong className={styles.dockStrong}>{formatNumber(activeMarchCount)} active orders</strong>
+                <p className={styles.dockCopy}>
+                  Paths {showPaths ? "on" : "off"} · scouts {showScoutTrails ? "on" : "off"} · reports {showReports ? "on" : "off"}
+                </p>
+              </article>
+              <article className={styles.dockCard}>
+                <span className={styles.dockEyebrow}>Alliance Signals</span>
+                <strong className={styles.dockStrong}>{formatNumber(allianceMarkers.length)} live markers</strong>
+                <p className={styles.dockCopy}>
+                  {selectedTargetName ? `Selected ${selectedTargetName}` : "Select a city, camp, or node to open command actions."}
+                </p>
+              </article>
+            </div>
             <Suspense fallback={<div className={styles.hero}>Opening map...</div>}>
               <WorldMap
                 worldSize={worldChunk.size}
@@ -1607,208 +1806,288 @@ export function MapPage() {
         </aside>
       </section>
 
-      <TargetDetailSheet
-        open={targetSheetOpen}
-        target={
-          selectedCity && !selectedCity.isCurrentPlayer
-            ? { kind: "CITY", city: selectedCity }
-            : selectedPoi
-              ? { kind: "POI", poi: selectedPoi }
-              : null
-        }
-        projectedOutcome={selectedCity?.projectedOutcome ?? selectedPoi?.projectedOutcome ?? null}
-        onClose={() => setTargetSheetOpen(false)}
-        onProceed={() =>
-          setComposerMode(selectedCity ? "CITY_ATTACK" : selectedPoi?.kind === "BARBARIAN_CAMP" ? "BARBARIAN_ATTACK" : "RESOURCE_GATHER")
-        }
-        onScout={() => setComposerMode("SCOUT")}
-        onRally={selectedCity || selectedPoi?.kind === "BARBARIAN_CAMP" ? () => setComposerMode("RALLY") : null}
-      />
-
       <BottomSheet
-        open={Boolean(fieldCommand)}
-        title={fieldCommand ? `Field Command: ${fieldCommand.label}` : "Field Command"}
-        onClose={() => setFieldCommand(null)}
+        open={targetSheetVisible || Boolean(composerMode)}
+        title={composerMode ? composerTitle : `Objective: ${selectedTargetName ?? "-"}`}
+        onClose={() => {
+          if (composerMode) {
+            setComposerMode(null);
+          } else {
+            setTargetSheetOpen(false);
+          }
+        }}
+        mode="aside"
         actions={
-          <>
-            <Button type="button" variant="ghost" onClick={() => setFieldCommand(null)}>
-              Close
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={createMarkerMutation.isPending}
-              onClick={() => void handleFieldMarkerCreate()}
-            >
-              {createMarkerMutation.isPending ? "Posting" : "Post Marker"}
-            </Button>
-          </>
-        }
-      >
-        {fieldCommand ? (
-          <div className={styles.detailList}>
-            <div className={styles.fieldCommandMeta}>
-              <p className={styles.muted}>Target type: {fieldCommand.kind.toLowerCase()}</p>
-              <p className={styles.muted}>
-                Coordinates: {fieldCommand.x}, {fieldCommand.y}
-              </p>
-            </div>
-            <div className={styles.actionRow}>
-              <Button type="button" size="small" variant="secondary" onClick={handleFieldCommandFocus}>
-                Focus
-              </Button>
-              {fieldCommand.kind !== "TILE" ? (
-                <Button type="button" size="small" variant="secondary" onClick={handleFieldCommandOpenTarget}>
-                  Open Target
-                </Button>
-              ) : null}
-              {fieldCommand.kind !== "TILE" ? (
-                <Button type="button" size="small" variant="primary" onClick={handleFieldCommandScout}>
-                  Scout
-                </Button>
-              ) : null}
-            </div>
-            <label className={styles.fieldCommandLabel}>
-              <span className={styles.muted}>Alliance marker label</span>
-              <input
-                className={styles.commandInput}
-                type="text"
-                value={fieldMarkerDraft}
-                onChange={(event) => setFieldMarkerDraft(event.target.value)}
-                placeholder={`Marker for ${fieldCommand.label}`}
-              />
-            </label>
-            <p className={styles.commandHint}>
-              {alliance
-                ? "Right-click lets you tag the frontier without leaving the map route."
-                : "Join an alliance to turn field commands into persistent map markers."}
-            </p>
-          </div>
-        ) : null}
-      </BottomSheet>
-
-      <BottomSheet
-        open={Boolean(selectedMarch)}
-        title={selectedMarch ? `March Orders: ${selectedMarch.targetPoiName ?? selectedMarch.targetCityName ?? "Target"}` : "March Orders"}
-        onClose={() => setSelectedMarchId(null)}
-        actions={
-          selectedMarch ? (
+          composerMode ? (
             <>
-              <Button type="button" variant="ghost" onClick={() => setSelectedMarchId(null)}>
-                Close
+              <Button type="button" variant="ghost" onClick={() => setComposerMode(null)}>
+                Cancel
               </Button>
               <Button
                 type="button"
-                variant="secondary"
-                disabled={retargetMutation.isPending || !canRetargetMarch(selectedMarch, selectedCity, selectedPoi)}
+                disabled={isSendingMarch || (composerMode !== "SCOUT" && totalAssignedTroops <= 0)}
+                onClick={() => void handleComposerConfirm()}
+              >
+                {composerActionLabel}
+              </Button>
+            </>
+          ) : selectedCity || selectedPoi ? (
+            <>
+              <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
+                {copy.map.scout}
+              </Button>
+              {selectedCity || selectedPoi?.kind === "BARBARIAN_CAMP" ? (
+                <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
+                  {copy.map.rally}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="primary"
                 onClick={() =>
-                  retargetMutation.mutate({
-                    marchId: selectedMarch.id,
-                    targetCityId: selectedMarch.objective === "CITY_ATTACK" ? selectedCity?.cityId : undefined,
-                    targetPoiId: selectedMarch.objective !== "CITY_ATTACK" ? selectedPoi?.id : undefined,
-                  })
+                  openComposer(
+                    selectedCity
+                      ? "CITY_ATTACK"
+                      : selectedPoi?.kind === "BARBARIAN_CAMP"
+                        ? "BARBARIAN_ATTACK"
+                        : "RESOURCE_GATHER",
+                  )
                 }
               >
-                {copy.map.retarget}
-              </Button>
-              <Button type="button" disabled={isRecallingMarch} onClick={() => recallMarch(selectedMarch.id)}>
-                {isRecallingMarch ? "Please wait" : "Recall"}
+                {selectedCity
+                  ? "Attack City"
+                  : selectedPoi?.kind === "BARBARIAN_CAMP"
+                    ? "Attack Camp"
+                    : "Gather Here"}
               </Button>
             </>
           ) : undefined
         }
       >
-        {selectedMarch ? (
-          <div className={styles.detailList}>
-            <p className={styles.muted}>Commander: {selectedMarch.commanderName}</p>
-            <p className={styles.muted}>State: {selectedMarch.state.toLowerCase()}</p>
-            <p className={styles.muted}>{getMarchTimingLabel(selectedMarch, now)}</p>
-            <p className={styles.muted}>Distance: {formatNumber(selectedMarch.distance)} tiles</p>
-            {selectedMarch.cargo.amount > 0 ? (
-              <p className={styles.muted}>
-                Cargo: {formatNumber(selectedMarch.cargo.amount)} {selectedMarch.cargo.resourceType?.toLowerCase() ?? "supplies"}
-              </p>
-            ) : null}
-            <p className={styles.muted}>
-              Select another valid target on the map, then use {copy.map.retarget.toLowerCase()} while this sheet is open.
-            </p>
-          </div>
-        ) : null}
-      </BottomSheet>
-
-      <BottomSheet
-        open={Boolean(composerMode)}
-        title={composerMode === "SCOUT" ? "Scout Mission" : composerMode === "RALLY" ? "Rally Setup" : copy.map.confirm}
-        onClose={() => setComposerMode(null)}
-        actions={
-          <>
-            <Button type="button" variant="ghost" onClick={() => setComposerMode(null)}>
-              Cancel
-            </Button>
-            <Button type="button" disabled={isSendingMarch || (composerMode !== "SCOUT" && totalAssignedTroops <= 0)} onClick={() => void handleComposerConfirm()}>
-              {composerMode === "SCOUT"
-                ? "Send Scout"
-                : composerMode === "RALLY"
-                  ? "Open Rally"
-                  : composerMode === "RESOURCE_GATHER"
-                    ? "Start Gathering"
-                    : composerMode === "BARBARIAN_ATTACK"
-                      ? "March to Camp"
-                      : "Send March"}
-            </Button>
-          </>
-        }
-      >
         <div className={styles.composerGrid}>
-          <p className={styles.muted}>
-            {selectedCity
-              ? `${selectedCity.cityName} | ${selectedCity.ownerName}`
-              : selectedPoi
-                ? `${selectedPoi.label} | ${selectedPoi.kind.toLowerCase()}`
-                : ""}
-          </p>
-          {composerMode !== "SCOUT" ? (
+          {composerMode ? (
             <>
-              <div className={styles.composerRow}>
-                <span className={styles.muted}>Commander</span>
-                <select value={commanderId} onChange={(event) => setCommanderId(event.target.value)}>
-                  {state.city.commanders.map((commander) => (
-                    <option key={commander.id} value={commander.id}>
-                      {commander.name} L{commander.level}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {state.city.troops.map((troop) => (
-                <div key={troop.type} className={styles.sliderRow}>
-                  <label htmlFor={`troop-${troop.type}`}>
-                    <span>
-                      {troop.label} ({formatNumber(troop.quantity)})
-                    </span>
-                    <strong>{formatNumber(troopPayload[troop.type])}</strong>
-                  </label>
-                  <input
-                    id={`troop-${troop.type}`}
-                    type="range"
-                    min={0}
-                    max={troop.quantity}
-                    value={troopPayload[troop.type]}
-                    onChange={(event) =>
-                      setTroopPayload((current) => ({
-                        ...current,
-                        [troop.type]: Number(event.target.value),
-                      }))
-                    }
-                  />
+              <section className={styles.composerHero}>
+                <div>
+                  <p className={styles.hudEyebrow}>Command Composer</p>
+                  <strong className={styles.cardTitle}>{selectedTargetName ?? "Select a target"}</strong>
+                  <p className={styles.muted}>{selectedTargetSubtitle}</p>
                 </div>
-              ))}
+                <Badge
+                  tone={
+                    composerMode === "SCOUT"
+                      ? "info"
+                      : composerMode === "RESOURCE_GATHER"
+                        ? "success"
+                        : "warning"
+                  }
+                >
+                  {composerMode === "SCOUT"
+                    ? "Recon"
+                    : composerMode === "RESOURCE_GATHER"
+                      ? "Gather"
+                      : composerMode === "RALLY"
+                        ? "Rally"
+                        : "Attack"}
+                </Badge>
+              </section>
+              <div className={styles.composerStats}>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Distance</span>
+                  <strong className={styles.composerStatValue}>
+                    {selectedTargetDistance != null ? `${formatNumber(selectedTargetDistance)} tiles` : "-"}
+                  </strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Report" : "ETA"}</span>
+                  <strong className={styles.composerStatValue}>
+                    {composerMode === "SCOUT"
+                      ? "Mail Intel"
+                      : estimatedMarchEtaMs != null
+                        ? formatTimeRemaining(new Date(now + estimatedMarchEtaMs).toISOString(), now)
+                        : "Await troops"}
+                  </strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Coverage" : "Power"}</span>
+                  <strong className={styles.composerStatValue}>
+                    {composerMode === "SCOUT" ? "Target Readout" : formatNumber(estimatedPower)}
+                  </strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Sweep" : "Carry"}</span>
+                  <strong className={styles.composerStatValue}>
+                    {composerMode === "SCOUT" ? "High Detail" : formatNumber(estimatedCarry)}
+                  </strong>
+                </article>
+              </div>
+              {composerMode !== "SCOUT" ? (
+                <>
+                  <section className={styles.commanderCard}>
+                    <div className={styles.composerRow}>
+                      <span className={styles.muted}>Commander</span>
+                      <select aria-label="Commander" value={commanderId} onChange={(event) => setCommanderId(event.target.value)}>
+                        {state.city.commanders.map((commander) => (
+                          <option key={commander.id} value={commander.id}>
+                            {commander.name} L{commander.level}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className={styles.commanderMeta}>
+                      March +{selectedCommander?.marchSpeedBonusPct ?? 0}% · Carry +
+                      {selectedCommander?.carryBonusPct ?? 0}% · Attack +{selectedCommander?.attackBonusPct ?? 0}% ·
+                      Defense +{selectedCommander?.defenseBonusPct ?? 0}%
+                    </p>
+                  </section>
+                  <div className={styles.troopDeck}>
+                    {state.city.troops.map((troop) => (
+                      <article key={troop.type} className={styles.sliderCard}>
+                        <label htmlFor={`troop-${troop.type}`} className={styles.sliderLabelRow}>
+                          <span>
+                            <strong>{troop.label}</strong>
+                            <span className={styles.sliderMeta}>
+                              Reserve {formatNumber(troop.quantity)} · Speed {troop.speed.toFixed(2)} · Carry{" "}
+                              {formatNumber(troop.carry)}
+                            </span>
+                          </span>
+                          <strong>{formatNumber(troopPayload[troop.type])}</strong>
+                        </label>
+                        <input
+                          id={`troop-${troop.type}`}
+                          className={styles.sliderTrack}
+                          type="range"
+                          min={0}
+                          max={troop.quantity}
+                          value={troopPayload[troop.type]}
+                          onChange={(event) =>
+                            setTroopPayload((current) => ({
+                              ...current,
+                              [troop.type]: Number(event.target.value),
+                            }))
+                          }
+                        />
+                        <p className={styles.sliderFooter}>
+                          {troop.quantity > 0
+                            ? `${Math.round((troopPayload[troop.type] / troop.quantity) * 100)}% committed`
+                            : "No units available"}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                  <p className={styles.composerHint}>
+                    {composerMode === "RALLY"
+                      ? "Rally setup uses your selected commander and formation as the lead frame for allied joins."
+                      : composerMode === "RESOURCE_GATHER"
+                        ? "Gathering favors higher carry and shorter routes so your return loop stays efficient."
+                        : "Attack routes pulse on launch and arrival. Adjust composition before committing the march."}
+                  </p>
+                </>
+              ) : (
+                <SectionCard kicker="Recon Sweep" title="Scout briefing">
+                  <div className={styles.detailList}>
+                    <p className={styles.muted}>
+                      Scout missions do not carry troops. The result arrives as a detailed inbox report with refreshed
+                      target intel.
+                    </p>
+                    {selectedPoi?.resourceType ? (
+                      <p className={styles.muted}>Resource Type: {copy.poiResources[selectedPoi.resourceType]}</p>
+                    ) : null}
+                    <p className={styles.muted}>
+                      Use recon before a city strike when you want cleaner visibility on defenses and route quality.
+                    </p>
+                  </div>
+                </SectionCard>
+              )}
             </>
-          ) : (
-            <div className={styles.detailList}>
-              <p className={styles.muted}>Scout missions do not carry troops. The result will arrive as a detailed inbox report.</p>
-              {selectedPoi?.resourceType ? <p className={styles.muted}>Resource Type: {copy.poiResources[selectedPoi.resourceType]}</p> : null}
-            </div>
-          )}
+          ) : selectedCity ? (
+            <>
+              <section className={styles.composerHero}>
+                <div>
+                  <p className={styles.hudEyebrow}>Siege Target</p>
+                  <strong className={styles.cardTitle}>{selectedTargetName}</strong>
+                  <p className={styles.muted}>{selectedTargetSubtitle}</p>
+                </div>
+                <Badge tone={selectedCity.projectedOutcome === "ATTACKER_WIN" ? "success" : "warning"}>
+                  {selectedCity.projectedOutcome === "ATTACKER_WIN" ? "Favorable" : "Resistant"}
+                </Badge>
+              </section>
+              <div className={styles.composerStats}>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Defense</span>
+                  <strong className={styles.composerStatValue}>{formatNumber(selectedCity.defensePower)}</strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Distance</span>
+                  <strong className={styles.composerStatValue}>
+                    {selectedCity.distance != null ? `${formatNumber(selectedCity.distance)} tiles` : "-"}
+                  </strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Fog State</span>
+                  <strong className={styles.composerStatValue}>{selectedCity.fogState.toLowerCase()}</strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Type</span>
+                  <strong className={styles.composerStatValue}>Player City</strong>
+                </article>
+              </div>
+              <SectionCard kicker="Operational Readout" title="Field intel">
+                <div className={styles.detailList}>
+                  <p className={styles.muted}>
+                    Projected defense window reacts to your selected commander and current march weight.
+                  </p>
+                  <p className={styles.muted}>
+                    Scout first if you want fresher garrison information before committing troops.
+                  </p>
+                </div>
+              </SectionCard>
+            </>
+          ) : selectedPoi ? (
+            <>
+              <section className={styles.composerHero}>
+                <div>
+                  <p className={styles.hudEyebrow}>Field Objective</p>
+                  <strong className={styles.cardTitle}>{selectedTargetName}</strong>
+                  <p className={styles.muted}>{selectedTargetSubtitle}</p>
+                </div>
+                <Badge tone={selectedPoi.kind === "RESOURCE_NODE" ? "info" : "warning"}>
+                  {selectedPoi.kind === "RESOURCE_NODE" ? "Harvestable" : "Resistant"}
+                </Badge>
+              </section>
+              <div className={styles.composerStats}>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Level</span>
+                  <strong className={styles.composerStatValue}>L{selectedPoi.level}</strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Distance</span>
+                  <strong className={styles.composerStatValue}>
+                    {selectedPoi.distance != null ? `${formatNumber(selectedPoi.distance)} tiles` : "-"}
+                  </strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>State</span>
+                  <strong className={styles.composerStatValue}>{selectedPoi.state.toLowerCase()}</strong>
+                </article>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Amount</span>
+                  <strong className={styles.composerStatValue}>
+                    {selectedPoi.remainingAmount != null ? formatNumber(selectedPoi.remainingAmount) : "-"}
+                  </strong>
+                </article>
+              </div>
+              <SectionCard kicker="Operational Readout" title="Field intel">
+                <div className={styles.detailList}>
+                  <p className={styles.muted}>
+                    {selectedPoi.kind === "BARBARIAN_CAMP"
+                      ? "Barbarian camps pay out best when opened with a stronger commander frame."
+                      : "Resource nodes reward higher carry capacity and faster return routes."}
+                  </p>
+                </div>
+              </SectionCard>
+            </>
+          ) : null}
         </div>
       </BottomSheet>
     </section>

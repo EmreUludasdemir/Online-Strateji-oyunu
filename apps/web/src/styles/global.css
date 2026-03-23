@@ -26,9 +26,9 @@ body,
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 0%, rgba(244, 215, 156, 0.13), transparent 20%),
-    radial-gradient(circle at 84% 10%, rgba(75, 158, 160, 0.16), transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(193, 122, 84, 0.18), transparent 28%),
+    radial-gradient(circle at 14% 8%, rgba(208, 166, 91, 0.16), transparent 22%),
+    radial-gradient(circle at 84% 12%, rgba(75, 147, 145, 0.14), transparent 24%),
+    radial-gradient(circle at 52% 94%, rgba(176, 111, 76, 0.12), transparent 28%),
     linear-gradient(180deg, var(--color-bg-850) 0%, var(--color-bg-900) 42%, var(--color-bg-950) 100%);
 }
 
@@ -42,10 +42,10 @@ body::after {
 
 body::before {
   background:
-    linear-gradient(90deg, rgba(255, 244, 217, 0.02), transparent 14%, rgba(255, 244, 217, 0.02)),
-    repeating-linear-gradient(135deg, rgba(255, 244, 217, 0.015) 0 2px, transparent 2px 18px),
-    repeating-radial-gradient(circle at center, rgba(255, 244, 217, 0.012) 0 1px, transparent 1px 32px);
-  opacity: 0.54;
+    linear-gradient(90deg, rgba(247, 239, 223, 0.02), transparent 14%, rgba(247, 239, 223, 0.02)),
+    repeating-linear-gradient(135deg, rgba(247, 239, 223, 0.015) 0 2px, transparent 2px 18px),
+    repeating-radial-gradient(circle at center, rgba(247, 239, 223, 0.012) 0 1px, transparent 1px 32px);
+  opacity: 0.48;
   animation: ambientDrift 18s ease-in-out infinite alternate;
 }
 
@@ -92,8 +92,8 @@ a {
 }
 
 ::selection {
-  background: rgba(226, 187, 114, 0.28);
-  color: #fff9ef;
+  background: rgba(208, 166, 91, 0.28);
+  color: #fff5e2;
 }
 
 /* ─── Keyframe Animasyonları ─────────────────────────────────────────── */

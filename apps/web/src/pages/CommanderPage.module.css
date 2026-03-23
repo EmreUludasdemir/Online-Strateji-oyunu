@@ -57,10 +57,26 @@
 .summaryCard,
 .rosterCard,
 .profileCard {
+  position: relative;
+  overflow: hidden;
   padding: 0.95rem 1rem;
-  border: 1px solid var(--color-panel-edge);
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(64, 38, 24, 0.84), rgba(27, 15, 10, 0.96));
+  border: 1px solid var(--color-panel-line);
+  background:
+    radial-gradient(circle at 16% 0%, rgba(244, 220, 166, 0.08), transparent 22%),
+    linear-gradient(180deg, var(--surface-panel-top), var(--surface-panel-mid) 46%, var(--surface-panel-bottom)),
+    linear-gradient(90deg, var(--surface-panel-glow), transparent 72%);
+}
+
+.summaryCard::after,
+.rosterCard::after,
+.profileCard::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--color-panel-line);
+  pointer-events: none;
 }
 
 .summaryValue,

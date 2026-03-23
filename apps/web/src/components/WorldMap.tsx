@@ -934,27 +934,49 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
 
-    const outer = this.add.circle(selection.x, selection.y, this.selectedMarchId ? 28 : 32, 0x000000, 0);
-    outer.setStrokeStyle(3, 0xf4d79c, 0.92);
-    const inner = this.add.circle(selection.x, selection.y, this.selectedMarchId ? 18 : 22, 0x000000, 0);
-    inner.setStrokeStyle(1, this.selectedMarchId ? 0x7dd3fc : 0x72ced1, 0.55);
+    const ringRadius = this.selectedMarchId ? 28 : 32;
+    const accent = this.selectedMarchId ? 0x7dd3fc : 0xf4d79c;
+    const secondary = this.selectedMarchId ? 0xf4d79c : 0x72ced1;
+    const halo = this.add.circle(selection.x, selection.y, ringRadius + 12, accent, this.selectedMarchId ? 0.08 : 0.1);
+    const outer = this.add.circle(selection.x, selection.y, ringRadius, 0x000000, 0);
+    outer.setStrokeStyle(3, accent, 0.92);
+    const tracker = this.add.arc(selection.x, selection.y, ringRadius + 7, 18, 148, false, secondary, 0);
+    tracker.setStrokeStyle(4, secondary, 0.82);
+    const core = this.add.circle(selection.x, selection.y, this.selectedMarchId ? 7 : 8, accent, 0.14);
+    core.setStrokeStyle(2, secondary, 0.52);
 
-    this.fxLayer.add([outer, inner]);
-    this.selectionObjects.push(outer, inner);
+    this.fxLayer.add([halo, outer, tracker, core]);
+    this.selectionObjects.push(halo, outer, tracker, core);
 
+    this.tweens.add({
+      targets: halo,
+      scale: { from: 0.96, to: 1.16 },
+      alpha: { from: 0.16, to: 0.04 },
+      duration: 1400,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: -1,
+    });
     this.tweens.add({
       targets: outer,
       scale: { from: 0.94, to: 1.08 },
-      alpha: { from: 0.9, to: 0.6 },
+      alpha: { from: 0.9, to: 0.58 },
       duration: 1100,
       ease: "Sine.easeInOut",
       yoyo: true,
       repeat: -1,
     });
     this.tweens.add({
-      targets: inner,
-      scale: { from: 0.98, to: 1.16 },
-      alpha: { from: 0.45, to: 0.22 },
+      targets: tracker,
+      angle: 360,
+      duration: 3200,
+      ease: "Linear",
+      repeat: -1,
+    });
+    this.tweens.add({
+      targets: core,
+      scale: { from: 0.92, to: 1.18 },
+      alpha: { from: 0.24, to: 0.1 },
       duration: 900,
       ease: "Sine.easeInOut",
       yoyo: true,
@@ -1158,10 +1180,38 @@ class FrontierMapScene extends Phaser.Scene {
         (march.targetCityId && march.targetCityId === this.selectedCityId) ||
         (march.targetPoiId && march.targetPoiId === this.selectedPoiId);
       const alpha = highlight ? 0.95 : this.currentDetailLevel === "far" ? 0.42 : 0.62;
-      this.routeGraphics.lineStyle(this.currentDetailLevel === "far" ? 2 : 3, color, alpha);
+      const angle = Phaser.Math.Angle.Between(origin.x, origin.y, target.x, target.y);
+      const trailWidth = this.currentDetailLevel === "far" ? 2 : 3;
+      const underlayWidth = this.currentDetailLevel === "far" ? 6 : 8;
+      const arrowProgress = this.currentDetailLevel === "far" ? 0.56 : 0.68;
+      const arrowSize = highlight ? (this.currentDetailLevel === "far" ? 9 : 12) : this.currentDetailLevel === "far" ? 7 : 10;
+      const arrowX = Phaser.Math.Linear(origin.x, target.x, arrowProgress);
+      const arrowY = Phaser.Math.Linear(origin.y, target.y, arrowProgress);
+      this.routeGraphics.lineStyle(underlayWidth, 0x090d10, highlight ? 0.34 : 0.2);
+      this.routeGraphics.lineBetween(origin.x, origin.y, target.x, target.y);
+      this.routeGraphics.lineStyle(trailWidth + 1, color, highlight ? 0.24 : 0.16);
+      this.routeGraphics.lineBetween(origin.x, origin.y, target.x, target.y);
+      this.routeGraphics.lineStyle(trailWidth, color, alpha);
       this.drawDashedLine(this.routeGraphics, origin.x, origin.y, target.x, target.y, dashOffset);
+      this.routeGraphics.fillStyle(color, highlight ? 0.92 : 0.72);
+      this.routeGraphics.beginPath();
+      this.routeGraphics.moveTo(arrowX + Math.cos(angle) * arrowSize, arrowY + Math.sin(angle) * arrowSize);
+      this.routeGraphics.lineTo(
+        arrowX + Math.cos(angle + Math.PI * 0.78) * arrowSize * 0.82,
+        arrowY + Math.sin(angle + Math.PI * 0.78) * arrowSize * 0.82,
+      );
+      this.routeGraphics.lineTo(
+        arrowX + Math.cos(angle - Math.PI * 0.78) * arrowSize * 0.82,
+        arrowY + Math.sin(angle - Math.PI * 0.78) * arrowSize * 0.82,
+      );
+      this.routeGraphics.closePath();
+      this.routeGraphics.fillPath();
+      this.routeGraphics.lineStyle(2, 0xf7edd9, highlight ? 0.88 : 0.46);
+      this.routeGraphics.strokeCircle(target.x, target.y, highlight ? 10 : 8);
       this.routeGraphics.fillStyle(color, highlight ? 0.95 : 0.7);
-      this.routeGraphics.fillCircle(target.x, target.y, highlight ? 7 : 5);
+      this.routeGraphics.fillCircle(target.x, target.y, highlight ? 6 : 5);
+      this.routeGraphics.fillStyle(0xf7edd9, highlight ? 0.92 : 0.72);
+      this.routeGraphics.fillCircle(target.x, target.y, highlight ? 2.5 : 2);
     }
   }
 
