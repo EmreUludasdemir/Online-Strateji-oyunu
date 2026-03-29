@@ -1,0 +1,263 @@
+﻿.page,
+.layout,
+.summaryGrid,
+.tabRow,
+.podiumGrid,
+.table,
+.sideStack,
+.rewardList,
+.sideActions,
+.mainColumn,
+.sideColumn {
+  display: grid;
+  gap: 1rem;
+}
+
+.page {
+  animation: fadeSlideUp 400ms var(--motion-smooth) both;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 1.2rem;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(244, 220, 166, 0.12), transparent 24%),
+    radial-gradient(circle at 14% 14%, rgba(81, 163, 161, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(37, 29, 24, 0.94), rgba(14, 11, 9, 0.99));
+  box-shadow: var(--shadow-soft);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: calc(var(--radius-lg) - 8px);
+  border: 1px solid rgba(247, 239, 223, 0.08);
+  pointer-events: none;
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kicker,
+.summaryLabel,
+.tabEyebrow,
+.podiumLabel {
+  color: var(--color-ink-300);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.heroTitle,
+.summaryValue,
+.podiumName,
+.podiumScore,
+.rankValue,
+.personalScore {
+  font-family: var(--font-display);
+}
+
+.heroTitle {
+  font-size: clamp(2rem, 1.6rem + 1.5vw, 3rem);
+}
+
+.heroLead {
+  margin-top: 0.45rem;
+  max-width: 74ch;
+  color: var(--color-ink-200);
+}
+
+.summaryGrid {
+  margin-top: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summaryCard,
+.podiumCard,
+.rankRow,
+.rewardRow,
+.personalMetric {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(244, 220, 166, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(58, 42, 32, 0.9), rgba(18, 13, 10, 0.98)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
+  border: 1px solid rgba(244, 220, 166, 0.08);
+}
+
+.summaryCard,
+.podiumCard,
+.rankRow,
+.rewardRow,
+.personalMetric {
+  padding: 1rem;
+}
+
+.summaryValue,
+.podiumScore,
+.personalScore {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1.15rem;
+}
+
+.summaryMeta,
+.podiumMeta,
+.rankMeta,
+.sideMeta,
+.sideLead {
+  margin-top: 0.3rem;
+  color: var(--color-ink-300);
+  line-height: 1.5;
+}
+
+.layout {
+  margin-top: 1rem;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+  align-items: start;
+}
+
+.tabRow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tabButton {
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(244, 220, 166, 0.08);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(180deg, rgba(52, 37, 28, 0.78), rgba(18, 13, 10, 0.96)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.05), transparent 72%);
+  color: var(--color-ink-100);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-base);
+}
+
+.tabButton:hover {
+  transform: translateY(-2px);
+  border-color: rgba(244, 220, 166, 0.2);
+}
+
+.tabButtonActive {
+  border-color: rgba(244, 220, 166, 0.28);
+  box-shadow: var(--shadow-soft), 0 0 26px rgba(244, 220, 166, 0.1);
+}
+
+.tabEyebrow {
+  display: block;
+  margin-bottom: 0.28rem;
+}
+
+.podiumGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+
+.podiumCard {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.podiumFirst {
+  min-height: 240px;
+  border-color: rgba(244, 220, 166, 0.26);
+}
+
+.podiumSecond,
+.podiumThird {
+  min-height: 200px;
+}
+
+.podiumName {
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+
+.table {
+  margin-top: 1rem;
+}
+
+.rankRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.rankRowActive {
+  border-color: rgba(81, 163, 161, 0.24);
+  box-shadow: var(--shadow-soft), 0 0 28px rgba(81, 163, 161, 0.12);
+}
+
+.rankIdentity {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.rankNumber {
+  width: 52px;
+  min-height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(244, 220, 166, 0.08);
+  color: var(--color-gold-200);
+  font-family: var(--font-mono);
+}
+
+.rankValue {
+  font-size: 1.1rem;
+}
+
+.rewardList {
+  gap: 0.75rem;
+}
+
+.sideActions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feedback {
+  color: var(--color-ink-300);
+}
+
+@media (max-width: 1180px) {
+  .summaryGrid,
+  .podiumGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .heroTop,
+  .rankRow,
+  .rankIdentity {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summaryGrid,
+  .tabRow,
+  .podiumGrid,
+  .sideActions {
+    grid-template-columns: 1fr;
+  }
+}

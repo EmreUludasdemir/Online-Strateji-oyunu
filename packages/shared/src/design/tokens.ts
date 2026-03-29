@@ -1,19 +1,19 @@
 export const frontierColors = {
-  parchmentYellow: "#f4dca6",
-  brass: "#c2923e",
+  parchmentYellow: "#e2c275",
+  brass: "#b58d22",
   copper: "#965a3b",
   iznikBlue: "#598bc0",
   imperialTeal: "#51a3a1",
   emberRed: "#d86851",
-  nightCanvas: "#0a0807",
+  nightCanvas: "#0a0a0c",
   dayCanvas: "#f7efe1",
   highContrastCanvas: "#050505",
-  inkDark: "#120d0a",
-  inkLight: "#fdf6ea",
+  inkDark: "#101012",
+  inkLight: "#f4f4f5",
 } as const;
 
 export const frontierFonts = {
-  display: "Cinzel, Cormorant Garamond, Baskerville Old Face, Palatino Linotype, Georgia, serif",
+  display: "Playfair Display, Cinzel, Cormorant Garamond, Baskerville Old Face, Palatino Linotype, Georgia, serif",
   body: "Inter, Segoe UI, Noto Sans, Helvetica Neue, Arial, sans-serif",
   mono: "JetBrains Mono, Cascadia Mono, Consolas, Courier New, monospace",
 } as const;
@@ -46,9 +46,9 @@ export const frontierThemes = {
   },
   night: {
     background: frontierColors.nightCanvas,
-    surface: "#1c1410",
+    surface: "#161618",
     text: frontierColors.inkLight,
-    accent: frontierColors.brass,
+    accent: frontierColors.parchmentYellow,
   },
   highContrast: {
     background: frontierColors.highContrastCanvas,

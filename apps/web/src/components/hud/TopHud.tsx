@@ -12,37 +12,24 @@ export interface QueueSummaryItem {
 }
 
 export function TopHud({
+  brand,
   resources,
-  queueItems,
-  meta,
   actions,
 }: {
+  brand?: ReactNode;
   resources: Array<{ label: string; value: number }>;
-  queueItems: QueueSummaryItem[];
-  meta: ReactNode;
   actions: ReactNode;
 }) {
   return (
-    <div className={styles.topHud}>
+    <header className={styles.topHud}>
+      {brand && <div className={styles.topBrand}>{brand}</div>}
       <div className={styles.resourceRow}>
         {resources.map((resource) => (
           <ResourcePill key={resource.label} label={resource.label} value={resource.value} />
         ))}
       </div>
-      <div className={styles.metaRow}>
-        <div className={styles.queueRail}>
-          {queueItems.map((item) => (
-            <article key={item.id} className={styles.queueCard}>
-              <p className={styles.queueLabel}>{item.label}</p>
-              <strong className={styles.queueValue}>{item.value}</strong>
-              <p className={styles.queueHint}>{item.hint}</p>
-            </article>
-          ))}
-        </div>
-        <div className={styles.desktopOnly}>{meta}</div>
-        <div className={styles.quickActions}>{actions}</div>
-      </div>
-    </div>
+      <div className={styles.quickActions}>{actions}</div>
+    </header>
   );
 }
 

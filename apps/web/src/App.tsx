@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
@@ -33,6 +33,26 @@ const CommanderPage = lazy(async () => {
   return { default: module.CommanderPage };
 });
 
+const ResearchPage = lazy(async () => {
+  const module = await import("./pages/ResearchPage");
+  return { default: module.ResearchPage };
+});
+
+const LeaderboardPage = lazy(async () => {
+  const module = await import("./pages/LeaderboardPage");
+  return { default: module.LeaderboardPage };
+});
+
+const MessageCenterPage = lazy(async () => {
+  const module = await import("./pages/MessageCenterPage");
+  return { default: module.MessageCenterPage };
+});
+
+const MarketPage = lazy(async () => {
+  const module = await import("./pages/MarketPage");
+  return { default: module.MarketPage };
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -61,9 +81,13 @@ export default function App() {
               <Route path="/app" element={<GameLayout />}>
                 <Route index element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="research" element={<ResearchPage />} />
                 <Route path="commanders" element={<CommanderPage />} />
                 <Route path="map" element={<MapPage />} />
                 <Route path="reports" element={<ReportsPage />} />
+                <Route path="leaderboards" element={<LeaderboardPage />} />
+                <Route path="messages" element={<MessageCenterPage />} />
+                <Route path="market" element={<MarketPage />} />
                 <Route path="alliance" element={<AlliancePage />} />
                 <Route path="alliance/roles" element={<AllianceRolesPage />} />
               </Route>

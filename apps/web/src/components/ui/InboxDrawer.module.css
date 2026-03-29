@@ -1,52 +1,199 @@
-.list {
+﻿.layout {
   display: grid;
-  gap: 0.85rem;
+  grid-template-columns: minmax(300px, 0.42fr) minmax(0, 0.58fr);
+  gap: 1rem;
+  min-height: 560px;
 }
 
-.entry {
-  padding: 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-panel-edge);
-  background:
-    linear-gradient(180deg, rgba(81, 48, 30, 0.44), rgba(32, 18, 13, 0.94)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.1), transparent 70%);
+.archiveRail,
+.detailPane,
+.groupList,
+.archiveGroups {
+  display: grid;
+  gap: 0.9rem;
 }
 
-.entryHeader {
+.archiveHeader,
+.detailMetaRow,
+.entryHead,
+.entryMeta,
+.actionRow,
+.detailColumns {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
 }
 
-.entryTitle {
+.kicker,
+.groupLabel,
+.detailLabel,
+.detailCardLabel,
+.detailRef {
+  color: var(--color-gold-200);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+}
+
+.archiveTitle,
+.detailTitle {
   font-family: var(--font-display);
-  font-size: 1.05rem;
 }
 
-.entryBody {
-  margin-top: 0.45rem;
-  color: var(--color-ink-200);
+.archiveTitle {
+  font-size: 1.6rem;
 }
 
-.meta {
-  margin-top: 0.65rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  color: var(--color-ink-300);
-  font-size: 0.86rem;
-}
-
-.rewardList {
-  margin-top: 0.75rem;
+.groupBlock {
   display: grid;
-  gap: 0.35rem;
-  color: var(--color-ink-200);
+  gap: 0.7rem;
+}
+
+.entryButton,
+.letterCard,
+.detailCard {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(244, 220, 166, 0.12);
+  background:
+    linear-gradient(180deg, rgba(55, 39, 29, 0.9), rgba(18, 14, 11, 0.96)),
+    radial-gradient(circle at top, rgba(244, 220, 166, 0.08), transparent 30%),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
+  box-shadow: var(--shadow-soft);
+}
+
+.entryButton {
+  display: grid;
+  gap: 0.55rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-base),
+    background var(--motion-base),
+    transform var(--motion-base),
+    box-shadow var(--motion-base);
+}
+
+.entryButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(244, 220, 166, 0.24);
+}
+
+.entryButtonActive {
+  border-color: rgba(244, 220, 166, 0.34);
+  background:
+    linear-gradient(180deg, rgba(74, 52, 39, 0.96), rgba(21, 16, 12, 0.98)),
+    linear-gradient(90deg, rgba(244, 220, 166, 0.12), transparent 72%);
+  box-shadow: var(--glow-gold);
+}
+
+.entryHead span,
+.entryMeta,
+.entryExcerpt,
+.letterBody,
+.quote,
+.intelBlock span,
+.rewardList span {
+  color: var(--color-ink-300);
+  line-height: 1.6;
+}
+
+.entryExcerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.detailHero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(244, 220, 166, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(48, 34, 26, 0.92), rgba(18, 13, 11, 0.98)),
+    radial-gradient(circle at top, rgba(244, 220, 166, 0.14), transparent 34%),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.12), transparent 72%);
+  box-shadow: var(--shadow-soft);
+}
+
+.detailTitle {
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 0.94;
+}
+
+.detailColumns {
+  flex-wrap: wrap;
+}
+
+.detailColumns div,
+.intelBlock {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.detailColumns strong,
+.intelBlock strong {
+  color: var(--color-ink-100);
+}
+
+.letterCard,
+.detailCard {
+  gap: 0.9rem;
+}
+
+.letterBody,
+.quote,
+.rewardList span,
+.intelBlock span {
+  display: block;
+}
+
+.quote {
+  margin: 0;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(244, 220, 166, 0.32);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+.intelGrid,
+.rewardList {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.rewardList span {
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  background: rgba(17, 13, 11, 0.68);
+  border: 1px solid rgba(244, 220, 166, 0.08);
 }
 
 .actionRow {
-  margin-top: 0.9rem;
-  display: flex;
   justify-content: flex-end;
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .archiveHeader,
+  .detailMetaRow,
+  .entryHead,
+  .entryMeta,
+  .actionRow,
+  .detailColumns {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

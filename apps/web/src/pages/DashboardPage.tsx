@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type BuildingType, type ResearchType, type TroopType } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
@@ -17,6 +18,7 @@ import styles from "./DashboardPage.module.css";
 
 export function DashboardPage() {
   const now = useNow();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const {
     state,
@@ -24,8 +26,6 @@ export function DashboardPage() {
     train,
     research,
     openCommanderPanel,
-    openInbox,
-    openStorePreview,
     isUpgrading,
     isTraining,
     isResearching,
@@ -84,6 +84,30 @@ export function DashboardPage() {
     () => state.city.research.find((entry) => entry.level < entry.maxLevel) ?? null,
     [state.city.research],
   );
+  const allianceLabel = state.alliance ? `[${state.alliance.tag}] ${state.alliance.name}` : "Independent province";
+  const provinceStatus = state.city.peaceShieldUntil ? "Peace shield active" : "Battle ready";
+  const queueLedger = [
+    {
+      id: "build",
+      label: "Build queue",
+      value: activeUpgrade ? `L${activeUpgrade.toLevel}` : "Idle",
+      detail: activeUpgrade
+        ? `${activeUpgrade.buildingType.replaceAll("_", " ").toLowerCase()} upgrade is underway.`
+        : "Town planners are waiting for a fresh order.",
+    },
+    {
+      id: "training",
+      label: "Barracks",
+      value: activeTraining ? `${activeTrainingLabel} x${formatNumber(activeTraining.quantity)}` : "Ready",
+      detail: activeTraining ? "Fresh troops are staging inside the drill yard." : "A new unit batch can start immediately.",
+    },
+    {
+      id: "research",
+      label: "Academy",
+      value: activeResearch ? activeResearchLabel : "Open",
+      detail: activeResearch ? "Doctrine scribes are processing the active study." : "No doctrine is currently consuming the queue.",
+    },
+  ];
 
   useEffect(() => {
     trackAnalyticsOnce(`tutorial_started:${state.player.id}`, "tutorial_started", { cityId: state.city.cityId });
@@ -102,8 +126,8 @@ export function DashboardPage() {
             <p className={styles.statLabel}>{copy.dashboard.title}</p>
             <h2 className={styles.heroTitle}>{state.city.cityName}</h2>
             <p className={styles.heroLead}>
-              Coordinates {state.city.coordinates.x}, {state.city.coordinates.y}. City growth, queues, research,
-              commanders, and social pressure now sit in one premium operations deck.
+              Coordinates {state.city.coordinates.x}, {state.city.coordinates.y}. Growth, queues, research, and social
+              pressure now sit inside a stronger city hall deck with faster command shortcuts.
             </p>
           </div>
           {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Queue idle</Badge>}
@@ -141,6 +165,97 @@ export function DashboardPage() {
           <div className={styles.statCard}><span className={styles.statLabel}>Defense</span><strong className={styles.statValue}>{formatNumber(state.city.defensePower)}</strong></div>
           <div className={styles.statCard}><span className={styles.statLabel}>Open marches</span><strong className={styles.statValue}>{formatNumber(state.city.openMarchCount)}</strong></div>
           <div className={styles.statCard}><span className={styles.statLabel}>Total stock</span><strong className={styles.statValue}>{formatNumber(totalStores)}</strong></div>
+        </div>
+        <div className={styles.operationsDeck}>
+          <article className={styles.operationsCard}>
+            <div className={styles.operationsHeader}>
+              <div>
+                <p className={styles.operationsEyebrow}>City Hall Record</p>
+                <strong className={styles.operationsValue}>{allianceLabel}</strong>
+              </div>
+              {state.city.peaceShieldUntil ? (
+                <TimerChip endsAt={state.city.peaceShieldUntil} now={now} />
+              ) : (
+                <Badge tone="warning">Battle ready</Badge>
+              )}
+            </div>
+            <p className={styles.operationsBody}>
+              {state.city.cityName} anchors the province at {state.city.coordinates.x}, {state.city.coordinates.y}. {provinceStatus}.
+            </p>
+            <div className={styles.operationsList}>
+              <div className={styles.operationsListItem}>
+                <span className={styles.operationsLabel}>Open marches</span>
+                <strong>{formatNumber(state.city.openMarchCount)}</strong>
+              </div>
+              <div className={styles.operationsListItem}>
+                <span className={styles.operationsLabel}>Field power</span>
+                <strong>{formatNumber(state.city.attackPower + state.city.defensePower)}</strong>
+              </div>
+              <div className={styles.operationsListItem}>
+                <span className={styles.operationsLabel}>Resource stock</span>
+                <strong>{formatNumber(totalStores)}</strong>
+              </div>
+            </div>
+          </article>
+
+          <article className={styles.operationsCard}>
+            <div className={styles.operationsHeader}>
+              <div>
+                <p className={styles.operationsEyebrow}>Queue Ledger</p>
+                <strong className={styles.operationsValue}>Build, train, research</strong>
+              </div>
+              <Badge tone={activeUpgrade || activeTraining || activeResearch ? "info" : "success"}>
+                {activeUpgrade || activeTraining || activeResearch ? "In motion" : "All clear"}
+              </Badge>
+            </div>
+            <p className={styles.operationsBody}>
+              Keep the city board readable at a glance before diving into districts, commanders, or the frontier map.
+            </p>
+            <div className={styles.queueLedger}>
+              {queueLedger.map((entry) => (
+                <div key={entry.id} className={styles.queueLedgerItem}>
+                  <div>
+                    <span className={styles.operationsLabel}>{entry.label}</span>
+                    <strong>{entry.value}</strong>
+                  </div>
+                  <span className={styles.queueLedgerHint}>{entry.detail}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className={styles.operationsCard}>
+            <div className={styles.operationsHeader}>
+              <div>
+                <p className={styles.operationsEyebrow}>Quick Orders</p>
+                <strong className={styles.operationsValue}>Command center shortcuts</strong>
+              </div>
+              <Badge tone="info">Mobile-first</Badge>
+            </div>
+            <p className={styles.operationsBody}>
+              One-tap routes keep research, commanders, alliance rooms, and the world map within thumb reach.
+            </p>
+            <div className={styles.quickOrderGrid}>
+              <Button type="button" size="small" onClick={() => navigate("/app/map")}>
+                Sweep Map
+              </Button>
+              <Button type="button" size="small" variant="secondary" onClick={() => navigate("/app/research")}>
+                Research
+              </Button>
+              <Button type="button" size="small" variant="secondary" onClick={() => openCommanderPanel(primaryCommander?.id)}>
+                Commander
+              </Button>
+              <Button type="button" size="small" variant="ghost" onClick={() => navigate("/app/alliance")}>
+                Alliance
+              </Button>
+              <Button type="button" size="small" variant="ghost" onClick={() => navigate("/app/messages")}>
+                Messages
+              </Button>
+              <Button type="button" size="small" variant="ghost" onClick={() => navigate("/app/market")}>
+                Market
+              </Button>
+            </div>
+          </article>
         </div>
       </header>
 
@@ -192,6 +307,11 @@ export function DashboardPage() {
                   </div>
                 ))}
               </div>
+              <div className={styles.actionRow}>
+                <Button type="button" variant="secondary" onClick={() => navigate("/app/research")}>
+                  Open Research Chamber
+                </Button>
+              </div>
             </SectionCard>
 
             <SectionCard kicker={copy.dashboard.inventory} title="Speedups and chests" aside={<Badge tone="warning">{inventoryItems.length} lots</Badge>}>
@@ -207,7 +327,7 @@ export function DashboardPage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Live board" title="Events and season" aside={<Badge tone="success">{formatNumber(seasonPass?.xp ?? 0)} xp</Badge>}>
+            <SectionCard kicker="Live board" title="Events and season standings" aside={<Badge tone="success">{formatNumber(seasonPass?.xp ?? 0)} xp</Badge>}>
               <div className={styles.compactList}>
                 {liveEvents.slice(0, 3).map((event) => (
                   <div key={event.eventKey} className={styles.taskMeta}>
@@ -216,6 +336,11 @@ export function DashboardPage() {
                   </div>
                 ))}
                 <p className={styles.stackHint}>{seasonPass ? `${seasonPass.tiers.filter((tier) => tier.claimedFree).length} free tiers unlocked.` : "Season data is loading."}</p>
+              </div>
+              <div className={styles.actionRow}>
+                <Button type="button" variant="secondary" onClick={() => navigate("/app/leaderboards")}>
+                  Open Rankings
+                </Button>
               </div>
             </SectionCard>
           </div>
@@ -251,14 +376,14 @@ export function DashboardPage() {
             <div className={styles.compactList}>
               {mailboxEntries.slice(0, 4).map((entry) => <div key={entry.id} className={styles.taskMeta}><strong>{entry.title}</strong><span className={styles.stackHint}>{entry.canClaim ? "Reward waiting" : "Report archived"}</span></div>)}
             </div>
-            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={openInbox}>Open Inbox</Button></div>
+            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>Open Message Center</Button></div>
           </SectionCard>
 
           <SectionCard kicker={copy.dashboard.store} title="Store summary" aside={<Badge tone="success">{storeOffers.length} offers</Badge>}>
             <div className={styles.compactList}>
               {storeOffers.slice(0, 3).map((offer) => <div key={offer.offerId} className={styles.taskMeta}><strong>{offer.title}</strong><span className={styles.stackHint}>{offer.productIds.length} products</span></div>)}
             </div>
-            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={openStorePreview}>Open Store</Button></div>
+            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={() => navigate("/app/market")}>Open Imperial Market</Button></div>
           </SectionCard>
         </aside>
       </div>

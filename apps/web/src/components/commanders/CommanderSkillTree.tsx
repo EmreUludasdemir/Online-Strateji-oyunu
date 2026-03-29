@@ -1,26 +1,26 @@
-import type { CommanderProgressView, CommanderSkillNodeView } from "@frontier/shared";
-import { useMemo, useState } from "react";
+﻿import type { CommanderProgressView, CommanderSkillNodeView } from "@frontier/shared";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "../ui/Badge";
 import styles from "./CommanderSkillTree.module.css";
 
 const ICONS: Record<string, string> = {
-  sword: "⚔",
-  drum: "◉",
-  banner: "⚑",
-  shield: "⛨",
-  gate: "⌂",
-  crown: "♛",
-  watch: "◌",
-  hoof: "➶",
-  tower: "▣",
-  ring: "◎",
-  flame: "✦",
-  ledger: "☷",
-  gem: "◆",
-  veil: "◍",
-  grain: "✺",
-  coin: "◈",
+  sword: "ATK",
+  drum: "CMD",
+  banner: "RLY",
+  shield: "DEF",
+  gate: "GRD",
+  crown: "LDR",
+  watch: "SCT",
+  hoof: "SPD",
+  tower: "HLD",
+  ring: "AUR",
+  flame: "DMG",
+  ledger: "LOG",
+  gem: "ELT",
+  veil: "FOG",
+  grain: "GTH",
+  coin: "ECO",
 };
 
 function getNodeTone(node: CommanderSkillNodeView) {
@@ -35,6 +35,10 @@ function getNodeTone(node: CommanderSkillNodeView) {
 
 export function CommanderSkillTree({ commander }: { commander: CommanderProgressView }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(commander.skillTree.nodes.find((node) => node.active)?.id ?? null);
+
+  useEffect(() => {
+    setSelectedNodeId(commander.skillTree.nodes.find((node) => node.active)?.id ?? commander.skillTree.nodes[0]?.id ?? null);
+  }, [commander]);
 
   const selectedNode = useMemo(
     () => commander.skillTree.nodes.find((node) => node.id === selectedNodeId) ?? commander.skillTree.nodes[0],
@@ -88,7 +92,7 @@ export function CommanderSkillTree({ commander }: { commander: CommanderProgress
           {commander.skillTree.nodes.map((node) => {
             const tone = getNodeTone(node);
             const position = nodePositions.get(node.id)!;
-            const icon = ICONS[node.icon] ?? "✧";
+            const icon = ICONS[node.icon] ?? "SYS";
 
             return (
               <button

@@ -1,0 +1,175 @@
+﻿.page,
+.layout,
+.summaryGrid,
+.productGrid,
+.offerList,
+.rewardList,
+.offerMeta,
+.resourceGrid,
+.warrantList,
+.mainColumn,
+.sideColumn {
+  display: grid;
+  gap: 1rem;
+}
+
+.page {
+  animation: fadeSlideUp 400ms var(--motion-smooth) both;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 1.2rem;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(244, 220, 166, 0.12), transparent 24%),
+    radial-gradient(circle at 14% 14%, rgba(81, 163, 161, 0.1), transparent 26%),
+    linear-gradient(180deg, rgba(39, 29, 23, 0.94), rgba(14, 11, 9, 0.99));
+  box-shadow: var(--shadow-soft);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: calc(var(--radius-lg) - 8px);
+  border: 1px solid rgba(247, 239, 223, 0.08);
+  pointer-events: none;
+}
+
+.heroTop,
+.productHead,
+.offerHead,
+.warrantRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kicker,
+.summaryLabel,
+.cardLabel {
+  color: var(--color-ink-300);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.heroTitle,
+.summaryValue,
+.cardTitle {
+  font-family: var(--font-display);
+}
+
+.heroTitle {
+  font-size: clamp(2rem, 1.6rem + 1.5vw, 3rem);
+}
+
+.heroLead,
+.summaryMeta,
+.cardBody,
+.offerMeta span,
+.feedback {
+  color: var(--color-ink-200);
+}
+
+.heroLead {
+  margin-top: 0.45rem;
+  max-width: 74ch;
+}
+
+.summaryGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summaryCard,
+.productCard,
+.offerCard,
+.warrantRow {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(244, 220, 166, 0.08);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(244, 220, 166, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(58, 42, 32, 0.9), rgba(18, 13, 10, 0.98)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1.16rem;
+}
+
+.layout {
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.95fr);
+  align-items: start;
+}
+
+.productGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cardTitle {
+  margin-top: 0.3rem;
+  font-size: 1.15rem;
+}
+
+.rewardList span,
+.offerMeta span {
+  display: block;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: rgba(17, 13, 11, 0.68);
+  border: 1px solid rgba(244, 220, 166, 0.08);
+}
+
+.offerMeta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.resourceGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.warrantList {
+  gap: 0.75rem;
+}
+
+.feedback {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+}
+
+@media (max-width: 1180px) {
+  .summaryGrid,
+  .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .heroTop,
+  .productHead,
+  .offerHead,
+  .warrantRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summaryGrid,
+  .productGrid,
+  .offerMeta,
+  .resourceGrid {
+    grid-template-columns: 1fr;
+  }
+}

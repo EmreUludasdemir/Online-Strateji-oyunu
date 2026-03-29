@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AllianceRole, ResourceKey } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -183,6 +183,12 @@ export function AlliancePage() {
     ],
     [state.city.activeResearch, state.city.activeTraining, state.city.activeUpgrade],
   );
+  const contributionByUserId = useMemo(
+    () => new Map((alliance?.contributions ?? []).map((entry) => [entry.userId, entry.points])),
+    [alliance?.contributions],
+  );
+  const treasuryTotal = alliance ? Object.values(alliance.treasury).reduce((sum, value) => sum + value, 0) : 0;
+  const latestDonation = alliance?.donations[0] ?? null;
 
   useEffect(() => {
     if (!alliance) {
@@ -209,43 +215,55 @@ export function AlliancePage() {
   return (
     <section className={styles.page}>
       <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.kicker}>Alliance Chamber</p>
-            <h2 className={styles.heroTitle}>{alliance ? `${alliance.name} [${alliance.tag}]` : "Open Diplomacy"}</h2>
+        <div className={styles.heroPanel}>
+          <div className={styles.heroLeadBlock}>
+            <p className={styles.kicker}>Grand Alliance</p>
+            <h2 className={styles.heroTitle}>{alliance ? alliance.name : "Open Diplomacy"}</h2>
+            <div className={styles.heroMeta}>
+              <Badge tone={alliance ? getRoleTone(alliance.role) : "info"}>{alliance ? alliance.role : "Seeking Banner"}</Badge>
+              {alliance ? <span className={styles.heroMetaItem}>[{alliance.tag}]</span> : null}
+              <span className={styles.heroMetaItem}>{alliance ? `${alliance.memberCount} sworn banners` : "Create or join a house"}</span>
+            </div>
             <p className={styles.heroLead}>
-              Member coordination, the help board, map markers, and the shared treasury stay in one command layer.
+              {alliance
+                ? alliance.description ?? "Shared war doctrine, logistics, and member rhythm live in this chamber."
+                : "Create a new alliance house or join an open banner to unlock treasury, help, and live coordination."}
             </p>
           </div>
-          <Badge tone={alliance ? getRoleTone(alliance.role) : "info"}>
-            {alliance ? alliance.role : "Seeking Banner"}
-          </Badge>
+
+          <aside className={styles.noticeCard}>
+            <span className={styles.noticeEyebrow}>Command Signal</span>
+            <strong className={styles.noticeTitle}>{alliance ? "Alliance directives online" : "Banner search open"}</strong>
+            <p className={styles.noticeBody}>
+              {notice ??
+                (alliance
+                  ? "Announcements, support requests, map pins, and treasury actions are staged from one organized surface."
+                  : "No alliance active. Create a banner or review open houses below.")}
+            </p>
+          </aside>
         </div>
+
         <div className={styles.summaryGrid}>
           <article className={styles.summaryCard}>
             <span className={styles.summaryLabel}>Members</span>
             <strong className={styles.summaryValue}>{formatNumber(alliance?.memberCount ?? publicAlliances.length)}</strong>
+            <span className={styles.summaryHint}>sworn banners</span>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Help</span>
+            <span className={styles.summaryLabel}>Support Queue</span>
             <strong className={styles.summaryValue}>{formatNumber(alliance?.helpRequests.length ?? 0)}</strong>
+            <span className={styles.summaryHint}>open accelerations</span>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Messages</span>
+            <span className={styles.summaryLabel}>Field Dispatches</span>
             <strong className={styles.summaryValue}>{formatNumber(alliance?.chatMessages.length ?? 0)}</strong>
+            <span className={styles.summaryHint}>live channel notes</span>
           </article>
           <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Treasury</span>
-            <strong className={styles.summaryValue}>
-              {formatNumber(alliance ? Object.values(alliance.treasury).reduce((sum, value) => sum + value, 0) : 0)}
-            </strong>
+            <span className={styles.summaryLabel}>Treasury Reserve</span>
+            <strong className={styles.summaryValue}>{formatNumber(treasuryTotal)}</strong>
+            <span className={styles.summaryHint}>shared strategic stock</span>
           </article>
-        </div>
-        <div className={styles.notice}>
-          {notice ??
-            (alliance
-              ? "Field coordination, support, logistics, and chat stay in one place."
-              : "Create a new alliance or join one of the open banners.")}
         </div>
       </header>
 
@@ -253,9 +271,78 @@ export function AlliancePage() {
         <div className={styles.layout}>
           <div className={styles.mainColumn}>
             <SectionCard
+              kicker="Vanguard Roster"
+              title="Sworn banners"
+              aside={<Link className={styles.inlineLink} to="/app/alliance/roles">Open role management</Link>}
+            >
+              <div className={styles.rosterTableHead}>
+                <span>Member</span>
+                <span>Rank</span>
+                <span>Contribution</span>
+                <span>Status</span>
+              </div>
+              <div className={styles.rosterList}>
+                {alliance.members.map((member) => {
+                  const contribution = contributionByUserId.get(member.userId) ?? 0;
+
+                  return (
+                    <article key={member.userId} className={styles.rosterRow}>
+                      <div className={styles.memberCell}>
+                        <strong>{member.username}</strong>
+                        <span>{member.cityName}</span>
+                      </div>
+                      <div className={styles.roleCell}>
+                        <Badge tone={getRoleTone(member.role)}>{member.role}</Badge>
+                      </div>
+                      <div className={styles.scoreCell}>{formatNumber(contribution)}</div>
+                      <div className={styles.statusCell}>{member.userId === state.player.id ? "You" : "Active"}</div>
+                      {alliance.role === "LEADER" && member.userId !== state.player.id ? (
+                        <div className={styles.rosterActions}>
+                          {member.role !== "OFFICER" ? (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="secondary"
+                              disabled={updateRoleMutation.isPending}
+                              onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "OFFICER" })}
+                            >
+                              Promote Officer
+                            </Button>
+                          ) : null}
+                          {member.role !== "MEMBER" ? (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="ghost"
+                              disabled={updateRoleMutation.isPending}
+                              onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "MEMBER" })}
+                            >
+                              Set Member
+                            </Button>
+                          ) : null}
+                          {member.role !== "LEADER" ? (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="secondary"
+                              disabled={updateRoleMutation.isPending}
+                              onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "LEADER" })}
+                            >
+                              Transfer Leadership
+                            </Button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </SectionCard>
+
+            <SectionCard
               kicker="Command Board"
-              title="Announcements and Routes"
-              aside={<Badge tone="info">{alliance.markers.length} markers</Badge>}
+              title="Alliance directives"
+              aside={<Badge tone="info">{alliance.markers.length} map pins</Badge>}
             >
               <div className={styles.stack}>
                 <textarea
@@ -263,7 +350,7 @@ export function AlliancePage() {
                   value={announcementDraft}
                   maxLength={220}
                   onChange={(event) => setAnnouncementDraft(event.target.value)}
-                  placeholder="Write today's focus, rally route, or defense order."
+                  placeholder="Write today's doctrine, rally route, or defense order."
                 />
                 <div className={styles.actions}>
                   <Button
@@ -274,9 +361,15 @@ export function AlliancePage() {
                   >
                     {!canManageAlliance(alliance.role) ? "Read Only" : "Save Announcement"}
                   </Button>
-                  <Link className={styles.inlineLink} to="/app/alliance/roles">
-                    Open role management
-                  </Link>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="small"
+                    disabled={leaveAllianceMutation.isPending}
+                    onClick={() => leaveAllianceMutation.mutate()}
+                  >
+                    {leaveAllianceMutation.isPending ? "Leaving" : "Leave Alliance"}
+                  </Button>
                 </div>
                 <div className={styles.inlineForm}>
                   <input
@@ -311,7 +404,53 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Field Chat" title="Alliance Channel" aside={<Badge tone="info">Live</Badge>}>
+            <SectionCard kicker="Support Queue" title="Acceleration and aid">
+              <div className={styles.helpGrid}>
+                {requestableHelp.map((entry) => (
+                  <Button
+                    key={entry.kind}
+                    type="button"
+                    variant={entry.enabled ? "secondary" : "ghost"}
+                    disabled={!entry.enabled || requestHelpMutation.isPending}
+                    onClick={() => requestHelpMutation.mutate(entry.kind)}
+                  >
+                    {entry.label}
+                  </Button>
+                ))}
+              </div>
+              <div className={styles.feedList}>
+                {alliance.helpRequests.length === 0 ? (
+                  <EmptyState
+                    title="No Open Requests"
+                    body="When a build, training, or research queue is active, help orders appear here."
+                  />
+                ) : (
+                  alliance.helpRequests.map((request) => (
+                    <article key={request.id} className={styles.feedCard}>
+                      <div className={styles.feedMeta}>
+                        <strong>{request.label}</strong>
+                        <Badge tone={request.isOpen ? "warning" : "success"}>{request.helpCount}/{request.maxHelps}</Badge>
+                      </div>
+                      <p>
+                        {request.requesterName} | {request.kind.replaceAll("_", " ").toLowerCase()}
+                      </p>
+                      <div className={styles.actions}>
+                        <Button
+                          type="button"
+                          size="small"
+                          disabled={respondHelpMutation.isPending || request.requesterUserId === state.player.id || !request.isOpen}
+                          onClick={() => respondHelpMutation.mutate(request.id)}
+                        >
+                          {request.requesterUserId === state.player.id ? "Your Request" : "Send Help"}
+                        </Button>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard kicker="Alliance Channel" title="Field dispatch" aside={<Badge tone="info">Live</Badge>}>
               <div className={styles.inlineComposer}>
                 <input
                   className={styles.textField}
@@ -344,76 +483,14 @@ export function AlliancePage() {
                 )}
               </div>
             </SectionCard>
-
-            <SectionCard kicker="Help Board" title="Queue Acceleration">
-              <div className={styles.helpGrid}>
-                {requestableHelp.map((entry) => (
-                  <Button
-                    key={entry.kind}
-                    type="button"
-                    variant={entry.enabled ? "secondary" : "ghost"}
-                    disabled={!entry.enabled || requestHelpMutation.isPending}
-                    onClick={() => requestHelpMutation.mutate(entry.kind)}
-                  >
-                    {entry.label}
-                  </Button>
-                ))}
-              </div>
-              <div className={styles.feedList}>
-                {alliance.helpRequests.length === 0 ? (
-                  <EmptyState
-                    title="No Open Requests"
-                    body="When a build, training, or research queue is active, help opens here."
-                  />
-                ) : (
-                  alliance.helpRequests.map((request) => (
-                    <article key={request.id} className={styles.feedCard}>
-                      <div className={styles.feedMeta}>
-                        <strong>{request.label}</strong>
-                        <Badge tone={request.isOpen ? "warning" : "success"}>{request.helpCount}/{request.maxHelps}</Badge>
-                      </div>
-                      <p>
-                        {request.requesterName} | {request.kind.replaceAll("_", " ").toLowerCase()}
-                      </p>
-                      <div className={styles.actions}>
-                        <Button
-                          type="button"
-                          size="small"
-                          disabled={
-                            respondHelpMutation.isPending || request.requesterUserId === state.player.id || !request.isOpen
-                          }
-                          onClick={() => respondHelpMutation.mutate(request.id)}
-                        >
-                          {request.requesterUserId === state.player.id ? "Your Request" : "Send Help"}
-                        </Button>
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-            </SectionCard>
-
-            <SectionCard kicker="Activity Log" title="Latest Events" aside={<Badge tone="info">{alliance.logs.length} entries</Badge>}>
-              <div className={styles.feedList}>
-                {alliance.logs.length === 0 ? (
-                  <EmptyState title="Log Empty" body="New aid, donation, and diplomacy actions will land here." />
-                ) : (
-                  alliance.logs.slice(0, 6).map((entry) => (
-                    <article key={entry.id} className={styles.feedCard}>
-                      <div className={styles.feedMeta}>
-                        <strong>{entry.kind.replaceAll("_", " ")}</strong>
-                        <span>{formatDateTime(entry.createdAt)}</span>
-                      </div>
-                      <p>{entry.body}</p>
-                    </article>
-                  ))
-                )}
-              </div>
-            </SectionCard>
           </div>
 
           <aside className={styles.sideColumn}>
-            <SectionCard kicker="Treasury" title="Shared Stock" aside={<Badge tone="success">Active</Badge>}>
+            <SectionCard kicker="Strategic Treasury" title="Shared reserve" aside={<Badge tone="success">Active</Badge>}>
+              <div className={styles.treasuryTotal}>
+                <span>Total reserve</span>
+                <strong>{formatNumber(treasuryTotal)}</strong>
+              </div>
               <dl className={styles.definitionGrid}>
                 {Object.entries(alliance.treasury).map(([resource, amount]) => (
                   <div key={resource}>
@@ -422,7 +499,7 @@ export function AlliancePage() {
                   </div>
                 ))}
               </dl>
-              <div className={styles.inlineForm}>
+              <div className={styles.inlineFormCompact}>
                 <select value={donationResource} onChange={(event) => setDonationResource(event.target.value as ResourceKey)}>
                   {RESOURCE_OPTIONS.map((resource) => (
                     <option key={resource} value={resource}>
@@ -442,20 +519,19 @@ export function AlliancePage() {
               <p className={styles.mutedText}>
                 City stock: {formatNumber(state.city.resources[donationResource])} {donationResource}
               </p>
+              {latestDonation ? (
+                <p className={styles.mutedText}>Latest convoy: {latestDonation.username} delivered {formatNumber(latestDonation.totalValue)} total value.</p>
+              ) : null}
               <Button
                 type="button"
-                disabled={
-                  donateMutation.isPending ||
-                  donationAmount < 1 ||
-                  donationAmount > state.city.resources[donationResource]
-                }
+                disabled={donateMutation.isPending || donationAmount < 1 || donationAmount > state.city.resources[donationResource]}
                 onClick={() => donateMutation.mutate()}
               >
                 {donateMutation.isPending ? "Processing" : "Donate to Treasury"}
               </Button>
             </SectionCard>
 
-            <SectionCard kicker="Contribution Score" title="Leadership Ranking">
+            <SectionCard kicker="Contribution Rank" title="Top contributors">
               <div className={styles.feedList}>
                 {alliance.contributions.length === 0 ? (
                   <EmptyState title="No Score Yet" body="Donation and aid actions fill the contribution table." />
@@ -472,7 +548,7 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Markers" title="Map Pins">
+            <SectionCard kicker="War Markers" title="Active pins">
               <div className={styles.feedList}>
                 {alliance.markers.length === 0 ? (
                   <EmptyState title="No Markers" body="Lock rally, defense, and target points here." />
@@ -485,7 +561,7 @@ export function AlliancePage() {
                       </div>
                       <p>
                         {formatDateTime(marker.createdAt)}
-                        {marker.expiresAt ? ` · expires in ${formatTimeRemaining(marker.expiresAt, now)}` : ""}
+                        {marker.expiresAt ? ` | expires in ${formatTimeRemaining(marker.expiresAt, now)}` : ""}
                       </p>
                       {marker.canDelete ? (
                         <div className={styles.actions}>
@@ -507,75 +583,28 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard
-              kicker="Roster"
-              title="Member List"
-              aside={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="small"
-                  disabled={leaveAllianceMutation.isPending}
-                  onClick={() => leaveAllianceMutation.mutate()}
-                >
-                  {leaveAllianceMutation.isPending ? "Leaving" : "Leave"}
-                </Button>
-              }
-            >
+            <SectionCard kicker="Chronicle" title="Recent events" aside={<Badge tone="info">{alliance.logs.length} entries</Badge>}>
               <div className={styles.feedList}>
-                {alliance.members.map((member) => (
-                  <article key={member.userId} className={styles.feedCard}>
-                    <div className={styles.feedMeta}>
-                      <strong>{member.username}</strong>
-                      <Badge tone={getRoleTone(member.role)}>{member.role}</Badge>
-                    </div>
-                    <p>{member.cityName}</p>
-                    {alliance.role === "LEADER" && member.userId !== state.player.id ? (
-                      <div className={styles.helpGrid}>
-                        {member.role !== "OFFICER" ? (
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="secondary"
-                            disabled={updateRoleMutation.isPending}
-                            onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "OFFICER" })}
-                          >
-                            Promote Officer
-                          </Button>
-                        ) : null}
-                        {member.role !== "MEMBER" ? (
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="ghost"
-                            disabled={updateRoleMutation.isPending}
-                            onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "MEMBER" })}
-                          >
-                            Set Member
-                          </Button>
-                        ) : null}
-                        {member.role !== "LEADER" ? (
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="secondary"
-                            disabled={updateRoleMutation.isPending}
-                            onClick={() => updateRoleMutation.mutate({ userId: member.userId, role: "LEADER" })}
-                          >
-                            Transfer Leadership
-                          </Button>
-                        ) : null}
+                {alliance.logs.length === 0 ? (
+                  <EmptyState title="Log Empty" body="New aid, donation, and diplomacy actions will land here." />
+                ) : (
+                  alliance.logs.slice(0, 6).map((entry) => (
+                    <article key={entry.id} className={styles.feedCard}>
+                      <div className={styles.feedMeta}>
+                        <strong>{entry.kind.replaceAll("_", " ")}</strong>
+                        <span>{formatDateTime(entry.createdAt)}</span>
                       </div>
-                    ) : null}
-                  </article>
-                ))}
+                      <p>{entry.body}</p>
+                    </article>
+                  ))
+                )}
               </div>
             </SectionCard>
           </aside>
         </div>
       ) : (
         <div className={styles.emptyLayout}>
-          <SectionCard kicker="New Banner" title="Create Alliance">
+          <SectionCard kicker="New Banner" title="Create alliance house">
             <div className={styles.stack}>
               <input
                 className={styles.textField}
@@ -608,7 +637,7 @@ export function AlliancePage() {
             </div>
           </SectionCard>
 
-          <SectionCard kicker="Open Banners" title="Join Alliance">
+          <SectionCard kicker="Open Banners" title="Join alliance house">
             <div className={styles.feedList}>
               {publicAlliances.length === 0 ? (
                 <EmptyState title="List Empty" body="No visible alliance is available yet." />
@@ -641,3 +670,4 @@ export function AlliancePage() {
     </section>
   );
 }
+

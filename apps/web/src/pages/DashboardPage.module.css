@@ -6,7 +6,11 @@
 .buildingGrid,
 .compactList,
 .resourceStrip,
-.heroSignals {
+.heroSignals,
+.operationsDeck,
+.operationsList,
+.queueLedger,
+.quickOrderGrid {
   display: grid;
   gap: 1rem;
 }
@@ -85,6 +89,11 @@
   gap: 0.75rem;
 }
 
+.operationsDeck {
+  margin-top: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .resourceStrip {
   margin-top: 1rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -93,7 +102,8 @@
 .signalCard,
 .statCard,
 .buildingCard,
-.taskCard {
+.taskCard,
+.operationsCard {
   position: relative;
   overflow: hidden;
   padding: 0.95rem;
@@ -113,7 +123,8 @@
 .signalCard::after,
 .statCard::after,
 .buildingCard::after,
-.taskCard::after {
+.taskCard::after,
+.operationsCard::after {
   content: "";
   position: absolute;
   inset: 6px;
@@ -125,7 +136,8 @@
 .signalCard:hover,
 .statCard:hover,
 .taskCard:hover,
-.buildingCard:hover {
+.buildingCard:hover,
+.operationsCard:hover {
   transform: translateY(-2px);
   border-color: var(--surface-panel-border-strong);
   box-shadow: var(--shadow-soft), 0 0 24px rgba(218, 176, 101, 0.12);
@@ -143,6 +155,75 @@
   display: block;
   margin-top: 0.28rem;
   font-size: 1.18rem;
+}
+
+.operationsCard {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.operationsHeader,
+.operationsListItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.operationsEyebrow,
+.operationsLabel {
+  color: var(--color-gold-200);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.operationsValue {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+}
+
+.operationsBody,
+.queueLedgerHint {
+  color: var(--color-ink-200);
+}
+
+.operationsList {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.operationsListItem,
+.queueLedgerItem {
+  padding: 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(237, 211, 160, 0.12);
+  background: rgba(16, 12, 10, 0.54);
+}
+
+.operationsListItem {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.35rem;
+}
+
+.queueLedger {
+  grid-template-columns: 1fr;
+}
+
+.queueLedgerItem {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.quickOrderGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quickOrderGrid button {
+  width: 100%;
 }
 
 .columns {
@@ -210,7 +291,9 @@
 
   .heroSignals,
   .resourceStrip,
-  .heroStats {
+  .heroStats,
+  .operationsDeck,
+  .operationsList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -224,6 +307,9 @@
   .heroSignals,
   .resourceStrip,
   .heroStats,
+  .operationsDeck,
+  .operationsList,
+  .quickOrderGrid,
   .grid,
   .buildingGrid {
     grid-template-columns: 1fr;

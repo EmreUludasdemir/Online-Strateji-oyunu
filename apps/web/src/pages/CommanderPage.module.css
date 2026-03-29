@@ -1,4 +1,4 @@
-.page,
+﻿.page,
 .rosterList,
 .mainColumn {
   display: grid;
@@ -6,90 +6,136 @@
 }
 
 .hero {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 1rem;
-  padding: 1.05rem;
-  border: 1px solid var(--color-panel-edge);
-  border-radius: var(--radius-lg);
+  padding: 1.15rem;
+  border: 1px solid rgba(244, 220, 166, 0.14);
+  border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(83, 51, 33, 0.48), rgba(27, 16, 11, 0.96)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent 72%);
+    linear-gradient(180deg, rgba(48, 35, 26, 0.92), rgba(19, 14, 11, 0.98)),
+    radial-gradient(circle at top right, rgba(81, 163, 161, 0.12), transparent 36%),
+    linear-gradient(90deg, rgba(244, 220, 166, 0.08), transparent 55%);
   box-shadow: var(--shadow-soft);
 }
 
-.heroTop,
-.rosterHeader,
-.actionRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.8rem;
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: linear-gradient(180deg, rgba(244, 220, 166, 0.88), rgba(126, 90, 37, 0.2));
+}
+
+.heroLeadBlock {
+  display: grid;
+  gap: 0.7rem;
 }
 
 .kicker,
 .summaryLabel,
-.profileLabel {
+.attributeLabel,
+.cardEyebrow,
+.portraitKicker,
+.loadoutLabel {
   color: var(--color-gold-200);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
 }
 
 .heroTitle {
-  margin-top: 0.25rem;
+  margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  line-height: 0.95;
 }
 
 .heroLead,
-.meta {
+.rosterMeta,
+.rosterNote,
+.loadoutNote,
+.portraitMeta,
+.orderLead {
   color: var(--color-ink-300);
   line-height: 1.6;
 }
 
-.summaryGrid,
-.profileGrid {
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.heroMetaItem {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(244, 220, 166, 0.12);
+  border-radius: 999px;
+  background: rgba(20, 14, 11, 0.72);
+  color: var(--color-ink-200);
+  font-size: 0.82rem;
+}
+
+.summaryGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
 }
 
 .summaryCard,
 .rosterCard,
-.profileCard {
+.portraitCard,
+.stageCard,
+.attributeCard {
   position: relative;
   overflow: hidden;
-  padding: 0.95rem 1rem;
-  border-radius: 22px;
-  border: 1px solid var(--color-panel-line);
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(244, 220, 166, 0.12);
   background:
-    radial-gradient(circle at 16% 0%, rgba(244, 220, 166, 0.08), transparent 22%),
-    linear-gradient(180deg, var(--surface-panel-top), var(--surface-panel-mid) 46%, var(--surface-panel-bottom)),
-    linear-gradient(90deg, var(--surface-panel-glow), transparent 72%);
+    linear-gradient(180deg, rgba(55, 39, 29, 0.9), rgba(18, 14, 11, 0.96)),
+    radial-gradient(circle at top, rgba(244, 220, 166, 0.08), transparent 30%),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.12), transparent 72%);
+  box-shadow: var(--shadow-soft);
 }
 
 .summaryCard::after,
 .rosterCard::after,
-.profileCard::after {
+.portraitCard::after,
+.stageCard::after,
+.attributeCard::after {
   content: "";
   position: absolute;
-  inset: 6px;
-  border-radius: 16px;
-  border: 1px solid var(--color-panel-line);
+  inset: 7px;
+  border: 1px solid rgba(244, 220, 166, 0.08);
+  border-radius: 10px;
   pointer-events: none;
 }
 
 .summaryValue,
-.profileValue {
+.attributeValue,
+.loadoutValue {
+  display: block;
+  margin-top: 0.3rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+}
+
+.summaryHint {
   display: block;
   margin-top: 0.28rem;
-  font-family: var(--font-display);
-  font-size: 1.35rem;
+  color: var(--color-ink-300);
+  font-size: 0.82rem;
 }
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
   gap: 1rem;
 }
 
@@ -105,27 +151,172 @@
 
 .rosterCard:hover {
   transform: translateY(-2px);
-  border-color: rgba(244, 215, 156, 0.25);
+  border-color: rgba(244, 215, 156, 0.28);
 }
 
 .rosterCardActive {
-  border-color: rgba(244, 215, 156, 0.5);
+  border-color: rgba(244, 215, 156, 0.42);
   box-shadow: var(--glow-gold);
 }
 
-.progressRail {
-  margin-top: 0.75rem;
-  height: 10px;
+.rosterHeader,
+.attributeHead,
+.stageHeader,
+.actionRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.progressRail,
+.attributeRail {
+  margin-top: 0.8rem;
+  height: 8px;
   border-radius: 999px;
   background: rgba(255, 244, 220, 0.08);
   overflow: hidden;
 }
 
-.progressRail span {
+.progressRail span,
+.attributeRail span {
   display: block;
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--color-teal-400), var(--color-gold-300));
+}
+
+.commanderStage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 1rem;
+}
+
+.portraitCard {
+  min-height: 420px;
+  display: grid;
+  align-content: space-between;
+  background:
+    linear-gradient(180deg, rgba(48, 34, 26, 0.76), rgba(14, 10, 8, 0.94)),
+    radial-gradient(circle at top, rgba(244, 220, 166, 0.12), transparent 32%),
+    linear-gradient(135deg, rgba(81, 163, 161, 0.1), transparent 55%);
+}
+
+.portraitCard::before {
+  content: "";
+  position: absolute;
+  inset: auto -8% -18% auto;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244, 220, 166, 0.16), transparent 70%);
+  pointer-events: none;
+}
+
+.portraitInset {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+}
+
+.portraitMonogram {
+  display: grid;
+  place-items: center;
+  width: clamp(150px, 22vw, 220px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(244, 220, 166, 0.16);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(82, 58, 43, 0.72), rgba(20, 15, 12, 0.92)),
+    radial-gradient(circle at top, rgba(244, 220, 166, 0.14), transparent 66%);
+  color: var(--color-gold-200);
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 10vw, 5.25rem);
+  line-height: 1;
+}
+
+.portraitName {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.portraitFooter {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(244, 220, 166, 0.1);
+}
+
+.portraitRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.stageStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.loadoutList,
+.serviceGrid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.loadoutRow,
+.serviceRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(244, 220, 166, 0.08);
+}
+
+.loadoutRow:last-child,
+.serviceRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.loadoutLabel,
+.serviceRow dt {
+  display: block;
+}
+
+.loadoutNote,
+.serviceRow dt {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+}
+
+.serviceRow dt {
+  color: var(--color-ink-300);
+}
+
+.serviceRow dd {
+  margin: 0;
+  text-align: right;
+  color: var(--color-ink-100);
+}
+
+.attributeGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.orderGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
 }
 
 .feedback {
@@ -136,21 +327,38 @@
   color: var(--color-ink-200);
 }
 
-@media (max-width: 1040px) {
-  .layout {
+@media (max-width: 1180px) {
+  .layout,
+  .commanderStage,
+  .orderGrid {
     grid-template-columns: 1fr;
+  }
+
+  .summaryGrid,
+  .attributeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 760px) {
-  .heroTop,
-  .actionRow {
+  .heroMeta,
+  .rosterHeader,
+  .attributeHead,
+  .stageHeader,
+  .actionRow,
+  .portraitRow,
+  .loadoutRow,
+  .serviceRow {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .summaryGrid,
-  .profileGrid {
+  .attributeGrid {
     grid-template-columns: 1fr;
+  }
+
+  .serviceRow dd {
+    text-align: left;
   }
 }

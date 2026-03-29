@@ -1,4 +1,4 @@
-import type { SocketEventType } from "@frontier/shared";
+﻿import type { SocketEventType } from "@frontier/shared";
 
 const SOCKET_EVENT_TYPES: SocketEventType[] = [
   "city.updated",
@@ -87,7 +87,7 @@ export function getInvalidationKeys(type: SocketEventType): string[][] {
   }
 
   if (["event.updated", "leaderboard.updated"].includes(type)) {
-    return [["events"], ["leaderboards"]];
+    return [["events"], ["leaderboard"]];
   }
 
   if (type === "alliance.updated") {

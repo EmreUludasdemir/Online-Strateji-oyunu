@@ -1,4 +1,9 @@
-.page {
+﻿.page,
+.mainColumn,
+.sideColumn,
+.stack,
+.feedList,
+.rosterList {
   display: grid;
   gap: 1rem;
 }
@@ -8,106 +13,141 @@
   overflow: hidden;
   display: grid;
   gap: 1rem;
-  padding: 1.05rem;
-  border: 1px solid var(--color-panel-edge);
-  border-radius: var(--radius-lg);
+  padding: 1.15rem;
+  border: 1px solid rgba(244, 220, 166, 0.14);
+  border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(83, 51, 33, 0.48), rgba(28, 16, 11, 0.96)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.14), transparent 72%);
+    linear-gradient(180deg, rgba(48, 34, 26, 0.92), rgba(18, 13, 11, 0.98)),
+    radial-gradient(circle at top right, rgba(244, 220, 166, 0.14), transparent 34%),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 70%);
   box-shadow: var(--shadow-soft);
-  animation: borderGlow 5s ease-in-out infinite;
 }
 
 .hero::before {
   content: "";
   position: absolute;
-  inset: -22% auto auto -10%;
-  width: 34%;
-  height: 82%;
-  background: radial-gradient(circle, rgba(255, 244, 220, 0.1), transparent 72%);
-  pointer-events: none;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: linear-gradient(180deg, rgba(244, 220, 166, 0.88), rgba(126, 90, 37, 0.24));
 }
 
-.heroTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.8rem;
+.heroPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 1rem;
+}
+
+.heroLeadBlock {
+  display: grid;
+  gap: 0.7rem;
 }
 
 .kicker,
-.summaryLabel {
+.summaryLabel,
+.noticeEyebrow,
+.rosterTableHead,
+.treasuryTotal span,
+.definitionGrid dt {
   color: var(--color-gold-200);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
 }
 
 .heroTitle {
-  margin-top: 0.25rem;
+  margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-size: clamp(2.15rem, 5vw, 3.5rem);
+  line-height: 0.95;
 }
 
 .heroLead,
-.notice,
-.mutedText,
-.feedCard p {
+.noticeBody,
+.feedCard p,
+.mutedText {
   color: var(--color-ink-300);
   line-height: 1.6;
+}
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.heroMetaItem {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(244, 220, 166, 0.12);
+  border-radius: 999px;
+  background: rgba(20, 14, 11, 0.72);
+  color: var(--color-ink-200);
+  font-size: 0.82rem;
+}
+
+.noticeCard,
+.summaryCard,
+.feedCard,
+.rosterRow {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(244, 220, 166, 0.12);
+  background:
+    linear-gradient(180deg, rgba(55, 39, 29, 0.9), rgba(18, 14, 11, 0.96)),
+    radial-gradient(circle at top, rgba(244, 220, 166, 0.08), transparent 30%),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.12), transparent 72%);
+  box-shadow: var(--shadow-soft);
+}
+
+.noticeCard::after,
+.summaryCard::after,
+.feedCard::after,
+.rosterRow::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(244, 220, 166, 0.08);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.noticeCard {
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+}
+
+.noticeTitle,
+.summaryValue,
+.treasuryTotal strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
 }
 
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 0.85rem;
 }
 
-.summaryCard,
-.feedCard,
-.notice {
-  position: relative;
-  overflow: hidden;
-  padding: 0.95rem 1rem;
-  border-radius: 22px;
-  border: 1px solid var(--color-panel-line);
-  background:
-    radial-gradient(circle at 16% 0%, rgba(244, 220, 166, 0.08), transparent 22%),
-    linear-gradient(180deg, var(--surface-panel-top), var(--surface-panel-mid) 46%, var(--surface-panel-bottom)),
-    linear-gradient(90deg, var(--surface-panel-glow), transparent 72%);
-}
-
-.summaryCard::after,
-.feedCard::after,
-.notice::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 16px;
-  border: 1px solid var(--color-panel-line);
-  pointer-events: none;
-}
-
-.summaryValue {
+.summaryHint {
   display: block;
   margin-top: 0.28rem;
-  font-family: var(--font-display);
-  font-size: 1.6rem;
-  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-300);
+  font-size: 0.82rem;
 }
 
 .layout,
 .emptyLayout {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
-  gap: 1rem;
-}
-
-.mainColumn,
-.sideColumn,
-.stack,
-.feedList {
-  display: grid;
+  grid-template-columns: minmax(0, 1.26fr) minmax(320px, 0.74fr);
   gap: 1rem;
 }
 
@@ -118,23 +158,24 @@
 .textField,
 .textArea,
 .inlineForm select,
-.inlineForm input {
+.inlineFormCompact select {
   width: 100%;
   min-height: var(--touch-target);
   padding: 0.85rem 1rem;
-  border: 1px solid var(--color-panel-edge);
-  border-radius: 18px;
+  border: 1px solid rgba(244, 220, 166, 0.12);
+  border-radius: 12px;
   background: rgba(19, 12, 9, 0.84);
   color: var(--color-ink-100);
   font: inherit;
 }
 
 .textArea {
-  min-height: 120px;
+  min-height: 140px;
   resize: vertical;
 }
 
 .inlineForm,
+.inlineFormCompact,
 .inlineComposer,
 .actions,
 .helpGrid {
@@ -143,7 +184,11 @@
 }
 
 .inlineForm {
-  grid-template-columns: minmax(0, 1.5fr) 110px 110px auto;
+  grid-template-columns: minmax(0, 1.45fr) 110px 110px auto;
+}
+
+.inlineFormCompact {
+  grid-template-columns: minmax(0, 1fr) 130px;
 }
 
 .inlineComposer {
@@ -170,6 +215,47 @@
   text-decoration: underline;
 }
 
+.rosterTableHead {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) 140px 140px 120px;
+  gap: 0.75rem;
+  padding: 0 0.4rem;
+  opacity: 0.7;
+}
+
+.rosterRow {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) 140px 140px 120px;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.memberCell {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.roleCell,
+.scoreCell,
+.statusCell {
+  color: var(--color-ink-100);
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreCell,
+.statusCell {
+  justify-self: start;
+}
+
+.rosterActions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(244, 220, 166, 0.08);
+}
+
 .feedCard {
   display: grid;
   gap: 0.55rem;
@@ -183,9 +269,18 @@
   flex-wrap: wrap;
 }
 
+.treasuryTotal {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(244, 220, 166, 0.08);
+}
+
 .definitionGrid {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 .definitionGrid div {
@@ -196,12 +291,12 @@
 
 .definitionGrid dt {
   color: var(--color-ink-300);
-  text-transform: capitalize;
 }
 
 .definitionGrid dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
+  color: var(--color-ink-100);
 }
 
 .feedback {
@@ -213,6 +308,7 @@
 }
 
 @media (max-width: 1180px) {
+  .heroPanel,
   .layout,
   .emptyLayout {
     grid-template-columns: 1fr;
@@ -221,10 +317,19 @@
   .summaryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .rosterTableHead,
+  .rosterRow {
+    grid-template-columns: minmax(220px, 1fr) 120px 120px 100px;
+  }
 }
 
 @media (max-width: 760px) {
-  .heroTop {
+  .heroMeta,
+  .actions,
+  .feedMeta,
+  .treasuryTotal,
+  .rosterActions {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -232,7 +337,14 @@
   .summaryGrid,
   .helpGrid,
   .inlineForm,
-  .inlineComposer {
+  .inlineFormCompact,
+  .inlineComposer,
+  .rosterTableHead,
+  .rosterRow {
     grid-template-columns: 1fr;
+  }
+
+  .rosterTableHead {
+    display: none;
   }
 }

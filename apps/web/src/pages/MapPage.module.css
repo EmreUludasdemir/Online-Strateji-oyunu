@@ -1,5 +1,7 @@
 .page,
 .summaryGrid,
+.campaignDeck,
+.campaignMetaGrid,
 .rail,
 .battlefieldLayout,
 .sideRail,
@@ -23,7 +25,8 @@
 .targetCard,
 .marchCard,
 .summaryCard,
-.commandCard {
+.commandCard,
+.campaignCard {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--color-panel-edge);
@@ -45,7 +48,8 @@
 .targetCard::before,
 .marchCard::before,
 .summaryCard::before,
-.commandCard::before {
+.commandCard::before,
+.campaignCard::before {
   content: "";
   position: absolute;
   inset: 8px;
@@ -113,8 +117,68 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.campaignDeck {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .summaryCard {
   padding: 0.95rem;
+}
+
+.campaignCard {
+  padding: 1rem;
+  background:
+    radial-gradient(circle at 86% 0%, rgba(76, 140, 136, 0.1), transparent 24%),
+    radial-gradient(circle at 14% 12%, rgba(237, 211, 160, 0.1), transparent 20%),
+    linear-gradient(180deg, rgba(69, 49, 38, 0.72), rgba(22, 16, 13, 0.94));
+}
+
+.campaignHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.campaignEyebrow,
+.campaignMetaLabel {
+  color: var(--color-gold-200);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.campaignValue,
+.campaignMetaValue {
+  display: block;
+  margin-top: 0.22rem;
+  font-family: var(--font-display);
+}
+
+.campaignValue {
+  font-size: 1.18rem;
+}
+
+.campaignCopy {
+  margin-top: 0.7rem;
+  color: var(--color-ink-200);
+  min-height: 4.25rem;
+}
+
+.campaignMetaGrid {
+  margin-top: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.campaignMetaCard {
+  padding: 0.78rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(237, 211, 160, 0.12);
+  background: rgba(16, 12, 10, 0.54);
+}
+
+.campaignMetaValue {
+  font-size: 1rem;
 }
 
 .summaryValue {
@@ -632,13 +696,69 @@
   grid-template-columns: 1fr;
 }
 
-.sliderLabelRow {
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
 .sliderLabelRow strong {
   display: block;
+}
+
+.aegisHeader {
+  padding: 0 0.5rem 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(237, 211, 160, 0.14);
+}
+
+.aegisTitle {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--color-gold-200);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.aegisCopy {
+  margin: 0.45rem 0 0;
+  color: var(--color-ink-200);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.queueList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.queueCard {
+  position: relative;
+  overflow: hidden;
+  padding: 0.9rem;
+  border: 1px solid var(--color-panel-edge);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(125, 184, 179, 0.08), transparent 20%),
+    linear-gradient(180deg, var(--surface-panel-top), var(--surface-panel-mid) 44%, var(--surface-panel-bottom)),
+    linear-gradient(90deg, var(--surface-panel-glow), transparent 74%);
+  box-shadow: var(--shadow-soft);
+  transition:
+    border-color var(--motion-base),
+    box-shadow var(--motion-base),
+    transform var(--motion-smooth);
+}
+
+.queueCard::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: inherit;
+  border: 1px solid rgba(125, 184, 179, 0.06);
+  pointer-events: none;
+}
+
+.queueMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
 }
 
 .sliderMeta,
@@ -681,7 +801,8 @@
 }
 
 @media (max-width: 980px) {
-  .tacticalHud {
+  .tacticalHud,
+  .campaignDeck {
     grid-template-columns: 1fr;
   }
 
@@ -701,6 +822,8 @@
 
 @media (max-width: 768px) {
   .summaryGrid,
+  .campaignDeck,
+  .campaignMetaGrid,
   .commandStrip,
   .rail,
   .composerStats {

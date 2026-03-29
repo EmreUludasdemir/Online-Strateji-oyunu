@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import type { ReportEntryView } from "@frontier/shared";
+﻿import { useQuery } from "@tanstack/react-query";
+import type { ReportEntryView, TroopStock } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -30,21 +30,40 @@ function getReportTone(report: ReportEntryView): "success" | "warning" | "info" 
   return report.result === "ATTACKER_WIN" ? "success" : "warning";
 }
 
-function getReportHeadline(report: ReportEntryView): string {
+function getReportRibbon(report: ReportEntryView): string {
+  if (report.kind === "RESOURCE_GATHER") {
+    return "Caravan Returned";
+  }
+  if (report.result === "ATTACKER_WIN") {
+    return report.kind === "CITY_BATTLE" ? "Major Victory" : "Camp Cleared";
+  }
+  return report.kind === "CITY_BATTLE" ? "Defense Held" : "Expedition Repelled";
+}
+
+function getReportTitle(report: ReportEntryView): string {
   if (report.kind === "CITY_BATTLE") {
-    return report.result === "ATTACKER_WIN" ? "March Succeeded" : "Defense Held";
+    return `Siege of ${report.defenderCityName}`;
   }
-
   if (report.kind === "BARBARIAN_BATTLE") {
-    return report.result === "ATTACKER_WIN" ? "Camp Cleared" : "Camp Held";
+    return `Assault on ${report.poiName}`;
   }
+  return `Return from ${report.poiName}`;
+}
 
-  return "Gather Returned";
+function getReportSubtitle(report: ReportEntryView): string {
+  if (report.kind === "RESOURCE_GATHER") {
+    return `${report.cityName} logistics train`;
+  }
+  return `${report.attackerName} field report`;
+}
+
+function getCasualtyTotal(losses: TroopStock): number {
+  return Object.values(losses).reduce((sum, value) => sum + value, 0);
 }
 
 export function ReportsPage() {
   const { openInbox, notifications } = useGameLayoutContext();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [kindFilter, setKindFilter] = useState<"ALL" | ReportEntryView["kind"]>("ALL");
   const [resultFilter, setResultFilter] = useState<"ALL" | "ATTACKER_WIN" | "DEFENDER_HOLD" | "LOGISTICS">("ALL");
   const [dateFilter, setDateFilter] = useState<"ALL" | "24H" | "7D" | "30D">("ALL");
@@ -85,10 +104,8 @@ export function ReportsPage() {
           if (report.kind !== "RESOURCE_GATHER") {
             return false;
           }
-        } else {
-          if (report.kind === "RESOURCE_GATHER" || report.result !== resultFilter) {
-            return false;
-          }
+        } else if (report.kind === "RESOURCE_GATHER" || report.result !== resultFilter) {
+          return false;
         }
       }
 
@@ -122,6 +139,11 @@ export function ReportsPage() {
     return { victories, holds, gatherReturns, movedTotal };
   }, [filteredReports]);
 
+  const activeReport = useMemo(
+    () => reports.find((report) => report.id === focusedReportId) ?? filteredReports[0] ?? null,
+    [filteredReports, focusedReportId, reports],
+  );
+
   if (reportsQuery.isPending) {
     return <div className={styles.feedback}>Loading reports...</div>;
   }
@@ -136,34 +158,35 @@ export function ReportsPage() {
         <div className={styles.heroTop}>
           <div>
             <p className={styles.kicker}>{copy.reports.title}</p>
-            <h2 className={styles.heroTitle}>Battle outcomes and supply returns</h2>
+            <h2 className={styles.heroTitle}>War Council</h2>
             <p className={styles.heroLead}>
-              City battles, barbarian camp clashes, and gathering returns are merged into one readable field log.
-              Deep reward detail stays in the inbox.
+              Battle dossiers, resource returns, and attrition ledgers stay in one council rail. Deep reward parcels still route through the message center.
             </p>
           </div>
           <Badge tone="info">{reports.length} entries</Badge>
         </div>
+
         <div className={styles.filterRow}>
-          <select value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)}>
+          <select aria-label="Filter by category" value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)}>
             <option value="ALL">All categories</option>
             <option value="CITY_BATTLE">City battles</option>
             <option value="BARBARIAN_BATTLE">Barbarian battles</option>
             <option value="RESOURCE_GATHER">Gather returns</option>
           </select>
-          <select value={resultFilter} onChange={(event) => setResultFilter(event.target.value as typeof resultFilter)}>
+          <select aria-label="Filter by outcome" value={resultFilter} onChange={(event) => setResultFilter(event.target.value as typeof resultFilter)}>
             <option value="ALL">All outcomes</option>
             <option value="ATTACKER_WIN">Attacker win</option>
             <option value="DEFENDER_HOLD">Defender hold</option>
             <option value="LOGISTICS">Logistics only</option>
           </select>
-          <select value={dateFilter} onChange={(event) => setDateFilter(event.target.value as typeof dateFilter)}>
+          <select aria-label="Filter by date range" value={dateFilter} onChange={(event) => setDateFilter(event.target.value as typeof dateFilter)}>
             <option value="ALL">All dates</option>
             <option value="24H">Last 24h</option>
             <option value="7D">Last 7d</option>
             <option value="30D">Last 30d</option>
           </select>
         </div>
+
         <div className={styles.summaryGrid}>
           <article className={styles.summaryCard}>
             <span className={styles.summaryLabel}>Victories</span>
@@ -185,7 +208,11 @@ export function ReportsPage() {
       </header>
 
       <div className={styles.layout}>
-        <div className={styles.feed}>
+        <aside className={styles.reportRail}>
+          <div className={styles.railHeader}>
+            <h3 className={styles.railTitle}>Battle Reports</h3>
+            <span>{formatNumber(filteredReports.length)} active logs</span>
+          </div>
           {filteredReports.length === 0 ? (
             <SectionCard kicker="Empty Log" title="No entries yet">
               <EmptyState
@@ -194,190 +221,160 @@ export function ReportsPage() {
               />
             </SectionCard>
           ) : (
-            filteredReports.map((report) => {
-              const focusedClass = focusedReportId === report.id ? styles.focusedEntry : undefined;
-              if (report.kind === "CITY_BATTLE") {
-                return (
-                  <SectionCard
-                    key={report.id}
-                    kicker="City Battle"
-                    title={`${report.attackerCityName} -> ${report.defenderCityName}`}
-                    aside={<Badge tone={getReportTone(report)}>{getReportHeadline(report)}</Badge>}
-                    className={[styles.entryCard, focusedClass].filter(Boolean).join(" ")}
-                  >
-                    <div className={styles.entryMeta}>
-                      <span>{formatDateTime(report.createdAt)}</span>
-                      <span>{report.location.distance} tiles</span>
-                    </div>
-                    <p className={styles.entryBody}>
-                      {report.attackerName} marched on {report.defenderName} from {report.location.from.x},
-                      {report.location.from.y}. Attack power reached {formatNumber(report.attackerPower)} against
-                      {formatNumber(report.defenderPower)} defense power.
-                    </p>
-                    <div className={styles.metricGrid}>
-                      <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Loot</span>
-                        <dl className={styles.definitionGrid}>
-                          {Object.entries(report.loot).map(([resource, amount]) => (
-                            <div key={resource}>
-                              <dt>{resource}</dt>
-                              <dd>{formatNumber(amount)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </article>
-                      <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Attacker Losses</span>
-                        <dl className={styles.definitionGrid}>
-                          {Object.entries(report.attackerLosses).map(([troopType, amount]) => (
-                            <div key={troopType}>
-                              <dt>{troopType.toLowerCase()}</dt>
-                              <dd>{formatNumber(amount)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </article>
-                      <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Defender Losses</span>
-                        <dl className={styles.definitionGrid}>
-                          {Object.entries(report.defenderLosses).map(([troopType, amount]) => (
-                            <div key={troopType}>
-                              <dt>{troopType.toLowerCase()}</dt>
-                              <dd>{formatNumber(amount)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </article>
-                    </div>
-                  </SectionCard>
-                );
-              }
+            <div className={styles.railList}>
+              {filteredReports.map((report) => {
+                const isActive = activeReport?.id === report.id;
 
-              if (report.kind === "BARBARIAN_BATTLE") {
                 return (
-                  <SectionCard
+                  <button
                     key={report.id}
-                    kicker="Barbarian Battle"
-                    title={`${report.attackerCityName} -> ${report.poiName}`}
-                    aside={<Badge tone={getReportTone(report)}>{getReportHeadline(report)}</Badge>}
-                    className={[styles.entryCard, focusedClass].filter(Boolean).join(" ")}
+                    type="button"
+                    className={[styles.reportCard, isActive ? styles.reportCardActive : ""].filter(Boolean).join(" ")}
+                    onClick={() => setSearchParams({ focus: report.id })}
                   >
-                    <div className={styles.entryMeta}>
+                    <div className={styles.reportCardMeta}>
+                      <span>{getReportRibbon(report)}</span>
                       <span>{formatDateTime(report.createdAt)}</span>
-                      <span>Level {report.poiLevel}</span>
                     </div>
-                    <p className={styles.entryBody}>
-                      The march covered {report.location.distance} tiles to reach the camp. Attack power peaked at
-                      {" "}{formatNumber(report.attackerPower)} against {formatNumber(report.defenderPower)} camp defense.
-                    </p>
-                    <div className={styles.metricGrid}>
-                      <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Rewards</span>
-                        <dl className={styles.definitionGrid}>
-                          {Object.entries(report.loot).map(([resource, amount]) => (
-                            <div key={resource}>
-                              <dt>{resource}</dt>
-                              <dd>{formatNumber(amount)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </article>
-                      <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Attacker Losses</span>
-                        <dl className={styles.definitionGrid}>
-                          {Object.entries(report.attackerLosses).map(([troopType, amount]) => (
-                            <div key={troopType}>
-                              <dt>{troopType.toLowerCase()}</dt>
-                              <dd>{formatNumber(amount)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </article>
-                      <article className={styles.metricCard}>
-                        <span className={styles.metricLabel}>Camp Losses</span>
-                        <dl className={styles.definitionGrid}>
-                          {Object.entries(report.defenderLosses).map(([troopType, amount]) => (
-                            <div key={troopType}>
-                              <dt>{troopType.toLowerCase()}</dt>
-                              <dd>{formatNumber(amount)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </article>
-                    </div>
-                  </SectionCard>
+                    <strong className={styles.reportCardTitle}>{getReportTitle(report)}</strong>
+                    <p className={styles.reportCardBody}>{getReportSubtitle(report)}</p>
+                  </button>
                 );
-              }
+              })}
+            </div>
+          )}
+        </aside>
 
-              return (
-                <SectionCard
-                  key={report.id}
-                  kicker="Gather Return"
-                  title={`${report.cityName} <- ${report.poiName}`}
-                  aside={<Badge tone="info">{getReportHeadline(report)}</Badge>}
-                  className={[styles.entryCard, focusedClass].filter(Boolean).join(" ")}
-                >
-                  <div className={styles.entryMeta}>
-                    <span>{formatDateTime(report.createdAt)}</span>
-                    <span>{report.location.distance} tiles</span>
-                  </div>
-                  <p className={styles.entryBody}>
-                    {report.ownerName} returned with {formatNumber(report.amount)} {copy.poiResources[report.resourceType].toLowerCase()} from the node.
-                  </p>
-                  <div className={styles.metricGrid}>
-                    <article className={styles.metricCard}>
-                      <span className={styles.metricLabel}>Cargo</span>
-                      <dl className={styles.definitionGrid}>
-                        <div>
-                          <dt>Resource</dt>
-                          <dd>{copy.poiResources[report.resourceType]}</dd>
-                        </div>
-                        <div>
-                          <dt>Amount</dt>
-                          <dd>{formatNumber(report.amount)}</dd>
-                        </div>
-                      </dl>
+        <div className={styles.detailPane}>
+          {!activeReport ? (
+            <SectionCard kicker="Council Desk" title="Detail center" aside={<Badge tone="warning">{notifications.unreadMailboxCount} new</Badge>}>
+              <p className={styles.sideText}>Select a report from the rail to view siege telemetry, attrition, and cargo returns.</p>
+              <Button type="button" variant="secondary" onClick={openInbox}>
+                Open Message Center
+              </Button>
+            </SectionCard>
+          ) : (
+            <>
+              <header className={styles.detailHero}>
+                <div className={styles.detailMetaRow}>
+                  <Badge tone={getReportTone(activeReport)}>{getReportRibbon(activeReport)}</Badge>
+                  <span className={styles.detailMetaText}>{formatDateTime(activeReport.createdAt)}</span>
+                </div>
+                <h2 className={styles.detailTitle}>{getReportTitle(activeReport)}</h2>
+                <p className={styles.detailSubtitle}>{getReportSubtitle(activeReport)}</p>
+              </header>
+
+              <div className={styles.detailGrid}>
+                <SectionCard kicker="Engagement Zone" title="Location data">
+                  <div className={styles.coordGrid}>
+                    <article className={styles.statCard}>
+                      <span className={styles.statLabel}>Launch</span>
+                      <strong>{activeReport.location.from.x}, {activeReport.location.from.y}</strong>
                     </article>
-                    <article className={styles.metricCard}>
-                      <span className={styles.metricLabel}>Assigned Troops</span>
+                    <article className={styles.statCard}>
+                      <span className={styles.statLabel}>Target</span>
+                      <strong>{activeReport.location.to.x}, {activeReport.location.to.y}</strong>
+                    </article>
+                    <article className={styles.statCard}>
+                      <span className={styles.statLabel}>Distance</span>
+                      <strong>{formatNumber(activeReport.location.distance)} tiles</strong>
+                    </article>
+                  </div>
+                </SectionCard>
+
+                {activeReport.kind === "RESOURCE_GATHER" ? (
+                  <SectionCard kicker="Cargo Manifest" title="Recovered assets">
+                    <div className={styles.lootGrid}>
+                      <article className={styles.statCard}>
+                        <span className={styles.statLabel}>Resource</span>
+                        <strong>{copy.poiResources[activeReport.resourceType]}</strong>
+                      </article>
+                      <article className={styles.statCard}>
+                        <span className={styles.statLabel}>Amount</span>
+                        <strong>{formatNumber(activeReport.amount)}</strong>
+                      </article>
+                    </div>
+                    <dl className={styles.definitionGrid}>
+                      {Object.entries(activeReport.troops).map(([troopType, amount]) => (
+                        <div key={troopType}>
+                          <dt>{troopType.toLowerCase()}</dt>
+                          <dd>{formatNumber(amount)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </SectionCard>
+                ) : (
+                  <SectionCard kicker="Attrition Report" title="Casualties and power">
+                    <div className={styles.powerSplit}>
+                      <div className={styles.powerFill} style={{ width: `${Math.round((activeReport.attackerPower / Math.max(1, activeReport.attackerPower + activeReport.defenderPower)) * 100)}%` }} />
+                    </div>
+                    <div className={styles.powerLabels}>
+                      <span>{formatNumber(activeReport.attackerPower)} attacker</span>
+                      <span>{formatNumber(activeReport.defenderPower)} defender</span>
+                    </div>
+                    <div className={styles.lootGrid}>
+                      <article className={styles.statCard}>
+                        <span className={styles.statLabel}>Attacker losses</span>
+                        <strong>{formatNumber(getCasualtyTotal(activeReport.attackerLosses))}</strong>
+                      </article>
+                      <article className={styles.statCard}>
+                        <span className={styles.statLabel}>Defender losses</span>
+                        <strong>{formatNumber(getCasualtyTotal(activeReport.defenderLosses))}</strong>
+                      </article>
+                    </div>
+                    <div className={styles.lossGrid}>
                       <dl className={styles.definitionGrid}>
-                        {Object.entries(report.troops).map(([troopType, amount]) => (
+                        {Object.entries(activeReport.attackerLosses).map(([troopType, amount]) => (
                           <div key={troopType}>
-                            <dt>{troopType.toLowerCase()}</dt>
+                            <dt>Atk {troopType.toLowerCase()}</dt>
                             <dd>{formatNumber(amount)}</dd>
                           </div>
                         ))}
                       </dl>
-                    </article>
-                  </div>
+                      <dl className={styles.definitionGrid}>
+                        {Object.entries(activeReport.defenderLosses).map(([troopType, amount]) => (
+                          <div key={troopType}>
+                            <dt>Def {troopType.toLowerCase()}</dt>
+                            <dd>{formatNumber(amount)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  </SectionCard>
+                )}
+
+                <SectionCard kicker="War Spoils" title="Acquired assets">
+                  {activeReport.kind === "RESOURCE_GATHER" ? (
+                    <p className={styles.sideText}>Gathering logs report delivered cargo and assigned troops. Reward parcels are available through the message center.</p>
+                  ) : (
+                    <div className={styles.lootGrid}>
+                      {Object.entries(activeReport.loot)
+                        .filter(([, amount]) => amount > 0)
+                        .map(([resource, amount]) => (
+                          <article key={resource} className={styles.statCard}>
+                            <span className={styles.statLabel}>{resource}</span>
+                            <strong>{formatNumber(amount)}</strong>
+                          </article>
+                        ))}
+                      {Object.values(activeReport.loot).every((amount) => amount === 0) ? (
+                        <p className={styles.sideText}>No spoils were recovered from this engagement.</p>
+                      ) : null}
+                    </div>
+                  )}
                 </SectionCard>
-              );
-            })
+
+                <SectionCard kicker="Commander Ascension" title="Result handling" aside={<Badge tone="warning">{notifications.unreadMailboxCount} inbox</Badge>}>
+                  <p className={styles.sideText}>
+                    Reward parcels, commander tomes, and any follow-up dispatches continue into the message center for claiming and review.
+                  </p>
+                  <Button type="button" variant="secondary" onClick={openInbox}>
+                    Open Message Center
+                  </Button>
+                </SectionCard>
+              </div>
+            </>
           )}
         </div>
-
-        <aside className={styles.sideRail}>
-          <SectionCard
-            kicker="Inbox Flow"
-            title="Detail Center"
-            aside={<Badge tone="warning">{notifications.unreadMailboxCount} new</Badge>}
-          >
-            <p className={styles.sideText}>
-              Scout reports, system rewards, and claimable entries remain in the inbox so this page stays focused on battle outcomes.
-            </p>
-            <Button type="button" variant="secondary" onClick={openInbox}>
-              Open Inbox
-            </Button>
-          </SectionCard>
-
-          <SectionCard kicker="Reading Guide" title="How to parse the log">
-            <ul className={styles.tipList}>
-              <li>Compare loot and loss distribution together when reviewing city battles.</li>
-              <li>Barbarian camp entries are useful for commander XP pacing and PvE pressure.</li>
-              <li>Gather logs reveal which nodes are keeping the supply chain most efficient.</li>
-            </ul>
-          </SectionCard>
-        </aside>
       </div>
     </section>
   );

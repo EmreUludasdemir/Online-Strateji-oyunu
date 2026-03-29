@@ -1,0 +1,110 @@
+﻿@import "../components/ui/InboxDrawer.module.css";
+
+.page,
+.summaryGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.page {
+  animation: fadeSlideUp 400ms var(--motion-smooth) both;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 1.2rem;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(244, 220, 166, 0.1), transparent 24%),
+    radial-gradient(circle at 14% 16%, rgba(81, 163, 161, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(37, 29, 24, 0.94), rgba(14, 11, 9, 0.99));
+  box-shadow: var(--shadow-soft);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: calc(var(--radius-lg) - 8px);
+  border: 1px solid rgba(247, 239, 223, 0.08);
+  pointer-events: none;
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kicker,
+.summaryLabel {
+  color: var(--color-ink-300);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.heroTitle,
+.summaryValue {
+  font-family: var(--font-display);
+}
+
+.heroTitle {
+  font-size: clamp(2rem, 1.6rem + 1.5vw, 3rem);
+}
+
+.heroLead,
+.summaryMeta,
+.feedback {
+  color: var(--color-ink-200);
+}
+
+.heroLead {
+  margin-top: 0.45rem;
+  max-width: 74ch;
+}
+
+.summaryGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summaryCard {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(244, 220, 166, 0.08);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(244, 220, 166, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(58, 42, 32, 0.9), rgba(18, 13, 10, 0.98)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1.16rem;
+}
+
+.layout {
+  min-height: 700px;
+}
+
+@media (max-width: 1180px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .heroTop {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

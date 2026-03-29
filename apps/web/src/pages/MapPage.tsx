@@ -288,6 +288,7 @@ export function MapPage() {
   const queryClient = useQueryClient();
   const {
     state,
+    hud,
     selectedCityId,
     selectedPoiId,
     selectCity,
@@ -650,7 +651,7 @@ export function MapPage() {
         kind: report.kind,
         label:
           report.kind === "CITY_BATTLE"
-            ? `${report.attackerCityName} → ${report.defenderCityName}`
+            ? `${report.attackerCityName} -> ${report.defenderCityName}`
             : report.kind === "BARBARIAN_BATTLE"
               ? `${report.poiName} resolved`
               : `${report.poiName} return`,
@@ -704,6 +705,17 @@ export function MapPage() {
   const worldRegions = useMemo(() => getWorldRegions(minimapWorldSize), [minimapWorldSize]);
   const visibleAllianceMarkers = useMemo(() => allianceMarkers.slice(0, 4), [allianceMarkers]);
   const recentAllianceMarkers = useMemo(() => allianceMarkers.slice(0, 6), [allianceMarkers]);
+  const currentRegion = useMemo(
+    () =>
+      worldRegions.find(
+        (region) =>
+          cameraView.centerTileX >= region.x0 &&
+          cameraView.centerTileX <= region.x1 &&
+          cameraView.centerTileY >= region.y0 &&
+          cameraView.centerTileY <= region.y1,
+      ) ?? null,
+    [cameraView.centerTileX, cameraView.centerTileY, worldRegions],
+  );
   const selectedMarkerTarget = useMemo(() => {
     if (selectedCity && !selectedCity.isCurrentPlayer) {
       return {
@@ -764,6 +776,22 @@ export function MapPage() {
   const targetSheetVisible = targetSheetOpen && !composerMode && !fieldCommand && !selectedMarch;
   const fieldCommandVisible = Boolean(fieldCommand) && !composerMode && !selectedMarch;
   const selectedMarchVisible = Boolean(selectedMarch) && !composerMode && !fieldCommand;
+  const alliedBattleParticipants = useMemo(() => {
+    if (!activeBattleWindow || !alliance?.tag) {
+      return 0;
+    }
+
+    return activeBattleWindow.participants.filter((participant) => participant.ownerAllianceTag === alliance.tag).length;
+  }, [activeBattleWindow, alliance?.tag]);
+  const latestAllianceMarker = recentAllianceMarkers[0] ?? null;
+  const theaterStatusTone = activeBattleWindow ? "warning" : selectedMarch ? "info" : selectedTargetName ? "success" : "info";
+  const theaterStatusLabel = activeBattleWindow
+    ? "Contested sector"
+    : selectedMarch
+      ? "March en route"
+      : selectedTargetName
+        ? "Target acquired"
+        : "Free frontier";
   const minimapViewport = useMemo(() => {
     const halfSpan = Math.max(3, chunkRequest.radius);
     return {
@@ -1284,7 +1312,7 @@ export function MapPage() {
             </p>
           </div>
           <Badge tone="info">
-            Center {cameraView.centerTileX},{cameraView.centerTileY} · zoom {cameraView.zoom.toFixed(2)}
+            Center {cameraView.centerTileX},{cameraView.centerTileY} / zoom {cameraView.zoom.toFixed(2)}
           </Badge>
         </div>
         <div className={styles.summaryGrid}>
@@ -1299,6 +1327,84 @@ export function MapPage() {
           <article className={styles.summaryCard}>
             <span className={styles.muted}>{copy.map.activeMarches}</span>
             <strong className={styles.summaryValue}>{formatNumber(activeMarchCount)}</strong>
+          </article>
+        </div>
+        <div className={styles.campaignDeck}>
+          <article className={styles.campaignCard}>
+            <div className={styles.campaignHeader}>
+              <div>
+                <p className={styles.campaignEyebrow}>Theater Directive</p>
+                <strong className={styles.campaignValue}>{currentRegion?.label ?? "Outer frontier"}</strong>
+              </div>
+              <Badge tone={theaterStatusTone}>{theaterStatusLabel}</Badge>
+            </div>
+            <p className={styles.campaignCopy}>
+              Camera anchor sits at {cameraView.centerTileX},{cameraView.centerTileY}. Drag the world to scout cleanly, then lean on zoom layering to surface labels only when the map can carry them.
+            </p>
+            <div className={styles.campaignMetaGrid}>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Detail</span>
+                <strong className={styles.campaignMetaValue}>{cameraView.detailLevel}</strong>
+              </article>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Chunk radius</span>
+                <strong className={styles.campaignMetaValue}>{formatNumber(chunkRequest.radius)}</strong>
+              </article>
+            </div>
+          </article>
+          <article className={styles.campaignCard}>
+            <div className={styles.campaignHeader}>
+              <div>
+                <p className={styles.campaignEyebrow}>Campaign Pressure</p>
+                <strong className={styles.campaignValue}>
+                  {activeBattleWindow ? `${formatNumber(activeBattleWindow.participantCount)} banners staged` : `${formatNumber(activeMarchCount)} live field orders`}
+                </strong>
+              </div>
+              <Badge tone={activeBattleWindow ? "warning" : reportMarkers.length > 0 ? "info" : "success"}>
+                {activeBattleWindow ? "Battle window" : reportMarkers.length > 0 ? "Recent history" : "Stable line"}
+              </Badge>
+            </div>
+            <p className={styles.campaignCopy}>
+              {activeBattleWindow
+                ? `${activeBattleWindow.label} remains open and ${formatNumber(alliedBattleParticipants)} allied banners are already committed.`
+                : "No battle window is locking the sector right now, so march lanes and report beacons stay easier to parse."}
+            </p>
+            <div className={styles.campaignMetaGrid}>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Allied banners</span>
+                <strong className={styles.campaignMetaValue}>{formatNumber(alliedBattleParticipants)}</strong>
+              </article>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Visible reports</span>
+                <strong className={styles.campaignMetaValue}>{formatNumber(reportMarkers.length)}</strong>
+              </article>
+            </div>
+          </article>
+          <article className={styles.campaignCard}>
+            <div className={styles.campaignHeader}>
+              <div>
+                <p className={styles.campaignEyebrow}>Banner Network</p>
+                <strong className={styles.campaignValue}>{alliance ? `[${alliance.tag}] signal rail` : "Independent signals"}</strong>
+              </div>
+              <Badge tone={allianceMarkers.length > 0 ? "success" : "info"}>{formatNumber(allianceMarkers.length)} markers</Badge>
+            </div>
+            <p className={styles.campaignCopy}>
+              {latestAllianceMarker
+                ? `Latest beacon: ${latestAllianceMarker.label} at ${latestAllianceMarker.x},${latestAllianceMarker.y}.`
+                : selectedTargetName
+                  ? `Target lock is on ${selectedTargetName}. Drop a marker to turn it into alliance-readable field guidance.`
+                  : "Select a city, camp, or resource node to translate reconnaissance into fast action buttons."}
+            </p>
+            <div className={styles.campaignMetaGrid}>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Selected target</span>
+                <strong className={styles.campaignMetaValue}>{selectedTargetName ?? "None"}</strong>
+              </article>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Recent beacons</span>
+                <strong className={styles.campaignMetaValue}>{formatNumber(recentAllianceMarkers.length)}</strong>
+              </article>
+            </div>
           </article>
         </div>
       </article>
@@ -1318,7 +1424,7 @@ export function MapPage() {
                   <p className={styles.hudMeta}>
                     {selectedTargetDistance != null
                       ? `Distance ${formatNumber(selectedTargetDistance)} tiles`
-                      : "Drag to pan · Mousewheel to zoom"}
+                      : "Drag to pan / Mousewheel to zoom"}
                   </p>
                 </div>
               </section>
@@ -1522,21 +1628,25 @@ export function MapPage() {
             <div className={styles.mapDock}>
               <article className={styles.dockCard}>
                 <span className={styles.dockEyebrow}>Field Lens</span>
-                <strong className={styles.dockStrong}>{cameraView.detailLevel.toUpperCase()}</strong>
-                <p className={styles.dockCopy}>Chunk radius {chunkRequest.radius} · center {cameraView.centerTileX},{cameraView.centerTileY}</p>
+                <strong className={styles.dockStrong}>{currentRegion?.label ?? cameraView.detailLevel.toUpperCase()}</strong>
+                <p className={styles.dockCopy}>Detail {cameraView.detailLevel} / radius {chunkRequest.radius} / center {cameraView.centerTileX},{cameraView.centerTileY}</p>
               </article>
               <article className={styles.dockCard}>
                 <span className={styles.dockEyebrow}>Route Grid</span>
                 <strong className={styles.dockStrong}>{formatNumber(activeMarchCount)} active orders</strong>
                 <p className={styles.dockCopy}>
-                  Paths {showPaths ? "on" : "off"} · scouts {showScoutTrails ? "on" : "off"} · reports {showReports ? "on" : "off"}
+                  Paths {showPaths ? "on" : "off"} / scouts {showScoutTrails ? "on" : "off"} / reports {showReports ? "on" : "off"}
                 </p>
               </article>
               <article className={styles.dockCard}>
                 <span className={styles.dockEyebrow}>Alliance Signals</span>
-                <strong className={styles.dockStrong}>{formatNumber(allianceMarkers.length)} live markers</strong>
+                <strong className={styles.dockStrong}>{alliance ? `[${alliance.tag}] marker network` : "Independent signals"}</strong>
                 <p className={styles.dockCopy}>
-                  {selectedTargetName ? `Selected ${selectedTargetName}` : "Select a city, camp, or node to open command actions."}
+                  {latestAllianceMarker
+                    ? `Latest beacon: ${latestAllianceMarker.label}`
+                    : selectedTargetName
+                      ? `Selected ${selectedTargetName}`
+                      : "Select a city, camp, or node to open command actions."}
                 </p>
               </article>
             </div>
@@ -1583,6 +1693,93 @@ export function MapPage() {
         </div>
 
         <aside className={styles.sideRail}>
+          <div className={styles.aegisHeader}>
+            <p className={styles.hudEyebrow}>Command Rail</p>
+            <h2 className={styles.aegisTitle}>Aegis Command</h2>
+            <p className={styles.aegisCopy}>
+              Queue rhythm, search, alliance markers, and report beacons stay pinned here while the battlefield camera moves.
+            </p>
+          </div>
+
+          <SectionCard kicker="ACTIVE CONSTRUCTION" title="City Queues" className={styles.marchSection}>
+            <div className={styles.queueList}>
+              {hud.queueItems.map((item) => (
+                <article key={item.id} className={styles.queueCard}>
+                  <div className={styles.queueMeta}>
+                    <strong className={styles.cardTitle}>{item.label}</strong>
+                    <Badge tone={item.value === "Idle" || item.value === "Ready" ? "warning" : "info"}>
+                      {item.value}
+                    </Badge>
+                  </div>
+                  <p className={styles.muted}>{item.hint}</p>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard kicker={copy.map.activeMarches} title="MILITARY EVENTS" className={styles.marchSection}>
+            <div className={styles.marchList}>
+              {state.city.activeMarches.length === 0 ? (
+                <p className={styles.commandHint}>No active military operations.</p>
+              ) : null}
+              {state.city.activeMarches.map((march) => (
+                <article
+                  key={march.id}
+                  className={styles.marchCard}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleMarchSelect(march.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleMarchSelect(march.id);
+                    }
+                  }}
+                >
+                  <div className={styles.marchMeta}>
+                    <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Target"}</strong>
+                    <Badge tone={march.state === "STAGING" ? "warning" : march.state === "RETURNING" ? "info" : "success"}>
+                      {march.state.toLowerCase()}
+                    </Badge>
+                  </div>
+                  <p className={styles.muted}>
+                    {getMarchTimingLabel(march, now)} | Distance {formatNumber(march.distance)} tiles
+                  </p>
+                  <div className={styles.actionRow}>
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="ghost"
+                      disabled={isRecallingMarch}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        recallMarch(march.id);
+                      }}
+                    >
+                      {isRecallingMarch ? "Please wait" : "Recall"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="secondary"
+                      disabled={retargetMutation.isPending || !canRetargetMarch(march, selectedCity, selectedPoi)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        retargetMutation.mutate({
+                          marchId: march.id,
+                          targetCityId: march.objective === "CITY_ATTACK" ? selectedCity?.cityId : undefined,
+                          targetPoiId: march.objective !== "CITY_ATTACK" ? selectedPoi?.id : undefined,
+                        });
+                      }}
+                    >
+                      {copy.map.retarget}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
+
           <section className={styles.commandStrip}>
             <article className={styles.commandCard}>
               <div className={styles.commandHeader}>
@@ -1678,8 +1875,8 @@ export function MapPage() {
                       <button type="button" className={styles.markerFocus} onClick={() => handleMarkerFocus(marker)}>
                         <strong>{marker.label}</strong>
                         <span className={styles.markerMeta}>
-                          {marker.x}, {marker.y} · {formatMarkerAge(marker.createdAt, now)}
-                          {marker.expiresAt ? ` · ${formatTimeRemaining(marker.expiresAt, now)} left` : ""}
+                          {marker.x}, {marker.y} / {formatMarkerAge(marker.createdAt, now)}
+                          {marker.expiresAt ? ` / ${formatTimeRemaining(marker.expiresAt, now)} left` : ""}
                         </span>
                       </button>
                       {marker.canDelete ? (
@@ -1739,7 +1936,7 @@ export function MapPage() {
                     >
                       <strong>{report.label}</strong>
                       <span className={styles.markerMeta}>
-                        {report.x}, {report.y} · {report.kind.toLowerCase().replaceAll("_", " ")}
+                        {report.x}, {report.y} / {report.kind.toLowerCase().replaceAll("_", " ")}
                       </span>
                     </button>
                   ))
@@ -1748,61 +1945,7 @@ export function MapPage() {
             </SectionCard>
           ) : null}
 
-          <SectionCard kicker={copy.map.activeMarches} title="Orders in the field" className={styles.marchSection}>
-            <div className={styles.marchList}>
-              {state.city.activeMarches.map((march) => (
-                <article
-                  key={march.id}
-                  className={styles.marchCard}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleMarchSelect(march.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      handleMarchSelect(march.id);
-                    }
-                  }}
-                >
-                  <div className={styles.marchMeta}>
-                    <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Target"}</strong>
-                    <Badge tone={march.state === "STAGING" ? "warning" : march.state === "RETURNING" ? "info" : "success"}>
-                      {march.state.toLowerCase()}
-                    </Badge>
-                  </div>
-                  <p className={styles.muted}>
-                    {getMarchTimingLabel(march, now)} | Distance {formatNumber(march.distance)} tiles
-                  </p>
-                  <div className={styles.actionRow}>
-                    <Button
-                      type="button"
-                      size="small"
-                      variant="ghost"
-                      disabled={isRecallingMarch}
-                      onClick={() => recallMarch(march.id)}
-                    >
-                      {isRecallingMarch ? "Please wait" : "Recall"}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="small"
-                      variant="secondary"
-                      disabled={retargetMutation.isPending || !canRetargetMarch(march, selectedCity, selectedPoi)}
-                      onClick={() =>
-                        retargetMutation.mutate({
-                          marchId: march.id,
-                          targetCityId: march.objective === "CITY_ATTACK" ? selectedCity?.cityId : undefined,
-                          targetPoiId: march.objective !== "CITY_ATTACK" ? selectedPoi?.id : undefined,
-                        })
-                      }
-                    >
-                      {copy.map.retarget}
-                    </Button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </SectionCard>
+
         </aside>
       </section>
 
@@ -1935,8 +2078,8 @@ export function MapPage() {
                       </select>
                     </div>
                     <p className={styles.commanderMeta}>
-                      March +{selectedCommander?.marchSpeedBonusPct ?? 0}% · Carry +
-                      {selectedCommander?.carryBonusPct ?? 0}% · Attack +{selectedCommander?.attackBonusPct ?? 0}% ·
+                      March +{selectedCommander?.marchSpeedBonusPct ?? 0}% / Carry +
+                      {selectedCommander?.carryBonusPct ?? 0}% / Attack +{selectedCommander?.attackBonusPct ?? 0}% /
                       Defense +{selectedCommander?.defenseBonusPct ?? 0}%
                     </p>
                   </section>
@@ -1947,7 +2090,7 @@ export function MapPage() {
                           <span>
                             <strong>{troop.label}</strong>
                             <span className={styles.sliderMeta}>
-                              Reserve {formatNumber(troop.quantity)} · Speed {troop.speed.toFixed(2)} · Carry{" "}
+                              Reserve {formatNumber(troop.quantity)} / Speed {troop.speed.toFixed(2)} / Carry{" "}
                               {formatNumber(troop.carry)}
                             </span>
                           </span>

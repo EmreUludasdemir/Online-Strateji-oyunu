@@ -178,12 +178,12 @@ function hashCoordinate(x: number, y: number): number {
 function getTerrainFill(tile: FogTileView): number {
   const hash = hashCoordinate(tile.x, tile.y) % 4;
   if (tile.state === "HIDDEN") {
-    return [0x071016, 0x09121a, 0x08131d, 0x061018][hash];
+    return [0x111112, 0x141416, 0x121214, 0x0f0f10][hash];
   }
   if (tile.state === "DISCOVERED") {
-    return [0x26312d, 0x2b372f, 0x2c3a33, 0x303a31][hash];
+    return [0x1e1f1c, 0x222320, 0x20211e, 0x1c1d1a][hash];
   }
-  return [0x304b42, 0x355146, 0x38574b, 0x2d493f][hash];
+  return [0x2a2c28, 0x2e302b, 0x282a26, 0x31332c][hash];
 }
 
 function getMarchColor(objective: MarchView["objective"]): number {
@@ -604,7 +604,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     this.terrainGraphics.clear();
     this.gridGraphics.clear();
-    this.terrainGraphics.fillStyle(0x071319, 1);
+    this.terrainGraphics.fillStyle(0x161618, 1);
     this.terrainGraphics.fillRect(0, 0, this.worldPixelSize, this.worldPixelSize);
 
     for (const tile of this.tiles) {
@@ -841,8 +841,8 @@ class FrontierMapScene extends Phaser.Scene {
       this.cityLookup.set(city.cityId, { worldX: point.x, worldY: point.y, data: city });
       const selected = city.cityId === this.selectedCityId;
       const allied = !city.isCurrentPlayer && this.alliedOwnerNames.has(city.ownerName);
-      const auraColor = city.isCurrentPlayer ? 0x4fb3b6 : allied ? 0x4aa7b5 : city.fogState === "VISIBLE" ? 0xa54842 : 0x8d6a46;
-      const cityColor = city.isCurrentPlayer ? 0x458b8e : allied ? 0x5fc8da : city.fogState === "VISIBLE" ? 0xc46f49 : 0x9b7651;
+      const auraColor = city.isCurrentPlayer ? 0xe2c275 : allied ? 0x5c8a99 : city.fogState === "VISIBLE" ? 0x8a2c2c : 0x555558;
+      const cityColor = city.isCurrentPlayer ? 0xd4af37 : allied ? 0x4aa7b5 : city.fogState === "VISIBLE" ? 0xa54842 : 0x737376;
 
       if (allied) {
         const territory = this.add.circle(point.x, point.y, this.currentDetailLevel === "near" ? 72 : 64, 0x2b8f98, 0.08);

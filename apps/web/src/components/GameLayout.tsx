@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AllianceStateResponse,
   BuildingType,
@@ -17,6 +17,7 @@ import { api, ApiClientError } from "../api";
 import type { CreateMarchPayload } from "../api";
 import { trackAnalyticsEvent, trackAnalyticsOnce } from "../lib/analytics";
 import { formatNumber } from "../lib/formatters";
+import { summarizeRewardLines } from "../lib/rewardSummaries";
 import { copy } from "../lib/i18n";
 import { getInvalidationKeys, getSocketToast, parseSocketEvent } from "../lib/socketEvents";
 import { useTheme } from "./ThemeProvider";
@@ -641,99 +642,149 @@ export function GameLayout() {
   ];
   const mailboxEntries = mailboxQuery.data?.entries ?? [];
   const storeCatalog = storeCatalogQuery.data?.catalog;
+  const marketProducts = storeCatalog?.products ?? [];
+  const marketProductLookup = new Map(marketProducts.map((product) => [product.productId, product]));
+  const marketOffers = (storeCatalog?.offers ?? []).slice(0, 4).map((offer) => ({
+    ...offer,
+    linkedProducts: offer.productIds.map((productId) => marketProductLookup.get(productId)).filter(Boolean),
+  }));
+  const featuredProducts = marketProducts.slice(0, 3);
   const entitlements = entitlementsQuery.data?.entitlements ?? [];
   const allianceLabel = contextValue.state.alliance
     ? `[${contextValue.state.alliance.tag}] ${contextValue.state.alliance.name}`
     : "Independent Province";
+  const provinceStatus = contextValue.state.city.peaceShieldUntil ? "Peace shield active" : "Battle ready";
+  const sidebarSummary = [
+    { label: "Alliance Banner", value: allianceLabel },
+    { label: "Open Marches", value: formatNumber(contextValue.state.city.openMarchCount) },
+    { label: "Unread Dispatches", value: formatNumber(mailboxQuery.data?.unreadCount ?? 0) },
+    { label: "Province Status", value: provinceStatus },
+  ];
+  const navigationItems = [
+    { to: "/app/map", eyebrow: "Field Theater", label: "Strategic Map", code: "MAP" },
+    { to: "/app/alliance", eyebrow: "Diplomacy Wing", label: "Grand Alliance", code: "ALLY" },
+    { to: "/app/dashboard", eyebrow: "Inner Province", label: "City Dashboard", code: "CITY" },
+    { to: "/app/reports", eyebrow: "Battle Ledger", label: "War Council", code: "WAR" },
+  ] as const;
+  const archiveItems = [
+    { to: "/app/research", eyebrow: "Academy Wing", label: "Imperial Research", code: "ARC" },
+    { to: "/app/leaderboards", eyebrow: "Ranking Bureau", label: "Imperial Leaderboards", code: "RANK" },
+    { to: "/app/messages", eyebrow: "Dispatch Hall", label: "Message Center", code: "MSG" },
+    { to: "/app/market", eyebrow: "Trade Exchange", label: "Imperial Market", code: "MKT" },
+  ] as const;
   const commanders = contextValue.state.city.commanders;
   const focusedCommander =
     commanders.find((commander) => commander.id === commanderPanelId) ?? commanders[0] ?? null;
 
   return (
     <div className={styles.shell}>
+      <TopHud
+        brand={
+          <div className={styles.topBrand}>
+            <h1 className={styles.brandKicker}>Frontier Dominion</h1>
+          </div>
+        }
+        resources={resources}
+        actions={
+          <QuickActions
+            onInbox={openInbox}
+            onStore={openStorePreview}
+            onCommander={() => openCommanderPanel()}
+          />
+        }
+      />
+
       <aside className={styles.sidebar}>
-        <div className={styles.brandCard}>
-          <p className={styles.brandKicker}>Frontier Dominion</p>
-          <h1 className={styles.brandTitle}>{contextValue.state.city.cityName}</h1>
-          <p className={styles.brandMeta}>Governor {contextValue.state.player.username}</p>
-          <p className={styles.brandMeta}>{allianceLabel}</p>
+        <div className={styles.sidebarHeader}>
+          <div className={styles.brandFrame}>
+            <span className={styles.brandMonogram}>FD</span>
+            <div className={styles.brandCopy}>
+              <p className={styles.brandEyebrow}>Sovereign Archive</p>
+              <h2 className={styles.brandTitle}>Frontier Dominion</h2>
+            </div>
+          </div>
+          <p className={styles.brandMeta}>{contextValue.state.city.cityName} command ledger</p>
         </div>
 
         <nav className={styles.nav}>
-          <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            {copy.hud.dashboard}
-          </NavLink>
-          <NavLink to="/app/map" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            {copy.hud.map}
-          </NavLink>
-          <NavLink to="/app/reports" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            {copy.hud.reports}
-          </NavLink>
-          <NavLink to="/app/alliance" className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}>
-            {copy.hud.alliance}
-          </NavLink>
+          {navigationItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}
+            >
+              <span className={styles.navIcon}>{item.code}</span>
+              <span className={styles.navCopy}>
+                <span className={styles.navEyebrow}>{item.eyebrow}</span>
+                <span className={styles.navTitle}>{item.label}</span>
+              </span>
+            </NavLink>
+          ))}
         </nav>
 
-        <div className={styles.summaryCard}>
-          <p className={styles.brandKicker}>HUD Overview</p>
-          <div className={styles.summaryList}>
-            <div>
-              <span className={styles.summaryLabel}>View Radius</span>
-              <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.visionRadius)} tiles</strong>
-            </div>
-            <div>
-              <span className={styles.summaryLabel}>Marches</span>
-              <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.openMarchCount)}</strong>
-            </div>
-            <div>
-              <span className={styles.summaryLabel}>Inbox</span>
-              <strong className={styles.summaryValue}>{formatNumber(mailboxQuery.data?.unreadCount ?? 0)} unread</strong>
-            </div>
+        <section className={styles.utilitySection}>
+          <p className={styles.utilityHeading}>Imperial Rooms</p>
+          <div className={styles.utilityGrid}>
+            {archiveItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive ? styles.utilityLinkActive : styles.utilityLink)}
+              >
+                <span className={styles.utilityCode}>{item.code}</span>
+                <span className={styles.utilityCopy}>
+                  <span className={styles.utilityEyebrow}>{item.eyebrow}</span>
+                  <span className={styles.utilityTitle}>{item.label}</span>
+                </span>
+              </NavLink>
+            ))}
           </div>
-        </div>
+        </section>
+
+        <section className={styles.summaryCard}>
+          <p className={styles.summaryKicker}>Dominion Signals</p>
+          <h3 className={styles.summaryHeadline}>{allianceLabel}</h3>
+          <div className={styles.summaryList}>
+            {sidebarSummary.map((entry) => (
+              <div key={entry.label}>
+                <span className={styles.summaryLabel}>{entry.label}</span>
+                <span className={styles.summaryValue}>{entry.value}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className={styles.sidebarFooter}>
-          <Button type="button" variant="secondary" onClick={() => setThemeSheetOpen(true)}>
-            Theme
+          <Button type="button" variant="primary" className={styles.declareWarBtn}>
+            Declare War
           </Button>
-          <Button type="button" variant="ghost" onClick={() => logoutMutation.mutate()}>
-            Log Out
-          </Button>
+          <div className={styles.supportActions}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="small"
+              className={styles.footerAction}
+              onClick={() => setThemeSheetOpen(true)}
+            >
+              Theme Deck
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="small"
+              className={styles.footerAction}
+              onClick={() => logoutMutation.mutate()}
+            >
+              Log Out
+            </Button>
+          </div>
         </div>
       </aside>
 
       <div className={styles.main}>
-        <TopHud
-          resources={resources}
-          queueItems={contextValue.hud.queueItems}
-          meta={
-            <div className={styles.summaryCard}>
-              <p className={styles.brandKicker}>Battle Line</p>
-              <div className={styles.summaryList}>
-                <div>
-                  <span className={styles.summaryLabel}>Attack</span>
-                  <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.attackPower)}</strong>
-                </div>
-                <div>
-                  <span className={styles.summaryLabel}>Defense</span>
-                  <strong className={styles.summaryValue}>{formatNumber(contextValue.state.city.defensePower)}</strong>
-                </div>
-              </div>
-            </div>
-          }
-          actions={
-            <QuickActions
-              onInbox={openInbox}
-              onStore={openStorePreview}
-              onCommander={() => openCommanderPanel()}
-            />
-          }
-        />
-
         <main className={styles.content}>
           <Outlet context={contextValue} />
         </main>
-
         <MobileBottomNav />
       </div>
 
@@ -830,24 +881,58 @@ export function GameLayout() {
       >
         <div className={styles.sheetGrid}>
           <SectionCard
-            kicker="Offers"
-            title={copy.store.offers}
-            aside={<Badge tone="warning">{formatNumber(storeCatalog?.offers.length ?? 0)}</Badge>}
+            kicker="Exchange Floor"
+            title="Imperial market pulse"
+            aside={<Badge tone="warning">{formatNumber(featuredProducts.length)}</Badge>}
           >
-            <div className={styles.sheetList}>
-              {(storeCatalog?.offers ?? []).slice(0, 4).map((offer) => (
-                <div key={offer.offerId} className={styles.sheetRow}>
-                  <div>
-                    <strong>{offer.title}</strong>
-                    <p className={styles.sheetMeta}>{offer.description}</p>
-                  </div>
-                  <Badge tone="info">{offer.productIds.length} products</Badge>
-                </div>
-              ))}
+            {featuredProducts.length === 0 ? (
+              <p className={styles.sheetMeta}>The market catalog is not available yet.</p>
+            ) : (
+              <div className={styles.marketTickerGrid}>
+                {featuredProducts.map((product) => {
+                  const rewardLines = summarizeRewardLines(product.reward);
+                  return (
+                    <article key={product.productId} className={styles.marketTicker}>
+                      <span className={styles.marketTickerLabel}>{product.label}</span>
+                      <strong className={styles.marketTickerValue}>{product.priceLabel}</strong>
+                      <p className={styles.marketTickerNote}>{rewardLines[0] ?? product.description}</p>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+
+          <SectionCard
+            kicker="Trade Caravans"
+            title={copy.store.offers}
+            aside={<Badge tone="info">{formatNumber(marketOffers.length)}</Badge>}
+          >
+            <div className={styles.marketLedger}>
+              {marketOffers.length === 0 ? (
+                <p className={styles.sheetMeta}>No live caravans are posted right now.</p>
+              ) : (
+                marketOffers.map((offer) => (
+                  <article key={offer.offerId} className={styles.marketLedgerRow}>
+                    <div>
+                      <strong>{offer.title}</strong>
+                      <p className={styles.sheetMeta}>{offer.description}</p>
+                      <p className={styles.marketManifest}>
+                        {offer.linkedProducts[0] ? summarizeRewardLines(offer.linkedProducts[0].reward)[0] ?? offer.linkedProducts[0].description : "Catalog preview only"}
+                      </p>
+                    </div>
+                    <div className={styles.marketLedgerMeta}>
+                      <Badge tone="warning">{offer.productIds.length} products</Badge>
+                      {offer.segmentTags[0] ? <span>{offer.segmentTags.join(" | ")}</span> : null}
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
           </SectionCard>
+
           <SectionCard
-            kicker="Entitlements"
+            kicker="Imperial Warrants"
             title={copy.store.entitlements}
             aside={<Badge tone="success">{formatNumber(entitlements.length)}</Badge>}
           >
@@ -857,13 +942,31 @@ export function GameLayout() {
               ) : (
                 entitlements.slice(0, 5).map((entitlement) => (
                   <div key={entitlement.id} className={styles.sheetRow}>
-                    <strong>{entitlement.productId}</strong>
+                    <div>
+                      <strong>{entitlement.productId}</strong>
+                      <p className={styles.sheetMeta}>{entitlement.entitlementKey}</p>
+                    </div>
                     <Badge tone="info">{entitlement.status.toLowerCase()}</Badge>
                   </div>
                 ))
               )}
             </div>
           </SectionCard>
+
+          <div className={styles.sheetRow}>
+            <span className={styles.sheetMeta}>Open the full market floor for offer rotation and warrant history.</span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="small"
+              onClick={() => {
+                setStorePreviewOpen(false);
+                navigate("/app/market");
+              }}
+            >
+              Open Market
+            </Button>
+          </div>
         </div>
       </BottomSheet>
 
@@ -907,4 +1010,5 @@ export function GameLayout() {
 export function useGameLayoutContext() {
   return useOutletContext<GameLayoutContext>();
 }
+
 

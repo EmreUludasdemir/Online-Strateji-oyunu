@@ -1,25 +1,25 @@
 :root,
 :root[data-theme="night"] {
   color-scheme: dark;
-  --font-display: "Cinzel", "Cormorant Garamond", "Baskerville Old Face", "Palatino Linotype", Georgia, serif;
+  --font-display: "Playfair Display", "Cinzel", "Cormorant Garamond", "Baskerville Old Face", "Palatino Linotype", Georgia, serif;
   --font-body: "Inter", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
 
-  --color-bg-950: #0a0807;
-  --color-bg-900: #120d0a;
-  --color-bg-850: #1c1410;
-  --color-surface-900: rgba(20, 14, 11, 0.96);
-  --color-surface-850: rgba(30, 21, 16, 0.94);
-  --color-surface-800: rgba(45, 32, 24, 0.90);
-  --color-surface-760: rgba(62, 44, 34, 0.85);
-  --color-surface-720: rgba(90, 65, 50, 0.78);
-  --color-ink-100: #fdf6ea;
-  --color-ink-200: #ebd8bd;
-  --color-ink-300: #d6bfa0;
-  --color-ink-400: #b59574;
-  --color-gold-400: #c2923e;
-  --color-gold-300: #dab162;
-  --color-gold-200: #f4dca6;
+  --color-bg-950: #0a0a0c;
+  --color-bg-900: #101012;
+  --color-bg-850: #161618;
+  --color-surface-900: rgba(22, 22, 24, 0.96);
+  --color-surface-850: rgba(28, 28, 30, 0.94);
+  --color-surface-800: rgba(36, 36, 38, 0.90);
+  --color-surface-760: rgba(44, 44, 46, 0.85);
+  --color-surface-720: rgba(56, 56, 58, 0.78);
+  --color-ink-100: #f4f4f5;
+  --color-ink-200: #e4e4e7;
+  --color-ink-300: #a1a1aa;
+  --color-ink-400: #71717a;
+  --color-gold-400: #b58d22;
+  --color-gold-300: #d4af37;
+  --color-gold-200: #e2c275;
   --color-teal-500: #2f7a7f;
   --color-teal-400: #51a3a1;
   --color-teal-300: #88c8c3;
@@ -28,15 +28,15 @@
   --color-red-500: #d86851;
   --color-green-500: #54a978;
   --color-blue-500: #598bc0;
-  --color-panel-edge: rgba(218, 176, 101, 0.28);
-  --color-panel-line: rgba(247, 239, 223, 0.12);
-  --color-overlay: rgba(5, 3, 2, 0.82);
-  --surface-panel-top: rgba(105, 78, 54, 0.38);
-  --surface-panel-mid: rgba(38, 25, 18, 0.92);
-  --surface-panel-bottom: rgba(12, 8, 6, 0.98);
-  --surface-panel-glow: rgba(81, 163, 161, 0.18);
-  --surface-panel-border-strong: rgba(244, 220, 166, 0.22);
-  --surface-parchment: rgba(244, 220, 166, 0.12);
+  --color-panel-edge: rgba(226, 194, 117, 0.28);
+  --color-panel-line: rgba(226, 194, 117, 0.12);
+  --color-overlay: rgba(5, 5, 6, 0.82);
+  --surface-panel-top: rgba(42, 42, 44, 0.38);
+  --surface-panel-mid: rgba(30, 30, 32, 0.92);
+  --surface-panel-bottom: rgba(24, 24, 26, 0.98);
+  --surface-panel-glow: rgba(226, 194, 117, 0.08);
+  --surface-panel-border-strong: rgba(226, 194, 117, 0.22);
+  --surface-parchment: rgba(226, 194, 117, 0.05);
 
   --shadow-soft: 0 18px 36px rgba(0, 0, 0, 0.45);
   --shadow-heavy: 0 30px 72px rgba(0, 0, 0, 0.65);
