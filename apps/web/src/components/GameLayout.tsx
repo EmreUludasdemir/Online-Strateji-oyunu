@@ -86,6 +86,13 @@ declare global {
       x: number;
       y: number;
     } | null;
+    frontierMapUi?: {
+      targetSheetOpen: boolean;
+      composerMode: string | null;
+      selectedMarchId: string | null;
+      selectedTargetName: string | null;
+      fieldCommandKind: string | null;
+    } | null;
   }
 }
 
@@ -157,7 +164,7 @@ function useSocketNotifications(enabled: boolean, onToast: (toast: Omit<ToastIte
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let socket: WebSocket | null = null;
     const timer = window.setTimeout(() => {
-      socket = new WebSocket(`${protocol}://${window.location.hostname}:3101/ws`);
+      socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
 
       socket.addEventListener("message", (event) => {
         const parsed = parseSocketEvent(JSON.parse(event.data) as unknown);
@@ -486,6 +493,7 @@ export function GameLayout() {
       const selectedPoi = worldChunk?.pois.find((poi) => poi.id === selectedPoiId) ?? null;
       const cameraView = window.frontierMapCamera ?? null;
       const fieldCommand = window.frontierMapFieldCommand ?? null;
+      const mapUi = window.frontierMapUi ?? null;
 
       return JSON.stringify({
         screen: location.pathname,
@@ -531,6 +539,7 @@ export function GameLayout() {
           loaded: Boolean(worldChunk),
           camera: cameraView,
           fieldCommand,
+          ui: mapUi,
           center: worldChunk?.center,
           radius: worldChunk?.radius ?? null,
           tiles: {

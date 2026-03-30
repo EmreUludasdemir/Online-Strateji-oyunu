@@ -5,6 +5,10 @@ import { chromium } from "playwright";
 
 const MAP_TILE_WORLD_SIZE = 128;
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function parseArgs(argv) {
   const args = {
     baseUrl: "http://localhost:5173",
@@ -153,10 +157,15 @@ async function openFieldCommandWithHook(page, target) {
     window.open_map_field_command?.(payload);
   }, target);
 
-  await waitFor(async () => {
+  const dialog = page.getByRole("dialog", {
+    name: new RegExp(`Field Command: ${escapeRegExp(target.label)}`),
+  });
+  await dialog.waitFor({ timeout: 3_000 });
+
+  return waitFor(async () => {
     const state = await readGameState(page);
     return state?.map?.fieldCommand?.label === target.label ? state : null;
-  }, 3_000, "field command sheet after automation hook");
+  }, 3_000, "field command sheet after automation hook").catch(() => null);
 }
 
 async function main() {
@@ -215,10 +224,37 @@ async function main() {
       await openFieldCommandWithHook(page, targetPayload);
     }
 
-    await page.getByRole("dialog", { name: new RegExp(`Field Command: ${targetPayload.label}`) }).waitFor({ timeout: 5_000 });
+    const fieldCommandDialog = page.getByRole("dialog", {
+      name: new RegExp(`Field Command: ${escapeRegExp(targetPayload.label)}`),
+    });
+    await fieldCommandDialog.waitFor({ timeout: 5_000 });
+
+    let targetTrayValidated = false;
+    if (targetPayload.kind !== "TILE") {
+      await fieldCommandDialog.locator("footer").getByRole("button", { name: "Open Target" }).click();
+
+      const targetDialog = page.getByRole("dialog", {
+        name: new RegExp(`Command Tray: ${escapeRegExp(targetPayload.label)}`),
+      });
+      await targetDialog.waitFor({ timeout: 5_000 });
+
+      const targetPrimaryActionLabel =
+        "id" in target ? (target.kind === "BARBARIAN_CAMP" ? "Attack Camp" : "Gather Here") : "Attack City";
+      await targetDialog.getByRole("button", { name: targetPrimaryActionLabel }).waitFor({ timeout: 5_000 });
+      targetTrayValidated = true;
+
+      await targetDialog.getByRole("button", { name: "Close" }).click();
+      await targetDialog.waitFor({ state: "hidden", timeout: 5_000 });
+
+      await page.reload({ waitUntil: "networkidle" });
+      await ensureMapLoaded(page);
+      await ensureFieldCommandHook(page);
+      await openFieldCommandWithHook(page, targetPayload);
+      await fieldCommandDialog.waitFor({ timeout: 5_000 });
+    }
 
     const markerLabel = `Field ping ${Date.now().toString().slice(-4)}`;
-    await page.locator("input[placeholder^='Marker for']").fill(markerLabel);
+    await fieldCommandDialog.locator("input[type='text']").fill(markerLabel);
     await page.getByRole("button", { name: "Post Marker" }).click();
 
     const finalState = await waitFor(async () => {
@@ -251,6 +287,7 @@ async function main() {
             y: targetPayload.y,
           },
           fieldCommand: finalState.map.fieldCommand,
+          targetTrayValidated,
           marker: createdMarker,
         },
         null,

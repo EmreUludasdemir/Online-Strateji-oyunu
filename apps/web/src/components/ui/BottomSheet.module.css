@@ -104,7 +104,7 @@
   right: 1rem;
   top: 1rem;
   bottom: 1rem;
-  width: min(460px, calc(100vw - 1.2rem));
+  width: min(540px, calc(100vw - 1.2rem));
   max-height: none;
   transform: none;
   border-radius: 28px;
