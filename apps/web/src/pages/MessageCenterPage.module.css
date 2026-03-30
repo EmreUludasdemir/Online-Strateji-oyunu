@@ -1,7 +1,10 @@
 ﻿@import "../components/ui/InboxDrawer.module.css";
 
 .page,
-.summaryGrid {
+.summaryGrid,
+.boardGrid,
+.dispatchBoard,
+.routeGrid {
   display: grid;
   gap: 1rem;
 }
@@ -31,23 +34,41 @@
   pointer-events: none;
 }
 
-.heroTop {
+.heroTop,
+.groupHead,
+.boardHead,
+.dispatchCell,
+.routeCard {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .kicker,
-.summaryLabel {
+.summaryLabel,
+.boardMeta,
+.groupMeta,
+.routeNote,
+.feedback {
   color: var(--color-ink-300);
+}
+
+.kicker,
+.summaryLabel,
+.boardMeta,
+.groupMeta,
+.detailLabel {
   font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .heroTitle,
-.summaryValue {
+.summaryValue,
+.boardValue,
+.archiveTitle,
+.detailTitle {
   font-family: var(--font-display);
 }
 
@@ -57,7 +78,11 @@
 
 .heroLead,
 .summaryMeta,
-.feedback {
+.boardCopy,
+.routeNote,
+.feedback,
+.dispatchCell span,
+.routeCard span {
   color: var(--color-ink-200);
 }
 
@@ -70,7 +95,16 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.summaryCard {
+.boardGrid,
+.dispatchBoard,
+.routeGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summaryCard,
+.boardCard,
+.dispatchCell,
+.routeCard {
   position: relative;
   overflow: hidden;
   padding: 1rem;
@@ -82,24 +116,96 @@
     linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
 }
 
-.summaryValue {
+.summaryValue,
+.boardValue {
   display: block;
   margin-top: 0.3rem;
   font-size: 1.16rem;
+}
+
+.summaryMeta,
+.boardCopy {
+  display: block;
+  margin-top: 0.35rem;
+  line-height: 1.6;
 }
 
 .layout {
   min-height: 700px;
 }
 
+.groupHead,
+.boardHead,
+.dispatchCell,
+.routeCard,
+.actionRow {
+  flex-wrap: wrap;
+}
+
+.groupMeta,
+.boardMeta,
+.detailRef {
+  color: var(--color-gold-200);
+}
+
+.entryButton,
+.letterCard,
+.detailCard,
+.dispatchCell,
+.routeCard,
+.boardCard {
+  position: relative;
+}
+
+.entryButton::after,
+.letterCard::after,
+.detailCard::after,
+.dispatchCell::after,
+.routeCard::after,
+.boardCard::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 10px;
+  border: 1px solid rgba(244, 220, 166, 0.06);
+  pointer-events: none;
+}
+
+.dispatchCell,
+.routeCard {
+  display: grid;
+}
+
+.dispatchCell strong,
+.routeCard strong {
+  color: var(--color-ink-100);
+  font-size: 1rem;
+}
+
+.routeNote {
+  margin: 0;
+  line-height: 1.7;
+}
+
 @media (max-width: 1180px) {
   .summaryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .boardGrid,
+  .dispatchBoard,
+  .routeGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
-  .heroTop {
+  .heroTop,
+  .groupHead,
+  .boardHead,
+  .dispatchCell,
+  .routeCard,
+  .actionRow {
     flex-direction: column;
     align-items: flex-start;
   }

@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "corepack pnpm --filter @frontier/shared build && tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "tsx tests/setupTestDb.ts && vitest run",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
+    "alpha:provision": "tsx prisma/provisionAlphaUsers.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

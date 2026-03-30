@@ -4,6 +4,7 @@ import { storeVerifySchema } from "@frontier/shared";
 import { requireAuth } from "../middleware/auth";
 import { env } from "../lib/env";
 import { parseOrThrow } from "../lib/http";
+import { assertStoreEnabled } from "../lib/launch";
 import { createRateLimit } from "../middleware/rateLimit";
 import { getEntitlements, getStoreCatalog, verifyStorePurchase } from "../game/service";
 
@@ -15,6 +16,10 @@ const mutationRateLimit = createRateLimit({
 });
 
 storeRouter.use(requireAuth);
+storeRouter.use((_request, _response, next) => {
+  assertStoreEnabled();
+  next();
+});
 
 storeRouter.get("/catalog", async (request, response) => {
   const catalog = await getStoreCatalog(request.authUserId!);

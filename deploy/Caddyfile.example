@@ -1,0 +1,10 @@
+alpha.example.com {
+  encode zstd gzip
+
+  @backend path /api/* /ws
+  reverse_proxy @backend 127.0.0.1:3101
+
+  root * /srv/frontier/web
+  try_files {path} /index.html
+  file_server
+}

@@ -22,6 +22,7 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const {
     state,
+    bootstrap,
     upgrade,
     train,
     research,
@@ -37,7 +38,11 @@ export function DashboardPage() {
   const inventoryQuery = useQuery({ queryKey: ["inventory"], queryFn: api.inventory });
   const mailboxQuery = useQuery({ queryKey: ["mailbox"], queryFn: api.mailbox });
   const eventsQuery = useQuery({ queryKey: ["events"], queryFn: api.events });
-  const storeCatalogQuery = useQuery({ queryKey: ["store-catalog"], queryFn: api.storeCatalog });
+  const storeCatalogQuery = useQuery({
+    queryKey: ["store-catalog"],
+    queryFn: api.storeCatalog,
+    enabled: bootstrap.storeEnabled,
+  });
 
   const claimTaskMutation = useMutation({
     mutationFn: (taskId: string) => api.claimTask(taskId),
@@ -251,9 +256,6 @@ export function DashboardPage() {
               <Button type="button" size="small" variant="ghost" onClick={() => navigate("/app/messages")}>
                 Messages
               </Button>
-              <Button type="button" size="small" variant="ghost" onClick={() => navigate("/app/market")}>
-                Market
-              </Button>
             </div>
           </article>
         </div>
@@ -378,13 +380,14 @@ export function DashboardPage() {
             </div>
             <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>Open Message Center</Button></div>
           </SectionCard>
-
-          <SectionCard kicker={copy.dashboard.store} title="Store summary" aside={<Badge tone="success">{storeOffers.length} offers</Badge>}>
-            <div className={styles.compactList}>
-              {storeOffers.slice(0, 3).map((offer) => <div key={offer.offerId} className={styles.taskMeta}><strong>{offer.title}</strong><span className={styles.stackHint}>{offer.productIds.length} products</span></div>)}
-            </div>
-            <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={() => navigate("/app/market")}>Open Imperial Market</Button></div>
-          </SectionCard>
+          {bootstrap.storeEnabled ? (
+            <SectionCard kicker={copy.dashboard.store} title="Store summary" aside={<Badge tone="success">{storeOffers.length} offers</Badge>}>
+              <div className={styles.compactList}>
+                {storeOffers.slice(0, 3).map((offer) => <div key={offer.offerId} className={styles.taskMeta}><strong>{offer.title}</strong><span className={styles.stackHint}>{offer.productIds.length} products</span></div>)}
+              </div>
+              <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={() => navigate("/app/market")}>Open Imperial Market</Button></div>
+            </SectionCard>
+          ) : null}
         </aside>
       </div>
     </section>

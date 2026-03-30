@@ -653,3 +653,35 @@
   }
 }
 
+
+.topReleaseMeta {
+  margin: 0.18rem 0 0;
+  color: var(--color-ink-300);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.releaseRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.releaseBadge,
+.versionStamp,
+.versionLine {
+  color: var(--color-ink-300);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.releaseBadge {
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 220, 166, 0.14);
+  background: rgba(244, 220, 166, 0.08);
+  color: var(--color-gold-200);
+}

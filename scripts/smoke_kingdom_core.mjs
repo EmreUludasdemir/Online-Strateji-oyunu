@@ -40,14 +40,10 @@ function prepareSmokeFixture(username) {
   const serverDir = path.resolve("apps", "server");
   const tsxCli = path.join(serverDir, "node_modules", "tsx", "dist", "cli.mjs");
 
-  execFileSync(
-    process.execPath,
-    [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username],
-    {
-      cwd: serverDir,
-      stdio: "inherit",
-    },
-  );
+  execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
+    cwd: serverDir,
+    stdio: "inherit",
+  });
 }
 
 async function waitFor(check, timeoutMs, label) {
@@ -134,10 +130,23 @@ async function waitForScoutInbox(page, targetName) {
   return title;
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getTargetDialog(page, label) {
+  return page.getByRole("dialog", { name: new RegExp(`Command Tray: ${escapeRegExp(label)}`) });
+}
+
+function getComposerDialog(page, title) {
+  return page.getByRole("dialog", { name: title });
+}
+
 async function dispatchMarch(page) {
   const mapState = await ensureMapLoaded(page);
   const totalTroops = mapState.city.troops.reduce((sum, troop) => sum + troop.quantity, 0);
   const targetPoi = mapState.map.pois.find((poi) => poi.canSendMarch) ?? mapState.map.pois.find((poi) => poi.canGather);
+
   if (targetPoi) {
     await page.evaluate((poiId) => {
       window.select_map_poi?.(poiId);
@@ -148,9 +157,14 @@ async function dispatchMarch(page) {
       return state?.selectedPoi?.id === targetPoi.id ? state : null;
     }, 5_000, "the target point of interest to become selected");
 
+    const targetDialog = getTargetDialog(page, targetPoi.label);
+    await targetDialog.waitFor({ timeout: 5_000 });
+
     if (totalTroops <= 0) {
-      await page.getByRole("button", { name: "Send Scout" }).first().click();
-      await page.getByLabel("Scout Mission").getByRole("button", { name: "Send Scout" }).click();
+      await targetDialog.getByRole("button", { name: "Send Scout" }).click();
+      const scoutDialog = getComposerDialog(page, "Scout Mission");
+      await scoutDialog.waitFor({ timeout: 5_000 });
+      await scoutDialog.getByRole("button", { name: "Send Scout" }).click();
       return {
         mission: "SCOUT",
         targetName: targetPoi.label,
@@ -158,9 +172,14 @@ async function dispatchMarch(page) {
       };
     }
 
-    await page.getByRole("button", { name: "Proceed" }).click();
-    const actionName = targetPoi.canGather ? "Start Gathering" : "March to Camp";
-    await page.getByRole("button", { name: actionName }).click();
+    const targetActionName = targetPoi.canGather ? "Gather Here" : "Attack Camp";
+    const composerTitle = targetPoi.canGather ? "Gathering Orders" : "Camp Assault";
+    const confirmActionName = targetPoi.canGather ? "Start Gathering" : "March to Camp";
+
+    await targetDialog.getByRole("button", { name: targetActionName }).click();
+    const composerDialog = getComposerDialog(page, composerTitle);
+    await composerDialog.waitFor({ timeout: 5_000 });
+    await composerDialog.getByRole("button", { name: confirmActionName }).click();
 
     const sentState = await waitFor(async () => {
       const state = await readGameState(page);
@@ -188,9 +207,14 @@ async function dispatchMarch(page) {
     return state?.selectedCity?.cityId === targetCity.cityId ? state : null;
   }, 5_000, "the target settlement to become selected");
 
+  const targetDialog = getTargetDialog(page, targetCity.cityName);
+  await targetDialog.waitFor({ timeout: 5_000 });
+
   if (totalTroops <= 0) {
-    await page.getByRole("button", { name: "Send Scout" }).first().click();
-    await page.getByLabel("Scout Mission").getByRole("button", { name: "Send Scout" }).click();
+    await targetDialog.getByRole("button", { name: "Send Scout" }).click();
+    const scoutDialog = getComposerDialog(page, "Scout Mission");
+    await scoutDialog.waitFor({ timeout: 5_000 });
+    await scoutDialog.getByRole("button", { name: "Send Scout" }).click();
     return {
       mission: "SCOUT",
       targetName: targetCity.cityName,
@@ -198,8 +222,10 @@ async function dispatchMarch(page) {
     };
   }
 
-  await page.getByRole("button", { name: "Proceed" }).click();
-  await page.getByRole("button", { name: "Send March" }).click();
+  await targetDialog.getByRole("button", { name: "Attack City" }).click();
+  const composerDialog = getComposerDialog(page, "March Orders");
+  await composerDialog.waitFor({ timeout: 5_000 });
+  await composerDialog.getByRole("button", { name: "Send March" }).click();
 
   const sentState = await waitFor(async () => {
     const state = await readGameState(page);
@@ -259,7 +285,7 @@ async function main() {
       await page.screenshot({ path: args.screenshotPath, fullPage: true });
     } else {
       await waitForMarchResolution(page);
-      await page.getByRole("link", { name: "Reports" }).click();
+      await page.getByRole("link", { name: /War Council|Reports/i }).click();
       await page.waitForURL("**/app/reports");
       await page.getByRole("heading").first().waitFor();
       await page.screenshot({ path: args.screenshotPath, fullPage: true });
@@ -298,4 +324,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
-

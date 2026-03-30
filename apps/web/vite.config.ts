@@ -6,8 +6,12 @@ export default defineConfig(({ mode }) => {
   const apiProxyTarget = env.FRONTIER_API_PROXY_TARGET || "http://localhost:3101";
   const wsProxyTarget = env.FRONTIER_WS_PROXY_TARGET || apiProxyTarget.replace(/^http/, "ws");
   const devPort = Number(env.FRONTIER_WEB_PORT || 5173);
+  const releaseVersion = env.FRONTIER_RELEASE_VERSION || process.env.npm_package_version || "0.0.1";
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(releaseVersion),
+    },
     plugins: [react()],
     build: {
       rollupOptions: {

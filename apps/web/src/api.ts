@@ -15,6 +15,7 @@ import type {
   MarchObjective,
   MarchCommandResponse,
   OkResponse,
+  PublicBootstrapResponse,
   PurchaseVerifyRequest,
   PurchaseVerifyResponse,
   RallyMutationResponse,
@@ -89,6 +90,7 @@ export type CreateMarchPayload =
     };
 
 export const api = {
+  publicBootstrap: () => apiRequest<PublicBootstrapResponse>("/api/public/bootstrap"),
   session: () => apiRequest<AuthResponse>("/api/auth/me"),
   login: (body: { username: string; password: string }) =>
     apiRequest<AuthResponse>("/api/auth/login", {

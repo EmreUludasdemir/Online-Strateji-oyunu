@@ -5,6 +5,7 @@ import { JWT_COOKIE_NAME } from "../game/constants";
 import { getSessionCookieOptions, signSessionToken, verifySessionToken } from "../lib/auth";
 import { env } from "../lib/env";
 import { parseOrThrow } from "../lib/http";
+import { assertRegistrationAvailable } from "../lib/launch";
 import { createRateLimit } from "../middleware/rateLimit";
 import { getSessionUser, loginPlayer, registerPlayer } from "../game/service";
 
@@ -15,6 +16,8 @@ const authRateLimit = createRateLimit({
 });
 
 authRouter.post("/register", authRateLimit, async (request, response) => {
+  assertRegistrationAvailable();
+
   const payload = parseOrThrow(authSchema, request.body);
   const user = await registerPlayer(payload);
 

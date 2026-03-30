@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../src/app";
+import { env } from "../src/lib/env";
 import { resetMetrics } from "../src/lib/metrics";
 import { prisma } from "../src/lib/prisma";
 
@@ -123,6 +124,60 @@ describe("API smoke", () => {
 
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body.user.username).toBe("alpha_test");
+  });
+
+  it("returns the public bootstrap payload", async () => {
+    const app = createApp();
+
+    const response = await request(app).get("/api/public/bootstrap");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      launchPhase: env.LAUNCH_PHASE,
+      registrationMode: env.REGISTRATION_MODE,
+      storeEnabled: env.STORE_ENABLED,
+    });
+  });
+
+  it("blocks registration when login-only mode is enabled", async () => {
+    const app = createApp();
+    const originalRegistrationMode = env.REGISTRATION_MODE;
+
+    env.REGISTRATION_MODE = "login_only";
+
+    try {
+      const response = await request(app).post("/api/auth/register").send({
+        username: "closed_gate",
+        password: "passphrase1",
+      });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe("REGISTRATION_CLOSED");
+    } finally {
+      env.REGISTRATION_MODE = originalRegistrationMode;
+    }
+  });
+
+  it("blocks store routes when the market is disabled", async () => {
+    const app = createApp();
+    const agent = request.agent(app);
+    const originalStoreEnabled = env.STORE_ENABLED;
+
+    await agent.post("/api/auth/register").send({
+      username: "store_gate",
+      password: "passphrase1",
+    });
+
+    env.STORE_ENABLED = false;
+
+    try {
+      const response = await agent.get("/api/store/catalog");
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe("FEATURE_DISABLED");
+    } finally {
+      env.STORE_ENABLED = originalStoreEnabled;
+    }
   });
 
   it("runs the kingdom core flow with battle staging, resolve, and reports", async () => {

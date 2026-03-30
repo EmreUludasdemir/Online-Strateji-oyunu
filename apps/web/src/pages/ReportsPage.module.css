@@ -30,7 +30,9 @@
 .filterRow,
 .reportCardMeta,
 .detailMetaRow,
-.powerLabels {
+.powerLabels,
+.detailActions,
+.timelineButtonMeta {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -63,7 +65,10 @@
 
 .heroLead,
 .reportCardBody,
-.sideText {
+.sideText,
+.summaryMeta,
+.dossierCell span,
+.timelineButton span {
   color: var(--color-ink-300);
   line-height: 1.65;
 }
@@ -84,15 +89,35 @@
 
 .summaryGrid,
 .coordGrid,
-.lootGrid {
+.lootGrid,
+.bridgeGrid,
+.dossierStrip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.85rem;
+}
+
+.summaryGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coordGrid,
+.lootGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.bridgeGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dossierStrip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .summaryCard,
 .reportCard,
-.statCard {
+.statCard,
+.dossierCell,
+.timelineButton {
   position: relative;
   overflow: hidden;
   padding: 1rem;
@@ -107,7 +132,9 @@
 
 .summaryCard::after,
 .reportCard::after,
-.statCard::after {
+.statCard::after,
+.dossierCell::after,
+.timelineButton::after {
   content: "";
   position: absolute;
   inset: 7px;
@@ -124,6 +151,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.summaryMeta {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -134,7 +167,10 @@
 .reportRail,
 .detailPane,
 .railList,
-.detailGrid {
+.detailGrid,
+.timelineList,
+.reportCardSignals,
+.dossierCell {
   display: grid;
   gap: 1rem;
 }
@@ -156,7 +192,8 @@
   font-size: 2rem;
 }
 
-.reportCard {
+.reportCard,
+.timelineButton {
   display: grid;
   gap: 0.55rem;
   text-align: left;
@@ -168,7 +205,8 @@
     box-shadow var(--motion-base);
 }
 
-.reportCard:hover {
+.reportCard:hover,
+.timelineButton:hover {
   transform: translateY(-1px);
   border-color: rgba(244, 220, 166, 0.24);
 }
@@ -183,10 +221,30 @@
 
 .reportCardMeta,
 .detailMetaRow,
-.powerLabels {
+.powerLabels,
+.timelineButtonMeta {
   flex-wrap: wrap;
   color: var(--color-ink-300);
   font-size: 0.82rem;
+}
+
+.reportCardSignals {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.reportSignal {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 0.72rem;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 220, 166, 0.08);
+  background: rgba(17, 13, 11, 0.68);
+  color: var(--color-ink-200);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .detailHero {
@@ -215,8 +273,17 @@
   font-size: 1rem;
 }
 
+.dossierCell strong {
+  color: var(--color-ink-100);
+  font-size: 1rem;
+}
+
 .detailGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detailActions {
+  flex-wrap: wrap;
 }
 
 .powerSplit {
@@ -262,6 +329,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.timelineButton strong {
+  color: var(--color-ink-100);
+}
+
 .feedback {
   padding: 1.3rem;
   border: 1px solid var(--color-panel-edge);
@@ -272,7 +343,9 @@
 
 @media (max-width: 1180px) {
   .layout,
-  .detailGrid {
+  .detailGrid,
+  .dossierStrip,
+  .bridgeGrid {
     grid-template-columns: 1fr;
   }
 
@@ -293,7 +366,9 @@
   .railHeader,
   .reportCardMeta,
   .detailMetaRow,
-  .powerLabels {
+  .powerLabels,
+  .detailActions,
+  .timelineButtonMeta {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -301,7 +376,8 @@
   .summaryGrid,
   .coordGrid,
   .lootGrid,
-  .lossGrid {
+  .lossGrid,
+  .reportCardSignals {
     grid-template-columns: 1fr;
   }
 }

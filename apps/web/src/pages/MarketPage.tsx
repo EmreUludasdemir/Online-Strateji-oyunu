@@ -1,4 +1,5 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
@@ -11,7 +12,12 @@ import { summarizeRewardLines } from "../lib/rewardSummaries";
 import styles from "./MarketPage.module.css";
 
 export function MarketPage() {
-  const { state } = useGameLayoutContext();
+  const { state, bootstrap } = useGameLayoutContext();
+
+  if (!bootstrap.storeEnabled) {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+
   const storeCatalogQuery = useQuery({ queryKey: ["store-catalog"], queryFn: api.storeCatalog });
   const entitlementsQuery = useQuery({ queryKey: ["entitlements"], queryFn: api.entitlements });
 

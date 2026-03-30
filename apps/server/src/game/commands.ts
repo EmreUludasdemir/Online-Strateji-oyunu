@@ -2287,8 +2287,8 @@ export async function getSessionUser(userId: string): Promise<AuthUser> {
 export async function seedDemoPlayer(input: {
   username: string;
   password: string;
-  cityName: string;
-  coordinate: { x: number; y: number };
+  cityName?: string;
+  coordinate?: { x: number; y: number };
 }): Promise<void> {
   const existing = await prisma.user.findUnique({
     where: { username: input.username },

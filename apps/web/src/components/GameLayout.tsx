@@ -4,6 +4,7 @@ import type {
   BuildingType,
   EntitlementsResponse,
   GameStateResponse,
+  PublicBootstrapResponse,
   ResearchType,
   StoreCatalogResponse,
   TroopStock,
@@ -16,6 +17,7 @@ import { NavLink, Navigate, Outlet, useLocation, useNavigate, useOutletContext }
 import { api, ApiClientError } from "../api";
 import type { CreateMarchPayload } from "../api";
 import { trackAnalyticsEvent, trackAnalyticsOnce } from "../lib/analytics";
+import { getLaunchPhaseLabel, usePublicBootstrap } from "../lib/bootstrap";
 import { formatNumber } from "../lib/formatters";
 import { summarizeRewardLines } from "../lib/rewardSummaries";
 import { copy } from "../lib/i18n";
@@ -39,6 +41,7 @@ interface HudState {
 }
 
 export interface GameLayoutContext {
+  bootstrap: PublicBootstrapResponse;
   state: GameStateResponse;
   hud: HudState;
   notifications: {
@@ -224,6 +227,8 @@ export function GameLayout() {
     setSelectedCityId(null);
   }, []);
 
+  const bootstrapQuery = usePublicBootstrap();
+
   const sessionQuery = useQuery({
     queryKey: ["session"],
     queryFn: api.session,
@@ -246,13 +251,13 @@ export function GameLayout() {
   const storeCatalogQuery = useQuery({
     queryKey: ["store-catalog"],
     queryFn: api.storeCatalog,
-    enabled: Boolean(sessionQuery.data?.user),
+    enabled: Boolean(sessionQuery.data?.user) && Boolean(bootstrapQuery.data?.storeEnabled),
   });
 
   const entitlementsQuery = useQuery({
     queryKey: ["entitlements"],
     queryFn: api.entitlements,
-    enabled: Boolean(sessionQuery.data?.user),
+    enabled: Boolean(sessionQuery.data?.user) && Boolean(bootstrapQuery.data?.storeEnabled),
   });
 
   const logoutMutation = useMutation({
@@ -395,9 +400,13 @@ export function GameLayout() {
   }, []);
 
   const openStorePreview = useCallback(() => {
+    if (!bootstrapQuery.data?.storeEnabled) {
+      return;
+    }
+
     setStorePreviewOpen(true);
     trackAnalyticsEvent("store_opened");
-  }, []);
+  }, [bootstrapQuery.data?.storeEnabled]);
 
   const openCommanderPanel = useCallback((commanderId?: string) => {
     setCommanderPanelId(commanderId ?? null);
@@ -405,11 +414,12 @@ export function GameLayout() {
   }, []);
 
   const contextValue = useMemo<GameLayoutContext | null>(() => {
-    if (!stateQuery.data) {
+    if (!stateQuery.data || !bootstrapQuery.data) {
       return null;
     }
 
     return {
+      bootstrap: bootstrapQuery.data,
       state: stateQuery.data,
       hud: {
         activeRoute: getHudRoute(location.pathname),
@@ -448,6 +458,7 @@ export function GameLayout() {
       openCommanderPanel,
     };
   }, [
+    bootstrapQuery.data,
     location.pathname,
     mailboxQuery.data?.unreadCount,
     marchMutation,
@@ -618,6 +629,10 @@ export function GameLayout() {
     });
   }, [location.pathname]);
 
+  if (bootstrapQuery.isError) {
+    return <div className={styles.feedback}>Launch configuration could not be loaded.</div>;
+  }
+
   if (sessionQuery.isError) {
     return <div className={styles.feedback}>Session could not be restored.</div>;
   }
@@ -635,7 +650,7 @@ export function GameLayout() {
     return <div className={styles.feedback}>Game state could not be loaded.</div>;
   }
 
-  if (sessionQuery.isPending || stateQuery.isPending) {
+  if (bootstrapQuery.isPending || sessionQuery.isPending || stateQuery.isPending) {
     return <div className={styles.feedback}>Loading HUD...</div>;
   }
 
@@ -649,6 +664,8 @@ export function GameLayout() {
     { label: copy.resources.food, value: contextValue.state.city.resources.food },
     { label: copy.resources.gold, value: contextValue.state.city.resources.gold },
   ];
+  const storeEnabled = contextValue.bootstrap.storeEnabled;
+  const releaseLabel = getLaunchPhaseLabel(contextValue.bootstrap);
   const mailboxEntries = mailboxQuery.data?.entries ?? [];
   const storeCatalog = storeCatalogQuery.data?.catalog;
   const marketProducts = storeCatalog?.products ?? [];
@@ -679,7 +696,7 @@ export function GameLayout() {
     { to: "/app/research", eyebrow: "Academy Wing", label: "Imperial Research", code: "ARC" },
     { to: "/app/leaderboards", eyebrow: "Ranking Bureau", label: "Imperial Leaderboards", code: "RANK" },
     { to: "/app/messages", eyebrow: "Dispatch Hall", label: "Message Center", code: "MSG" },
-    { to: "/app/market", eyebrow: "Trade Exchange", label: "Imperial Market", code: "MKT" },
+    ...(storeEnabled ? [{ to: "/app/market", eyebrow: "Trade Exchange", label: "Imperial Market", code: "MKT" }] : []),
   ] as const;
   const commanders = contextValue.state.city.commanders;
   const focusedCommander =
@@ -690,7 +707,11 @@ export function GameLayout() {
       <TopHud
         brand={
           <div className={styles.topBrand}>
-            <h1 className={styles.brandKicker}>Frontier Dominion</h1>
+            <div>
+              <h1 className={styles.brandKicker}>Frontier Dominion</h1>
+              <p className={styles.topReleaseMeta}>{releaseLabel} | v{__APP_VERSION__}</p>
+            </div>
+            <Badge tone="warning">{releaseLabel}</Badge>
           </div>
         }
         resources={resources}
@@ -699,6 +720,7 @@ export function GameLayout() {
             onInbox={openInbox}
             onStore={openStorePreview}
             onCommander={() => openCommanderPanel()}
+            showStore={storeEnabled}
           />
         }
       />
@@ -710,6 +732,10 @@ export function GameLayout() {
             <div className={styles.brandCopy}>
               <p className={styles.brandEyebrow}>Sovereign Archive</p>
               <h2 className={styles.brandTitle}>Frontier Dominion</h2>
+              <div className={styles.releaseRow}>
+                <span className={styles.releaseBadge}>{releaseLabel}</span>
+                <span className={styles.versionStamp}>v{__APP_VERSION__}</span>
+              </div>
             </div>
           </div>
           <p className={styles.brandMeta}>{contextValue.state.city.cityName} command ledger</p>
@@ -768,6 +794,7 @@ export function GameLayout() {
             Declare War
           </Button>
           <div className={styles.supportActions}>
+            <span className={styles.versionLine}>{releaseLabel} | v{__APP_VERSION__}</span>
             <Button
               type="button"
               variant="ghost"

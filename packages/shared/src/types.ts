@@ -60,6 +60,15 @@ export interface AuthResponse {
   user: AuthUser | null;
 }
 
+export type LaunchPhase = "closed_alpha" | "public";
+export type RegistrationMode = "open" | "login_only";
+
+export interface PublicBootstrapResponse {
+  launchPhase: LaunchPhase;
+  registrationMode: RegistrationMode;
+  storeEnabled: boolean;
+}
+
 export interface OkResponse {
   ok: true;
 }

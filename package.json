@@ -15,6 +15,9 @@
     "db:down": "docker compose down",
     "db:migrate": "corepack pnpm --filter @frontier/server prisma:migrate",
     "db:generate": "corepack pnpm --filter @frontier/server prisma:generate",
-    "db:seed": "corepack pnpm --filter @frontier/server prisma:seed"
+    "db:seed": "corepack pnpm --filter @frontier/server prisma:seed",
+    "alpha:provision": "corepack pnpm --filter @frontier/server alpha:provision",
+    "smoke:alpha-access": "node ./scripts/smoke_closed_alpha_access.mjs",
+    "smoke:alpha": "node ./scripts/smoke_closed_alpha_suite.mjs"
   }
 }

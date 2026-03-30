@@ -338,3 +338,25 @@
     width: 100%;
   }
 }
+
+.noticeBox {
+  margin-bottom: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(240, 207, 134, 0.18);
+  background:
+    linear-gradient(180deg, rgba(67, 42, 27, 0.72), rgba(28, 18, 13, 0.8)),
+    linear-gradient(90deg, rgba(46, 115, 116, 0.12), transparent 72%);
+  color: #f5e5c4;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.card .noticeBox {
+  margin-bottom: 1.1rem;
+  color: #5c412d;
+  background:
+    linear-gradient(180deg, rgba(116, 79, 47, 0.08), rgba(116, 79, 47, 0.12)),
+    rgba(255, 248, 236, 0.82);
+  border-color: rgba(139, 79, 47, 0.16);
+}

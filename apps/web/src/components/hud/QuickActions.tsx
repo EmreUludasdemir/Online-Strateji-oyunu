@@ -51,19 +51,23 @@ export function QuickActions({
   onInbox,
   onStore,
   onCommander,
+  showStore = true,
 }: {
   onInbox: () => void;
-  onStore: () => void;
+  onStore?: () => void;
   onCommander: () => void;
+  showStore?: boolean;
 }) {
   return (
     <>
       <IconButton type="button" aria-label={copy.hud.openInbox} onClick={onInbox}>
         <InboxIcon />
       </IconButton>
-      <IconButton type="button" aria-label={copy.hud.openStore} onClick={onStore}>
-        <StoreIcon />
-      </IconButton>
+      {showStore && onStore ? (
+        <IconButton type="button" aria-label={copy.hud.openStore} onClick={onStore}>
+          <StoreIcon />
+        </IconButton>
+      ) : null}
       <IconButton type="button" aria-label={copy.hud.openCommander} onClick={onCommander}>
         <CommanderIcon />
       </IconButton>

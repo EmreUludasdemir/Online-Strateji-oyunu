@@ -6,13 +6,14 @@ import { HttpError, toApiError } from "./lib/http";
 import { incrementCounter, observeDuration, snapshotMetrics } from "./lib/metrics";
 import { getRealtimeAdapterDiagnostics } from "./lib/notifications";
 import { storeValidationPort } from "./lib/storeValidation";
-import { authRouter } from "./routes/auth";
 import { allianceRouter } from "./routes/alliance";
+import { authRouter } from "./routes/auth";
 import { gameRouter } from "./routes/game";
+import { publicRouter } from "./routes/public";
 import { storeRouter } from "./routes/store";
 
 function getStatusClass(statusCode: number): string {
-  return `${Math.floor(statusCode / 100)}xx`;
+  return String(Math.floor(statusCode / 100)) + "xx";
 }
 
 function canAccessOps(request: Request): boolean {
@@ -83,6 +84,7 @@ export function createApp() {
     });
   });
 
+  app.use("/api/public", publicRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/alliance", allianceRouter);
   app.use("/api/game", gameRouter);

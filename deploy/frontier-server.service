@@ -1,0 +1,19 @@
+[Unit]
+Description=Frontier Dominion Server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/frontier/app
+EnvironmentFile=/etc/frontier/server.env
+ExecStart=/usr/bin/env node /srv/frontier/app/apps/server/dist/index.js
+Restart=always
+RestartSec=5
+User=frontier
+Group=frontier
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

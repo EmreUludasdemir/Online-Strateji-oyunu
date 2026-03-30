@@ -1,0 +1,1 @@
+15 3 * * * set -a && . /etc/frontier/server.env && set +a && /usr/local/bin/frontier-backup-postgres.sh >> /var/log/frontier-db-backup.log 2>&1
