@@ -30,6 +30,8 @@ import type {
   WorldChunkResponse,
 } from "@frontier/shared";
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export class ApiClientError extends Error {
   readonly status: number;
   readonly code: string;
@@ -40,6 +42,13 @@ export class ApiClientError extends Error {
     this.status = status;
     this.code = code;
     this.details = details;
+  }
+}
+
+export class ApiTimeoutError extends Error {
+  constructor(message = "Request timed out") {
+    super(message);
+    this.name = "ApiTimeoutError";
   }
 }
 
@@ -59,20 +68,38 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
+interface ApiRequestOptions extends RequestInit {
+  timeout?: number;
+}
 
-  if (init?.body && !headers.has("Content-Type")) {
+export async function apiRequest<T>(path: string, init?: ApiRequestOptions): Promise<T> {
+  const { timeout = DEFAULT_TIMEOUT_MS, ...fetchInit } = init ?? {};
+  const headers = new Headers(fetchInit?.headers);
+
+  if (fetchInit?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(path, {
-    credentials: "include",
-    ...init,
-    headers,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  return parseResponse<T>(response);
+  try {
+    const response = await fetch(path, {
+      credentials: "include",
+      ...fetchInit,
+      headers,
+      signal: controller.signal,
+    });
+
+    return await parseResponse<T>(response);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiTimeoutError(`Request to ${path} timed out after ${timeout}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export type CreateMarchPayload =

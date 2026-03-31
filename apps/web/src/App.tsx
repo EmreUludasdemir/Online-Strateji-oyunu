@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { ApiClientError } from "./api";
 import { AuthPage } from "./components/AuthPage";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GameLayout } from "./components/GameLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -70,32 +71,55 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <BrowserRouter>
-          <Suspense fallback={<div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>Loading route...</div>}>
-            <Routes>
-              <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
-              <Route path="/login" element={<AuthPage mode="login" />} />
-              <Route path="/register" element={<AuthPage mode="register" />} />
-              <Route path="/app" element={<GameLayout />}>
-                <Route index element={<Navigate to="/app/dashboard" replace />} />
-                <Route path="dashboard" element={<DashboardPage />} />
-                <Route path="research" element={<ResearchPage />} />
-                <Route path="commanders" element={<CommanderPage />} />
-                <Route path="map" element={<MapPage />} />
-                <Route path="reports" element={<ReportsPage />} />
-                <Route path="leaderboards" element={<LeaderboardPage />} />
-                <Route path="messages" element={<MessageCenterPage />} />
-                <Route path="market" element={<MarketPage />} />
-                <Route path="alliance" element={<AlliancePage />} />
-                <Route path="alliance/roles" element={<AllianceRolesPage />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <BrowserRouter>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
+                  <Route path="/login" element={<AuthPage mode="login" />} />
+                  <Route path="/register" element={<AuthPage mode="register" />} />
+                  <Route path="/app" element={<GameLayout />}>
+                    <Route index element={<Navigate to="/app/dashboard" replace />} />
+                    <Route path="dashboard" element={<DashboardPage />} />
+                    <Route path="research" element={<ResearchPage />} />
+                    <Route path="commanders" element={<CommanderPage />} />
+                    <Route path="map" element={<MapPage />} />
+                    <Route path="reports" element={<ReportsPage />} />
+                    <Route path="leaderboards" element={<LeaderboardPage />} />
+                    <Route path="messages" element={<MessageCenterPage />} />
+                    <Route path="market" element={<MarketPage />} />
+                    <Route path="alliance" element={<AlliancePage />} />
+                    <Route path="alliance/roles" element={<AllianceRolesPage />} />
+                  </Route>
+                  <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
+          </BrowserRouter>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "var(--color-bg-primary, #0f0f0f)",
+        color: "var(--color-text-secondary, #a0a0a0)",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>⏳</div>
+        <p>Loading...</p>
+      </div>
+    </div>
   );
 }

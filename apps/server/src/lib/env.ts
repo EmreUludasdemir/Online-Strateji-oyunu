@@ -32,6 +32,13 @@ const envSchema = z
     OPS_METRICS_TOKEN: z.preprocess(emptyStringToUndefined, z.string().optional()),
     REALTIME_ADAPTER: z.enum(["in_memory", "redis"]).optional().default("in_memory"),
     REDIS_URL: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
+    ALLOWED_ORIGINS: z.preprocess(emptyStringToUndefined, z.string().optional()),
+    TRUST_PROXY: z
+      .enum(["true", "false"])
+      .optional()
+      .default("false")
+      .transform((value) => value === "true"),
+    GRACEFUL_SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   })
   .superRefine((value, context) => {
     if (value.NODE_ENV !== "production") {

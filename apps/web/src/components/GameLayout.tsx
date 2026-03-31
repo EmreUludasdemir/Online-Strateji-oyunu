@@ -266,6 +266,10 @@ export function GameLayout() {
       queryClient.clear();
       navigate("/login", { replace: true });
     },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to logout";
+      enqueueToast({ tone: "error", title: "Logout Failed", body: message });
+    },
   });
 
   const upgradeMutation = useMutation({
@@ -282,6 +286,10 @@ export function GameLayout() {
         title: "Upgrade Started",
         body: "A new build order has been placed in the city queue.",
       });
+    },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to start upgrade";
+      enqueueToast({ tone: "error", title: "Upgrade Failed", body: message });
     },
   });
 
@@ -301,6 +309,10 @@ export function GameLayout() {
         body: "New troops have been entered into the barracks queue.",
       });
     },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to queue training";
+      enqueueToast({ tone: "error", title: "Training Failed", body: message });
+    },
   });
 
   const researchMutation = useMutation({
@@ -316,6 +328,10 @@ export function GameLayout() {
         title: "Research Started",
         body: "The academy has started a new doctrine study.",
       });
+    },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to start research";
+      enqueueToast({ tone: "error", title: "Research Failed", body: message });
     },
   });
 
@@ -344,6 +360,10 @@ export function GameLayout() {
         body: `${targetName} departure confirmed. ETA ${march.remainingSeconds}s.`,
       });
     },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to dispatch march";
+      enqueueToast({ tone: "error", title: "March Failed", body: message });
+    },
   });
 
   const recallMutation = useMutation({
@@ -358,6 +378,10 @@ export function GameLayout() {
         title: "March Recalled",
         body: "Troops are returning to the city.",
       });
+    },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to recall march";
+      enqueueToast({ tone: "error", title: "Recall Failed", body: message });
     },
   });
 
@@ -374,6 +398,10 @@ export function GameLayout() {
         body: "Command records have been updated.",
       });
     },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to upgrade commander";
+      enqueueToast({ tone: "error", title: "Commander Upgrade Failed", body: message });
+    },
   });
 
   const claimMailboxMutation = useMutation({
@@ -389,6 +417,10 @@ export function GameLayout() {
         title: "Inbox Reward Claimed",
         body: "Resources and entitlements have been refreshed.",
       });
+    },
+    onError: (error) => {
+      const message = error instanceof ApiClientError ? error.message : "Failed to claim reward";
+      enqueueToast({ tone: "error", title: "Claim Failed", body: message });
     },
   });
 

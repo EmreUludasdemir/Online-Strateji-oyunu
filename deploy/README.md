@@ -32,10 +32,15 @@ COMMAND_RATE_LIMIT_WINDOW_MS=60000
 OPS_METRICS_TOKEN=<long-random-token>
 REALTIME_ADAPTER=in_memory
 REDIS_URL=
+ALLOWED_ORIGINS=https://alpha.example.com
+TRUST_PROXY=true
+GRACEFUL_SHUTDOWN_TIMEOUT_MS=30000
 ```
 
 Notes:
 - `COOKIE_SECURE=true`, `COOKIE_DOMAIN`, `DATABASE_URL`, and `OPS_METRICS_TOKEN` are required in production.
+- `ALLOWED_ORIGINS` should contain your frontend domain(s), comma-separated for multiple origins.
+- `TRUST_PROXY=true` is required when running behind a reverse proxy (Caddy, Nginx).
 - Keep the imperial market disabled in alpha: `STORE_ENABLED=false`.
 - Public signup stays closed: `REGISTRATION_MODE=login_only`.
 
@@ -126,9 +131,25 @@ sudo crontab -e
 Run these after each deploy:
 
 ```bash
+# Basic health check
 curl -f https://alpha.example.com/api/health
+
+# Liveness probe (for Kubernetes/Docker)
+curl -f https://alpha.example.com/api/health/live
+
+# Readiness probe (checks database connectivity)
+curl -f https://alpha.example.com/api/health/ready
+
+# Ops health (requires token)
 curl -f -H "x-ops-token: <OPS_METRICS_TOKEN>" https://alpha.example.com/api/ops/health
+
+# Prometheus metrics (requires token)
+curl -f -H "x-ops-token: <OPS_METRICS_TOKEN>" https://alpha.example.com/metrics
+
+# Bootstrap check
 curl -f https://alpha.example.com/api/public/bootstrap
+
+# E2E smoke tests
 corepack pnpm smoke:e2e
 corepack pnpm smoke:field-command
 ```
@@ -143,6 +164,9 @@ Expected alpha behavior:
 
 ## Operations notes
 - Review logs with `journalctl -u frontier-server -f`.
+- Logs are in JSON format (structured logging with Pino).
 - This phase is single-node only. Do not add a second app instance while `REALTIME_ADAPTER=in_memory`.
+- Graceful shutdown: Server closes connections properly on SIGTERM/SIGINT with a configurable timeout.
+- WebSocket heartbeat: Dead connections are automatically cleaned up every 30 seconds.
 - Phaser chunk size warnings are known and not a release blocker for closed alpha.
 

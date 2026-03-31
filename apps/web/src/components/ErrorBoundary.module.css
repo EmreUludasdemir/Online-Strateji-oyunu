@@ -1,0 +1,94 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  background: var(--color-bg-primary);
+}
+
+.card {
+  max-width: 480px;
+  padding: var(--spacing-xl);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.message {
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--spacing-lg);
+  line-height: 1.5;
+}
+
+.details {
+  margin-bottom: var(--spacing-lg);
+  text-align: left;
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.errorText {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-danger);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.retryButton,
+.reloadButton {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--motion-fast);
+}
+
+.retryButton {
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
+  border: none;
+}
+
+.retryButton:hover {
+  background: var(--color-primary-hover);
+}
+
+.reloadButton {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.reloadButton:hover {
+  background: var(--color-bg-tertiary);
+}
