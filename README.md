@@ -170,12 +170,12 @@ COMMAND_RATE_LIMIT_MAX=30
 COMMAND_RATE_LIMIT_WINDOW_MS=60000
 OPS_METRICS_TOKEN=
 REALTIME_ADAPTER=in_memory
-REDIS_URL=
+REDIS_URL=redis://localhost:6379
 ```
 
 ## Database workflow
 
-Start PostgreSQL:
+Start PostgreSQL and Redis:
 
 ```powershell
 docker compose up -d
@@ -323,11 +323,25 @@ The smoke script:
 - Report filters are client-side only; there is no server-side report search/index yet
 - Web frontend tests now include a few Vitest component checks, but most UI verification is still smoke-level
 - Phaser is split into its own lazy-loaded chunk, but that vendor chunk is still large
-- Cookie and CORS defaults are aimed at localhost development rather than hardened production deployment
-- Realtime fanout still runs on the in-memory adapter; `REALTIME_ADAPTER=redis` only falls back to a Redis-ready boundary today
 - Ops metrics are in-memory JSON snapshots, not OpenTelemetry exporters or durable TSDB pipelines
 - Product analytics events now ingest server-side, but there is no warehouse sink or dashboarding yet
 - IAP validation is only represented by a noop service port; no store receipt verification exists yet
+
+## Multi-instance deployment (Redis)
+
+For production deployments with multiple server instances, enable the Redis realtime adapter:
+
+```env
+REALTIME_ADAPTER=redis
+REDIS_URL=redis://your-redis-host:6379
+```
+
+This enables:
+- WebSocket notifications across all server instances
+- User-specific and broadcast message fanout via Redis pub/sub
+- Automatic failover to in-memory if Redis is unavailable
+
+Health checks (`/api/health/ready`) will verify Redis connectivity when configured.
 
 ## Next improvements
 
@@ -335,6 +349,6 @@ The smoke script:
 - Add alliance shared territory, permissions, and richer treasury tooling
 - Expand commander progression beyond the current fixed tree visualization into real skill assignment
 - Add richer map overlays, scout telemetry, and report interactions
-- Replace the in-memory metrics and realtime adapters with Redis/pubsub plus OpenTelemetry exporters
+- Add OpenTelemetry tracing integration
 - Wire the analytics ingest stream into a real warehouse or dashboard sink
 - Implement real App Store / Play receipt validation behind the existing store port

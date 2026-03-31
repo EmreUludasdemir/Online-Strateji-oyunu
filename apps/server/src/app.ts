@@ -10,6 +10,7 @@ import { logger } from "./lib/logger";
 import { incrementCounter, observeDuration, snapshotMetrics } from "./lib/metrics";
 import { getRealtimeAdapterDiagnostics } from "./lib/notifications";
 import { prisma } from "./lib/prisma";
+import { isRedisConfigured, pingRedis } from "./lib/redis";
 import { storeValidationPort } from "./lib/storeValidation";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { allianceRouter } from "./routes/alliance";
@@ -143,17 +144,39 @@ export function createApp() {
     response.json({ status: "alive", timestamp: new Date().toISOString() });
   });
 
-  // Readiness probe - check database connectivity
+  // Readiness probe - check database and Redis connectivity
   app.get("/api/health/ready", async (_request, response) => {
+    const checks: { database: boolean; redis?: boolean } = { database: false };
+    
     try {
       await prisma.$queryRaw`SELECT 1`;
-      response.json({ status: "ready", timestamp: new Date().toISOString() });
+      checks.database = true;
     } catch (error) {
-      logger.error({ error, channel: "health" }, "Readiness check failed");
+      logger.error({ error, channel: "health" }, "Database readiness check failed");
+    }
+
+    // Check Redis if configured
+    if (isRedisConfigured()) {
+      checks.redis = await pingRedis();
+      if (!checks.redis) {
+        logger.error({ channel: "health" }, "Redis readiness check failed");
+      }
+    }
+
+    const isReady = checks.database && (checks.redis !== false);
+    
+    if (isReady) {
+      response.json({ 
+        status: "ready", 
+        timestamp: new Date().toISOString(),
+        checks,
+      });
+    } else {
       response.status(503).json({ 
         status: "not_ready", 
         timestamp: new Date().toISOString(),
-        error: env.NODE_ENV === "development" ? String(error) : "Database unavailable",
+        checks,
+        error: env.NODE_ENV === "development" ? "One or more services unavailable" : undefined,
       });
     }
   });
@@ -163,10 +186,13 @@ export function createApp() {
     response.json({ ok: true });
   });
 
-  app.get("/api/ops/health", (_request, response) => {
+  app.get("/api/ops/health", async (_request, response) => {
+    const redisStatus = isRedisConfigured() ? await pingRedis() : null;
+    
     response.json({
       ok: true,
       realtime: getRealtimeAdapterDiagnostics(),
+      redis: redisStatus !== null ? { connected: redisStatus } : undefined,
       storeValidation: {
         mode: storeValidationPort.mode,
       },

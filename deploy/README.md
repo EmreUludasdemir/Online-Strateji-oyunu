@@ -3,12 +3,12 @@
 This repo is prepared for a `closed_alpha` release on a single Ubuntu VPS.
 
 ## Topology
-- One VPS / VM only.
+- One VPS / VM only (for single instance) OR multiple instances with Redis.
 - `Caddy` terminates TLS and serves the web build from `/srv/frontier/web`.
 - `/api/*` and `/ws` reverse proxy to `127.0.0.1:3101`.
 - `Node 24` runs the compiled server process through `systemd`.
 - `PostgreSQL 17` runs on the same machine.
-- `REALTIME_ADAPTER` stays `in_memory`; do not run multiple server instances in this phase.
+- `Redis 7` (optional) enables multi-instance deployment with WebSocket fanout.
 
 ## Required production env
 Create `/etc/frontier/server.env` with at least:
@@ -30,8 +30,12 @@ AUTH_RATE_LIMIT_WINDOW_MS=60000
 COMMAND_RATE_LIMIT_MAX=30
 COMMAND_RATE_LIMIT_WINDOW_MS=60000
 OPS_METRICS_TOKEN=<long-random-token>
+# For single instance:
 REALTIME_ADAPTER=in_memory
 REDIS_URL=
+# For multi-instance (uncomment):
+# REALTIME_ADAPTER=redis
+# REDIS_URL=redis://localhost:6379
 ALLOWED_ORIGINS=https://alpha.example.com
 TRUST_PROXY=true
 GRACEFUL_SHUTDOWN_TIMEOUT_MS=30000
@@ -43,9 +47,10 @@ Notes:
 - `TRUST_PROXY=true` is required when running behind a reverse proxy (Caddy, Nginx).
 - Keep the imperial market disabled in alpha: `STORE_ENABLED=false`.
 - Public signup stays closed: `REGISTRATION_MODE=login_only`.
+- For multi-instance deployment, set `REALTIME_ADAPTER=redis` and configure `REDIS_URL`.
 
 ## Machine bootstrap
-1. Install Node 24, PostgreSQL 17, and Caddy.
+1. Install Node 24, PostgreSQL 17, Redis 7 (optional), and Caddy.
 2. Create deploy directories:
    - `sudo mkdir -p /srv/frontier/app`
    - `sudo mkdir -p /srv/frontier/web`

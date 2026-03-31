@@ -76,6 +76,16 @@ const envSchema = z
         message: "JWT_SECRET must be at least 32 characters in production.",
       });
     }
+  })
+  .superRefine((value, context) => {
+    // Redis URL is required when using redis adapter
+    if (value.REALTIME_ADAPTER === "redis" && !value.REDIS_URL) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["REDIS_URL"],
+        message: "REDIS_URL is required when REALTIME_ADAPTER is set to 'redis'.",
+      });
+    }
   });
 
 export const env = envSchema.parse(process.env);
