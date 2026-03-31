@@ -305,7 +305,13 @@ function getCommanderTotalTalentPoints(level: number, starLevel: number) {
   return Math.max(0, level - 1) + Math.max(0, starLevel - 1) * 2;
 }
 
-function buildCommanderSkillTree(track: CommanderTalentTrack, level: number, starLevel: number, talentPointsSpent: number) {
+function buildCommanderSkillTree(
+  track: CommanderTalentTrack,
+  level: number,
+  starLevel: number,
+  talentPointsSpent: number,
+  assignedSkills: string[] = []
+) {
   const totalPoints = getCommanderTotalTalentPoints(level, starLevel);
   const availablePoints = Math.max(0, totalPoints - talentPointsSpent);
   const blueprint = COMMANDER_SKILL_BLUEPRINT[track];
@@ -314,15 +320,138 @@ function buildCommanderSkillTree(track: CommanderTalentTrack, level: number, sta
     track,
     trackLabel: COMMANDER_TALENT_LABELS[track],
     availablePoints,
-    nodes: blueprint.map((node, index) => ({
+    nodes: blueprint.map((node) => ({
       ...node,
       unlocked: totalPoints >= node.requiredPoints,
-      active: talentPointsSpent > index,
+      active: assignedSkills.includes(node.id),
     })),
     links: blueprint.slice(1).map((node, index) => ({
       from: blueprint[index].id,
       to: node.id,
     })),
+  };
+}
+
+/**
+ * Get skill node from blueprint
+ */
+export function getSkillNode(track: CommanderTalentTrack, skillId: string) {
+  const blueprint = COMMANDER_SKILL_BLUEPRINT[track];
+  return blueprint.find((node) => node.id === skillId);
+}
+
+/**
+ * Validate if a skill can be assigned
+ */
+export function canAssignSkill(
+  track: CommanderTalentTrack,
+  level: number,
+  starLevel: number,
+  assignedSkills: string[],
+  skillId: string
+): { valid: boolean; reason?: string } {
+  const node = getSkillNode(track, skillId);
+  if (!node) {
+    return { valid: false, reason: "Skill not found in track" };
+  }
+
+  const totalPoints = getCommanderTotalTalentPoints(level, starLevel);
+  if (totalPoints < node.requiredPoints) {
+    return { valid: false, reason: "Not enough total points to unlock this skill" };
+  }
+
+  if (assignedSkills.includes(skillId)) {
+    return { valid: false, reason: "Skill already assigned" };
+  }
+
+  const maxSkills = COMMANDER_SKILL_BLUEPRINT[track].length;
+  if (assignedSkills.length >= maxSkills) {
+    return { valid: false, reason: "Maximum skills reached" };
+  }
+
+  // Check if used points would exceed available
+  if (assignedSkills.length >= totalPoints) {
+    return { valid: false, reason: "No available talent points" };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate if a skill can be unassigned
+ */
+export function canUnassignSkill(
+  assignedSkills: string[],
+  skillId: string
+): { valid: boolean; reason?: string } {
+  if (!assignedSkills.includes(skillId)) {
+    return { valid: false, reason: "Skill not currently assigned" };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Calculate stat bonuses from assigned skills
+ */
+function getAssignedSkillsBonuses(track: CommanderTalentTrack, assignedSkills: string[]) {
+  const numAssigned = assignedSkills.length;
+  
+  // Bonuses scale with number of assigned skills
+  const trackAttack =
+    track === "CONQUEST" ? numAssigned * 0.008 : track === "PEACEKEEPING" ? numAssigned * 0.004 : numAssigned * 0.003;
+  const trackDefense =
+    track === "PEACEKEEPING" ? numAssigned * 0.008 : track === "CONQUEST" ? numAssigned * 0.004 : numAssigned * 0.003;
+  const trackSpeed =
+    track === "GATHERING" ? numAssigned * 0.006 : track === "PEACEKEEPING" ? numAssigned * 0.002 : numAssigned * 0.003;
+  const trackCarry =
+    track === "GATHERING" ? numAssigned * 0.01 : track === "CONQUEST" ? numAssigned * 0.002 : numAssigned * 0.004;
+
+  return { trackAttack, trackDefense, trackSpeed, trackCarry };
+}
+
+/**
+ * Get commander bonuses from level, stars, and assigned skills
+ */
+function getCommanderBonusDeltaWithSkills(
+  level: number,
+  starLevel: number,
+  talentTrack: CommanderTalentTrack,
+  assignedSkills: string[]
+) {
+  const levelDelta = Math.max(0, level - 1);
+  const starDelta = Math.max(0, starLevel - 1);
+  const skillBonuses = getAssignedSkillsBonuses(talentTrack, assignedSkills);
+
+  return {
+    attackBonus: levelDelta * 0.004 + starDelta * 0.015 + skillBonuses.trackAttack,
+    defenseBonus: levelDelta * 0.003 + starDelta * 0.015 + skillBonuses.trackDefense,
+    marchSpeedBonus: levelDelta * 0.002 + starDelta * 0.008 + skillBonuses.trackSpeed,
+    carryBonus: levelDelta * 0.004 + starDelta * 0.012 + skillBonuses.trackCarry,
+  };
+}
+
+/**
+ * Recalculate commander stats with assigned skills
+ */
+export function getCommanderStatsWithSkills(
+  templateKey: string,
+  level: number,
+  starLevel: number,
+  talentTrack: CommanderTalentTrack,
+  assignedSkills: string[]
+) {
+  const template = COMMANDER_TEMPLATES.find((entry) => entry.key === templateKey);
+  if (!template) {
+    throw new HttpError(500, "COMMANDER_TEMPLATE_MISSING", "The commander template could not be found.");
+  }
+
+  const delta = getCommanderBonusDeltaWithSkills(level, starLevel, talentTrack, assignedSkills);
+  return {
+    attackBonus: Number((template.attackBonus + delta.attackBonus).toFixed(4)),
+    defenseBonus: Number((template.defenseBonus + delta.defenseBonus).toFixed(4)),
+    marchSpeedBonus: Number((template.marchSpeedBonus + delta.marchSpeedBonus).toFixed(4)),
+    carryBonus: Number((template.carryBonus + delta.carryBonus).toFixed(4)),
   };
 }
 
@@ -1054,13 +1183,14 @@ export async function getCommanderProgressViewTx(tx: Prisma.TransactionClient, u
     xpForNextLevel: commander.xp + commander.xpToNextLevel,
     talentPointsAvailable: Math.max(
       0,
-      getCommanderTotalTalentPoints(commander.level, commander.starLevel) - commander.talentPointsSpent,
+      getCommanderTotalTalentPoints(commander.level, commander.starLevel) - commander.assignedSkills.length,
     ),
     skillTree: buildCommanderSkillTree(
       commander.talentTrack,
       commander.level,
       commander.starLevel,
-      commander.talentPointsSpent,
+      commander.assignedSkills.length,
+      commander.assignedSkills,
     ),
   }));
 }

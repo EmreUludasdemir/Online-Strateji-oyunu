@@ -385,6 +385,7 @@ model Commander {
   starLevel        Int      @default(1)
   talentTrack      CommanderTalentTrack @default(CONQUEST)
   talentPointsSpent Int     @default(0)
+  assignedSkills   Json     @default("[]")
   assignedPreset   String?
   attackBonus      Float
   defenseBonus     Float

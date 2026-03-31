@@ -696,23 +696,29 @@ export function mapBattleWindowView(window: BattleWindowRecord | null, now: Date
 }
 
 export function mapCommanderViews(city: CityStateRecord): CommanderView[] {
-  return city.owner.commanders.map((commander) => ({
-    id: commander.id,
-    name: commander.name,
-    templateKey: commander.templateKey,
-    level: commander.level,
-    xp: commander.xp,
-    xpToNextLevel: Math.max(0, 80 + Math.max(0, commander.level - 1) * 35 - commander.xp),
-    starLevel: commander.starLevel,
-    talentTrack: commander.talentTrack,
-    talentPointsSpent: commander.talentPointsSpent,
-    assignedPreset: commander.assignedPreset,
-    attackBonusPct: Math.round(commander.attackBonus * 100),
-    defenseBonusPct: Math.round(commander.defenseBonus * 100),
-    marchSpeedBonusPct: Math.round(commander.marchSpeedBonus * 100),
-    carryBonusPct: Math.round(commander.carryBonus * 100),
-    isPrimary: commander.isPrimary,
-  }));
+  return city.owner.commanders.map((commander) => {
+    const assignedSkills = Array.isArray(commander.assignedSkills) 
+      ? (commander.assignedSkills as string[]) 
+      : [];
+    return {
+      id: commander.id,
+      name: commander.name,
+      templateKey: commander.templateKey,
+      level: commander.level,
+      xp: commander.xp,
+      xpToNextLevel: Math.max(0, 80 + Math.max(0, commander.level - 1) * 35 - commander.xp),
+      starLevel: commander.starLevel,
+      talentTrack: commander.talentTrack,
+      talentPointsSpent: commander.talentPointsSpent,
+      assignedSkills,
+      assignedPreset: commander.assignedPreset,
+      attackBonusPct: Math.round(commander.attackBonus * 100),
+      defenseBonusPct: Math.round(commander.defenseBonus * 100),
+      marchSpeedBonusPct: Math.round(commander.marchSpeedBonus * 100),
+      carryBonusPct: Math.round(commander.carryBonus * 100),
+      isPrimary: commander.isPrimary,
+    };
+  });
 }
 
 export function mapBuildingViews(city: CityStateRecord): BuildingView[] {

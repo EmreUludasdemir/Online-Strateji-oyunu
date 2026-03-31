@@ -1487,6 +1487,112 @@ export async function upgradeCommander(userId: string, commanderId: string) {
   return { commanders: response };
 }
 
+export async function assignCommanderSkill(userId: string, commanderId: string, skillId: string) {
+  await reconcileWorld();
+  const response = await prisma.$transaction(async (tx) => {
+    const commander = await tx.commander.findFirst({
+      where: { id: commanderId, userId },
+    });
+
+    if (!commander) {
+      throw new HttpError(404, "COMMANDER_NOT_FOUND", "The commander could not be found.");
+    }
+
+    const assignedSkills = Array.isArray(commander.assignedSkills)
+      ? (commander.assignedSkills as string[])
+      : [];
+
+    const validation = canAssignSkill(
+      commander.talentTrack,
+      commander.level,
+      commander.starLevel,
+      assignedSkills,
+      skillId,
+    );
+
+    if (!validation.valid) {
+      throw new HttpError(400, "SKILL_ASSIGNMENT_INVALID", validation.reason ?? "Cannot assign skill.");
+    }
+
+    const updatedSkills = [...assignedSkills, skillId];
+    const newStats = getCommanderStatsWithSkills(
+      commander.templateKey,
+      commander.level,
+      commander.starLevel,
+      commander.talentTrack,
+      updatedSkills,
+    );
+
+    await tx.commander.update({
+      where: { id: commanderId },
+      data: {
+        assignedSkills: updatedSkills,
+        talentPointsSpent: updatedSkills.length,
+        attackBonus: newStats.attackBonus,
+        defenseBonus: newStats.defenseBonus,
+        marchSpeedBonus: newStats.marchSpeedBonus,
+        carryBonus: newStats.carryBonus,
+      },
+    });
+
+    return getCommanderProgressViewTx(tx, userId);
+  });
+
+  writeAuditEntry("game.commander.skill.assign", { userId, commanderId, skillId });
+  emitCommanderUpdated(userId);
+  return { commanders: response };
+}
+
+export async function unassignCommanderSkill(userId: string, commanderId: string, skillId: string) {
+  await reconcileWorld();
+  const response = await prisma.$transaction(async (tx) => {
+    const commander = await tx.commander.findFirst({
+      where: { id: commanderId, userId },
+    });
+
+    if (!commander) {
+      throw new HttpError(404, "COMMANDER_NOT_FOUND", "The commander could not be found.");
+    }
+
+    const assignedSkills = Array.isArray(commander.assignedSkills)
+      ? (commander.assignedSkills as string[])
+      : [];
+
+    const validation = canUnassignSkill(assignedSkills, skillId);
+
+    if (!validation.valid) {
+      throw new HttpError(400, "SKILL_UNASSIGNMENT_INVALID", validation.reason ?? "Cannot unassign skill.");
+    }
+
+    const updatedSkills = assignedSkills.filter((id) => id !== skillId);
+    const newStats = getCommanderStatsWithSkills(
+      commander.templateKey,
+      commander.level,
+      commander.starLevel,
+      commander.talentTrack,
+      updatedSkills,
+    );
+
+    await tx.commander.update({
+      where: { id: commanderId },
+      data: {
+        assignedSkills: updatedSkills,
+        talentPointsSpent: updatedSkills.length,
+        attackBonus: newStats.attackBonus,
+        defenseBonus: newStats.defenseBonus,
+        marchSpeedBonus: newStats.marchSpeedBonus,
+        carryBonus: newStats.carryBonus,
+      },
+    });
+
+    return getCommanderProgressViewTx(tx, userId);
+  });
+
+  writeAuditEntry("game.commander.skill.unassign", { userId, commanderId, skillId });
+  emitCommanderUpdated(userId);
+  return { commanders: response };
+}
+
 export async function createScout(
   userId: string,
   payload: { targetCityId?: string; targetPoiId?: string },

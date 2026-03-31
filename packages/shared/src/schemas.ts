@@ -149,6 +149,16 @@ export const upgradeCommanderSchema = z.object({
   commanderId: z.string().min(1),
 });
 
+export const assignSkillSchema = z.object({
+  commanderId: z.string().min(1),
+  skillId: z.string().min(1),
+});
+
+export const unassignSkillSchema = z.object({
+  commanderId: z.string().min(1),
+  skillId: z.string().min(1),
+});
+
 export const createScoutSchema = z.union([
   z.object({
     targetCityId: z.string().min(1),

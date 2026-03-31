@@ -139,6 +139,7 @@ export interface CommanderView {
   starLevel: number;
   talentTrack: CommanderTalentTrack;
   talentPointsSpent: number;
+  assignedSkills: string[];
   assignedPreset: string | null;
   attackBonusPct: number;
   defenseBonusPct: number;
