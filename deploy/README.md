@@ -39,6 +39,10 @@ REDIS_URL=
 ALLOWED_ORIGINS=https://alpha.example.com
 TRUST_PROXY=true
 GRACEFUL_SHUTDOWN_TIMEOUT_MS=30000
+# OpenTelemetry (optional, for distributed tracing)
+OTEL_ENABLED=false
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_SERVICE_NAME=frontier-server
 ```
 
 Notes:
@@ -48,6 +52,7 @@ Notes:
 - Keep the imperial market disabled in alpha: `STORE_ENABLED=false`.
 - Public signup stays closed: `REGISTRATION_MODE=login_only`.
 - For multi-instance deployment, set `REALTIME_ADAPTER=redis` and configure `REDIS_URL`.
+- For distributed tracing, set `OTEL_ENABLED=true` and point to your OTLP collector (Jaeger, Grafana Tempo, etc).
 
 ## Machine bootstrap
 1. Install Node 24, PostgreSQL 17, Redis 7 (optional), and Caddy.

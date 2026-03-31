@@ -1,3 +1,7 @@
+// OpenTelemetry MUST be initialized before any other imports
+import { initTelemetry, shutdownTelemetry } from "./lib/telemetry";
+initTelemetry();
+
 import "dotenv/config";
 import http from "node:http";
 
@@ -176,6 +180,14 @@ async function startServer() {
       logger.info("Database disconnected");
     } catch (error) {
       logger.error({ error }, "Error disconnecting database");
+    }
+
+    // Shutdown OpenTelemetry
+    try {
+      await shutdownTelemetry();
+      logger.info("OpenTelemetry shut down");
+    } catch (error) {
+      logger.error({ error }, "Error shutting down OpenTelemetry");
     }
 
     logger.info("Graceful shutdown complete");

@@ -343,12 +343,35 @@ This enables:
 
 Health checks (`/api/health/ready`) will verify Redis connectivity when configured.
 
+## Distributed tracing (OpenTelemetry)
+
+Enable OpenTelemetry for distributed tracing and observability:
+
+```env
+OTEL_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_SERVICE_NAME=frontier-server
+```
+
+For local development, run Jaeger via docker-compose:
+
+```powershell
+docker compose up -d jaeger
+```
+
+Then access the Jaeger UI at http://localhost:16686.
+
+Auto-instrumented components:
+- HTTP requests (Express)
+- Database queries (Prisma)
+- Redis operations
+- Pino log correlation (trace IDs in logs)
+
 ## Next improvements
 
 - Expand battle windows into deeper rally/siege coordination UI
 - Add alliance shared territory, permissions, and richer treasury tooling
 - Expand commander progression beyond the current fixed tree visualization into real skill assignment
 - Add richer map overlays, scout telemetry, and report interactions
-- Add OpenTelemetry tracing integration
 - Wire the analytics ingest stream into a real warehouse or dashboard sink
 - Implement real App Store / Play receipt validation behind the existing store port

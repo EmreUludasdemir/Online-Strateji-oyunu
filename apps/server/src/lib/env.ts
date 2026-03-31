@@ -39,6 +39,14 @@ const envSchema = z
       .default("false")
       .transform((value) => value === "true"),
     GRACEFUL_SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+    // OpenTelemetry configuration
+    OTEL_ENABLED: z
+      .enum(["true", "false"])
+      .optional()
+      .default("false")
+      .transform((value) => value === "true"),
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
+    OTEL_SERVICE_NAME: z.string().optional().default("frontier-server"),
   })
   .superRefine((value, context) => {
     if (value.NODE_ENV !== "production") {
