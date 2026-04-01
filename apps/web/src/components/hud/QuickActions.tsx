@@ -60,15 +60,15 @@ export function QuickActions({
 }) {
   return (
     <>
-      <IconButton type="button" aria-label={copy.hud.openInbox} onClick={onInbox}>
+      <IconButton type="button" aria-label={copy.hud.openInbox} data-quick-action="inbox" onClick={onInbox}>
         <InboxIcon />
       </IconButton>
       {showStore && onStore ? (
-        <IconButton type="button" aria-label={copy.hud.openStore} onClick={onStore}>
+        <IconButton type="button" aria-label={copy.hud.openStore} data-quick-action="store" onClick={onStore}>
           <StoreIcon />
         </IconButton>
       ) : null}
-      <IconButton type="button" aria-label={copy.hud.openCommander} onClick={onCommander}>
+      <IconButton type="button" aria-label={copy.hud.openCommander} data-quick-action="commander" onClick={onCommander}>
         <CommanderIcon />
       </IconButton>
     </>

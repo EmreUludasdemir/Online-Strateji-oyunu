@@ -18,10 +18,7 @@
   overflow: hidden;
   padding: 1.2rem;
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 82% 18%, rgba(244, 220, 166, 0.1), transparent 24%),
-    radial-gradient(circle at 14% 16%, rgba(81, 163, 161, 0.12), transparent 26%),
-    linear-gradient(180deg, rgba(37, 29, 24, 0.94), rgba(14, 11, 9, 0.99));
+  background: var(--surface-hero-panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -110,10 +107,7 @@
   padding: 1rem;
   border-radius: var(--radius-md);
   border: 1px solid rgba(244, 220, 166, 0.08);
-  background:
-    radial-gradient(circle at 18% 0%, rgba(244, 220, 166, 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(58, 42, 32, 0.9), rgba(18, 13, 10, 0.98)),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
+  background: var(--surface-card-panel);
 }
 
 .summaryValue,

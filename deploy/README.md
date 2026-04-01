@@ -176,7 +176,7 @@ Expected alpha behavior:
 - Review logs with `journalctl -u frontier-server -f`.
 - Logs are in JSON format (structured logging with Pino).
 - This phase is single-node only. Do not add a second app instance while `REALTIME_ADAPTER=in_memory`.
+- Public-launch scope is tracked separately in [public-launch-backlog.md](./public-launch-backlog.md) so alpha hardening and launch work do not drift together.
 - Graceful shutdown: Server closes connections properly on SIGTERM/SIGINT with a configurable timeout.
 - WebSocket heartbeat: Dead connections are automatically cleaned up every 30 seconds.
 - Phaser chunk size warnings are known and not a release blocker for closed alpha.
-

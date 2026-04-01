@@ -23,10 +23,7 @@
   overflow: hidden;
   padding: 1.2rem;
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 84% 18%, rgba(81, 163, 161, 0.14), transparent 26%),
-    radial-gradient(circle at 12% 10%, rgba(244, 220, 166, 0.1), transparent 22%),
-    linear-gradient(180deg, rgba(40, 31, 25, 0.92), rgba(14, 11, 9, 0.98));
+  background: var(--surface-hero-panel-alt);
   box-shadow: var(--shadow-soft);
 }
 
@@ -89,10 +86,7 @@
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-md);
-  background:
-    radial-gradient(circle at 18% 0%, rgba(244, 220, 166, 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(58, 42, 32, 0.9), rgba(18, 13, 10, 0.98)),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
+  background: var(--surface-card-panel);
 }
 
 .summaryCard,
@@ -182,19 +176,16 @@
 .node:hover {
   transform: translateY(-2px);
   border-color: rgba(244, 220, 166, 0.22);
-  box-shadow: var(--shadow-soft), 0 0 26px rgba(244, 220, 166, 0.1);
+  box-shadow: var(--shadow-gold-soft);
 }
 
 .nodeActive {
   border-color: rgba(244, 220, 166, 0.34);
-  box-shadow: var(--shadow-soft), 0 0 32px rgba(244, 220, 166, 0.14);
+  box-shadow: var(--shadow-gold-strong);
 }
 
 .nodeRunning {
-  background:
-    radial-gradient(circle at 18% 0%, rgba(81, 163, 161, 0.16), transparent 24%),
-    linear-gradient(180deg, rgba(58, 42, 32, 0.94), rgba(18, 13, 10, 0.98)),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
+  background: var(--surface-card-panel-running);
 }
 
 .nodeComplete {
@@ -280,11 +271,11 @@
 }
 
 .costReady {
-  color: #9cd1a6;
+  color: var(--color-success-300);
 }
 
 .costShort {
-  color: #e19c86;
+  color: var(--color-danger-300);
 }
 
 .detailActions {

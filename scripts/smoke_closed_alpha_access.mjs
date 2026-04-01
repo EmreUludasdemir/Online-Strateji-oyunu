@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
+
+import { assert, prepareSmokeFixture } from "./smoke_support.mjs";
 
 function parseArgs(argv) {
   const args = {
@@ -32,26 +33,6 @@ function parseArgs(argv) {
   return args;
 }
 
-function prepareSmokeFixture(username) {
-  if (username !== "demo_smoke") {
-    return;
-  }
-
-  const serverDir = path.resolve("apps", "server");
-  const tsxCli = path.join(serverDir, "node_modules", "tsx", "dist", "cli.mjs");
-
-  execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
-    cwd: serverDir,
-    stdio: "inherit",
-  });
-}
-
-function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
 async function main() {
   const args = parseArgs(process.argv);
   await fs.mkdir(path.dirname(args.screenshotPath), { recursive: true });
@@ -79,6 +60,9 @@ async function main() {
     await page.goto(`${args.baseUrl}/login`, { waitUntil: "networkidle" });
     await page.getByText("Closed Alpha", { exact: true }).first().waitFor({ timeout: 5_000 });
 
+    await page.goto(`${args.baseUrl}/register`, { waitUntil: "networkidle" });
+    await page.waitForURL("**/login");
+
     assert((await page.getByRole("link", { name: /go to register|register/i }).count()) === 0, "Register CTA should be hidden in closed alpha.");
     assert((await page.locator("[data-demo-login]").count()) === 0, "Demo login buttons should be hidden in closed alpha.");
     assert(
@@ -91,8 +75,12 @@ async function main() {
     await page.locator("form").getByRole("button", { name: "Log in" }).click();
     await page.waitForURL("**/app/dashboard");
 
-    assert((await page.getByRole("link", { name: "Imperial Market" }).count()) === 0, "Imperial Market nav link should be hidden when store is disabled.");
-    assert((await page.getByRole("button", { name: /Open Imperial Market|Open Market/i }).count()) === 0, "Market CTA should be hidden when store is disabled.");
+    assert((await page.locator("[data-release-badge]").count()) > 0, "Closed-alpha release badge should be rendered in the shell.");
+    assert((await page.locator("[data-version-stamp]").count()) > 0, "Version stamp should be rendered in the shell.");
+    assert((await page.locator("[data-nav-item='map']").count()) === 1, "Strategic Map nav item should be visible after login.");
+    assert((await page.locator("[data-archive-item='messages']").count()) === 1, "Message Center archive link should stay visible.");
+    assert((await page.locator("[data-archive-item='market']").count()) === 0, "Imperial Market archive link should be hidden when store is disabled.");
+    assert((await page.locator("[data-quick-action='store']").count()) === 0, "Market quick action should be hidden when store is disabled.");
 
     await page.goto(`${args.baseUrl}/app/market`, { waitUntil: "networkidle" });
     await page.waitForURL("**/app/dashboard");

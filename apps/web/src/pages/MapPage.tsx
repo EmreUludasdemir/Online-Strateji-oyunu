@@ -657,6 +657,26 @@ export function MapPage() {
   }, []);
 
   useEffect(() => {
+    window.focus_map_target = (command) => {
+      if (command.kind === "CITY" && command.cityId) {
+        mapCommandRef.current?.focusCity(command.cityId);
+        return;
+      }
+
+      if (command.kind === "POI" && command.poiId) {
+        mapCommandRef.current?.focusPoi(command.poiId);
+        return;
+      }
+
+      mapCommandRef.current?.focusTile(command.x, command.y);
+    };
+
+    return () => {
+      delete window.focus_map_target;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!worldChunkQuery.data) {
       return undefined;
     }

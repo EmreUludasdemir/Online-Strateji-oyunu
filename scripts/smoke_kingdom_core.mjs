@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
+
+import { prepareSmokeFixture, waitFor } from "./smoke_support.mjs";
 
 function parseArgs(argv) {
   const args = {
@@ -30,33 +31,6 @@ function parseArgs(argv) {
   }
 
   return args;
-}
-
-function prepareSmokeFixture(username) {
-  if (username !== "demo_smoke") {
-    return;
-  }
-
-  const serverDir = path.resolve("apps", "server");
-  const tsxCli = path.join(serverDir, "node_modules", "tsx", "dist", "cli.mjs");
-
-  execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
-    cwd: serverDir,
-    stdio: "inherit",
-  });
-}
-
-async function waitFor(check, timeoutMs, label) {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    const result = await check();
-    if (result) {
-      return result;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-  }
-
-  throw new Error(`Timed out while waiting for ${label}.`);
 }
 
 async function readGameState(page) {
@@ -122,7 +96,7 @@ async function waitForMarchResolution(page) {
 
 async function waitForScoutInbox(page, targetName) {
   const title = `Scout report: ${targetName}`;
-  await page.getByRole("button", { name: "Open Inbox" }).click();
+  await page.locator("[data-quick-action='inbox']").click();
   await waitFor(async () => {
     const titleMatch = await page.getByText(title, { exact: true }).count();
     return titleMatch > 0 ? title : null;
@@ -269,11 +243,11 @@ async function main() {
       return null;
     }, 15_000, "dashboard state");
 
-    await page.getByRole("link", { name: "Alliance" }).click();
+    await page.locator("[data-nav-item='alliance']").click();
     await page.waitForURL("**/app/alliance");
     const allianceState = await ensureAllianceLoaded(page);
 
-    await page.getByRole("link", { name: "Map" }).click();
+    await page.locator("[data-nav-item='map']").click();
     await page.waitForURL("**/app/map");
     await ensureMapLoaded(page);
     await waitForMarchResolution(page);
@@ -285,7 +259,7 @@ async function main() {
       await page.screenshot({ path: args.screenshotPath, fullPage: true });
     } else {
       await waitForMarchResolution(page);
-      await page.getByRole("link", { name: /War Council|Reports/i }).click();
+      await page.locator("[data-nav-item='reports']").click();
       await page.waitForURL("**/app/reports");
       await page.getByRole("heading").first().waitFor();
       await page.screenshot({ path: args.screenshotPath, fullPage: true });

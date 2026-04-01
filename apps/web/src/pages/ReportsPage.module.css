@@ -11,10 +11,7 @@
   padding: 1.15rem;
   border: 1px solid rgba(244, 220, 166, 0.14);
   border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(48, 34, 26, 0.92), rgba(18, 13, 11, 0.98)),
-    radial-gradient(circle at top right, rgba(244, 220, 166, 0.14), transparent 34%),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.12), transparent 72%);
+  background: var(--surface-hero-panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -23,7 +20,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 6px;
-  background: linear-gradient(180deg, rgba(244, 220, 166, 0.88), rgba(126, 90, 37, 0.24));
+  background: var(--surface-accent-rail);
 }
 
 .heroTop,
@@ -123,10 +120,7 @@
   padding: 1rem;
   border-radius: 16px;
   border: 1px solid rgba(244, 220, 166, 0.12);
-  background:
-    linear-gradient(180deg, rgba(55, 39, 29, 0.9), rgba(18, 14, 11, 0.96)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.08), transparent 30%),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
+  background: var(--surface-card-panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -213,9 +207,7 @@
 
 .reportCardActive {
   border-color: rgba(244, 220, 166, 0.34);
-  background:
-    linear-gradient(180deg, rgba(74, 52, 39, 0.96), rgba(21, 16, 12, 0.98)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.12), transparent 72%);
+  background: var(--surface-card-panel-active);
   box-shadow: var(--glow-gold);
 }
 
@@ -255,10 +247,7 @@
   padding: 1.35rem;
   border: 1px solid rgba(244, 220, 166, 0.14);
   border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(48, 34, 26, 0.92), rgba(18, 13, 11, 0.98)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.16), transparent 34%),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
+  background: var(--surface-hero-panel);
   box-shadow: var(--shadow-soft);
 }
 

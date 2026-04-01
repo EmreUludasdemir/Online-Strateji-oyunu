@@ -141,6 +141,16 @@ interface DragState {
   velocityY: number;
 }
 
+interface RouteLayerSnapshot {
+  visible: boolean;
+  detailLevel: MapDetailLevel;
+  dashBucket: number;
+  selectedCityId: string | null;
+  selectedPoiId: string | null;
+  selectedMarchId: string | null;
+  marchSignature: string;
+}
+
 interface SceneConfig {
   worldSize: number;
   initialCenter: {
@@ -261,6 +271,7 @@ class FrontierMapScene extends Phaser.Scene {
   private scoutEntities = new Map<string, ScoutTrailEntity>();
   private selectionObjects: Phaser.GameObjects.GameObject[] = [];
   private lastCameraState: MapCameraState | null = null;
+  private lastRouteSnapshot: RouteLayerSnapshot | null = null;
   private currentDetailLevel: MapDetailLevel = getMapDetailLevel(MAP_CAMERA_DEFAULT_ZOOM);
   private didInitialFocus = false;
   private dragState: DragState = {
@@ -1165,11 +1176,47 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
 
+    const dashOffset = (this.time.now / 36) % 20;
+    const snapshot: RouteLayerSnapshot = {
+      visible: this.showPaths,
+      detailLevel: this.currentDetailLevel,
+      dashBucket: Math.floor(dashOffset / (this.currentDetailLevel === "near" ? 1.8 : this.currentDetailLevel === "mid" ? 2.6 : 3.4)),
+      selectedCityId: this.selectedCityId,
+      selectedPoiId: this.selectedPoiId,
+      selectedMarchId: this.selectedMarchId,
+      marchSignature: this.marches
+        .map((march) =>
+          [
+            march.id,
+            march.state,
+            march.objective,
+            `${march.origin.x},${march.origin.y}`,
+            `${march.target.x},${march.target.y}`,
+            march.targetCityId ?? "",
+            march.targetPoiId ?? "",
+          ].join(":"),
+        )
+        .join("|"),
+    };
+
+    if (
+      this.lastRouteSnapshot &&
+      this.lastRouteSnapshot.visible === snapshot.visible &&
+      this.lastRouteSnapshot.detailLevel === snapshot.detailLevel &&
+      this.lastRouteSnapshot.dashBucket === snapshot.dashBucket &&
+      this.lastRouteSnapshot.selectedCityId === snapshot.selectedCityId &&
+      this.lastRouteSnapshot.selectedPoiId === snapshot.selectedPoiId &&
+      this.lastRouteSnapshot.selectedMarchId === snapshot.selectedMarchId &&
+      this.lastRouteSnapshot.marchSignature === snapshot.marchSignature
+    ) {
+      return;
+    }
+
+    this.lastRouteSnapshot = snapshot;
     this.routeGraphics.clear();
     if (!this.showPaths) {
       return;
     }
-    const dashOffset = (this.time.now / 36) % 20;
 
     for (const march of this.marches) {
       const origin = tileToWorld(march.origin.x, march.origin.y);
@@ -1290,9 +1337,11 @@ class FrontierMapScene extends Phaser.Scene {
         entity.gatherSpinner.rotation += 0.08;
         entity.gatherSpinner.setAlpha(0.86);
       }
-      if ((phase === "moving" || phase === "returning") && this.time.now - entity.lastTrailAt > 130) {
+      const trailInterval = detail === "near" ? 130 : detail === "mid" ? 180 : 260;
+      const trailScale = detail === "near" ? 0.8 : detail === "mid" ? 0.62 : 0.44;
+      if ((phase === "moving" || phase === "returning") && this.time.now - entity.lastTrailAt > trailInterval) {
         entity.lastTrailAt = this.time.now;
-        this.spawnTrailDust(point.x, point.y, getMarchColor(march.objective), direction + Math.PI);
+        this.spawnTrailDust(point.x, point.y, getMarchColor(march.objective), direction + Math.PI, trailScale);
       }
 
       entity.lastPhase = phase;
@@ -1330,9 +1379,11 @@ class FrontierMapScene extends Phaser.Scene {
         this.spawnPulse(entity.to.x, entity.to.y, 0xfacc15, 16);
       }
 
-      if (progress < 1 && this.time.now - entity.lastTrailAt > 120) {
+      const trailInterval = this.currentDetailLevel === "near" ? 120 : this.currentDetailLevel === "mid" ? 170 : 240;
+      const trailScale = this.currentDetailLevel === "near" ? 0.55 : this.currentDetailLevel === "mid" ? 0.44 : 0.34;
+      if (progress < 1 && this.time.now - entity.lastTrailAt > trailInterval) {
         entity.lastTrailAt = this.time.now;
-        this.spawnTrailDust(point.x, point.y, 0x7dd3fc, direction + Math.PI, 0.55);
+        this.spawnTrailDust(point.x, point.y, 0x7dd3fc, direction + Math.PI, trailScale);
       }
     }
   }
@@ -1868,5 +1919,5 @@ export default function WorldMap({
     };
   }, [commandHandleRef]);
 
-  return <div ref={containerRef} className={styles.mapCanvas} />;
+  return <div ref={containerRef} className={styles.mapCanvas} data-map-canvas="true" />;
 }

@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
+
+import { prepareSmokeFixture, waitFor } from "./smoke_support.mjs";
 
 const MAP_TILE_WORLD_SIZE = 128;
 
@@ -36,33 +37,6 @@ function parseArgs(argv) {
   }
 
   return args;
-}
-
-function prepareSmokeFixture(username) {
-  if (username !== "demo_smoke") {
-    return;
-  }
-
-  const serverDir = path.resolve("apps", "server");
-  const tsxCli = path.join(serverDir, "node_modules", "tsx", "dist", "cli.mjs");
-
-  execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
-    cwd: serverDir,
-    stdio: "inherit",
-  });
-}
-
-async function waitFor(check, timeoutMs, label) {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    const result = await check();
-    if (result) {
-      return result;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  throw new Error(`Timed out while waiting for ${label}.`);
 }
 
 async function readGameState(page) {
@@ -104,30 +78,42 @@ async function ensureMapLoaded(page) {
 
 async function ensureFieldCommandHook(page) {
   return waitFor(async () => {
-    const available = await page.evaluate(() => Boolean(window.open_map_field_command));
-    return available ? true : null;
-  }, 10_000, "the field-command automation hook");
+    const available = await page.evaluate(() => ({
+      open: Boolean(window.open_map_field_command),
+      focus: Boolean(window.focus_map_target),
+    }));
+    return available.open && available.focus ? true : null;
+  }, 10_000, "the field-command automation hooks");
 }
 
-async function collectCanvasRects(page) {
-  return page.evaluate(() =>
-    Array.from(document.querySelectorAll("canvas")).map((canvas) => {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
-        area: rect.width * rect.height,
-      };
-    }),
-  );
+async function getPrimaryMapCanvasRect(page) {
+  const locator = page.locator("[data-map-canvas] canvas").first();
+  await locator.waitFor({ state: "visible", timeout: 5_000 });
+  const box = await locator.boundingBox();
+  return box ?? null;
 }
 
-async function openFieldCommandWithRightClick(page, state, target) {
-  const rects = await collectCanvasRects(page);
-  const canvas = rects.sort((left, right) => right.area - left.area)[0] ?? null;
-  if (!canvas || !state.map.camera) {
+async function focusTargetForCanvasCommand(page, target) {
+  await page.evaluate((payload) => {
+    window.focus_map_target?.(payload);
+  }, target);
+
+  return waitFor(async () => {
+    const state = await readGameState(page);
+    const camera = state?.map?.camera;
+    if (!camera) {
+      return null;
+    }
+    const dx = Math.abs(camera.centerTileX - target.x);
+    const dy = Math.abs(camera.centerTileY - target.y);
+    return dx <= 2 && dy <= 2 ? state : null;
+  }, 5_000, `the camera to focus ${target.label}`);
+}
+
+async function openFieldCommandWithRightClick(page, target) {
+  const state = await focusTargetForCanvasCommand(page, target).catch(() => null);
+  const canvas = await getPrimaryMapCanvasRect(page).catch(() => null);
+  if (!canvas || !state?.map?.camera) {
     return false;
   }
 
@@ -185,7 +171,7 @@ async function main() {
 
   try {
     await login(page, args.baseUrl, args.username, args.password);
-    await page.getByRole("link", { name: "Map" }).click();
+    await page.locator("[data-nav-item='map']").click();
     await page.waitForURL("**/app/map");
 
     const initialState = await ensureMapLoaded(page);
@@ -216,7 +202,7 @@ async function main() {
             cityId: target.cityId,
           };
 
-    const interactionMode = (await openFieldCommandWithRightClick(page, initialState, targetPayload))
+    const interactionMode = (await openFieldCommandWithRightClick(page, targetPayload))
       ? "canvas-right-click"
       : "automation-hook";
 

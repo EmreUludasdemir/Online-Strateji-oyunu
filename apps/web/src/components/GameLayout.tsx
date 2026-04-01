@@ -96,6 +96,14 @@ declare global {
       selectedTargetName: string | null;
       fieldCommandKind: string | null;
     } | null;
+    focus_map_target?: (command: {
+      kind?: "TILE" | "CITY" | "POI";
+      label?: string;
+      x: number;
+      y: number;
+      cityId?: string;
+      poiId?: string;
+    }) => void;
   }
 }
 
@@ -725,16 +733,16 @@ export function GameLayout() {
     { label: "Province Status", value: provinceStatus },
   ];
   const navigationItems = [
-    { to: "/app/map", eyebrow: "Field Theater", label: "Strategic Map", code: "MAP" },
-    { to: "/app/alliance", eyebrow: "Diplomacy Wing", label: "Grand Alliance", code: "ALLY" },
-    { to: "/app/dashboard", eyebrow: "Inner Province", label: "City Dashboard", code: "CITY" },
-    { to: "/app/reports", eyebrow: "Battle Ledger", label: "War Council", code: "WAR" },
+    { id: "map", to: "/app/map", eyebrow: "Field Theater", label: "Strategic Map", code: "MAP" },
+    { id: "alliance", to: "/app/alliance", eyebrow: "Diplomacy Wing", label: "Grand Alliance", code: "ALLY" },
+    { id: "dashboard", to: "/app/dashboard", eyebrow: "Inner Province", label: "City Dashboard", code: "CITY" },
+    { id: "reports", to: "/app/reports", eyebrow: "Battle Ledger", label: "War Council", code: "WAR" },
   ] as const;
   const archiveItems = [
-    { to: "/app/research", eyebrow: "Academy Wing", label: "Imperial Research", code: "ARC" },
-    { to: "/app/leaderboards", eyebrow: "Ranking Bureau", label: "Imperial Leaderboards", code: "RANK" },
-    { to: "/app/messages", eyebrow: "Dispatch Hall", label: "Message Center", code: "MSG" },
-    ...(storeEnabled ? [{ to: "/app/market", eyebrow: "Trade Exchange", label: "Imperial Market", code: "MKT" }] : []),
+    { id: "research", to: "/app/research", eyebrow: "Academy Wing", label: "Imperial Research", code: "ARC" },
+    { id: "leaderboards", to: "/app/leaderboards", eyebrow: "Ranking Bureau", label: "Imperial Leaderboards", code: "RANK" },
+    { id: "messages", to: "/app/messages", eyebrow: "Dispatch Hall", label: "Message Center", code: "MSG" },
+    ...(storeEnabled ? [{ id: "market", to: "/app/market", eyebrow: "Trade Exchange", label: "Imperial Market", code: "MKT" }] : []),
   ] as const;
   const commanders = contextValue.state.city.commanders;
   const focusedCommander =
@@ -747,9 +755,13 @@ export function GameLayout() {
           <div className={styles.topBrand}>
             <div>
               <h1 className={styles.brandKicker}>Frontier Dominion</h1>
-              <p className={styles.topReleaseMeta}>{releaseLabel} | v{__APP_VERSION__}</p>
+              <p className={styles.topReleaseMeta}>
+                <span data-release-badge>{releaseLabel}</span> | <span data-version-stamp>v{__APP_VERSION__}</span>
+              </p>
             </div>
-            <Badge tone="warning">{releaseLabel}</Badge>
+            <Badge tone="warning">
+              <span data-release-badge>{releaseLabel}</span>
+            </Badge>
           </div>
         }
         resources={resources}
@@ -771,8 +783,12 @@ export function GameLayout() {
               <p className={styles.brandEyebrow}>Sovereign Archive</p>
               <h2 className={styles.brandTitle}>Frontier Dominion</h2>
               <div className={styles.releaseRow}>
-                <span className={styles.releaseBadge}>{releaseLabel}</span>
-                <span className={styles.versionStamp}>v{__APP_VERSION__}</span>
+                <span className={styles.releaseBadge} data-release-badge>
+                  {releaseLabel}
+                </span>
+                <span className={styles.versionStamp} data-version-stamp>
+                  v{__APP_VERSION__}
+                </span>
               </div>
             </div>
           </div>
@@ -784,6 +800,7 @@ export function GameLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              data-nav-item={item.id}
               className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}
             >
               <span className={styles.navIcon}>{item.code}</span>
@@ -802,6 +819,7 @@ export function GameLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                data-archive-item={item.id}
                 className={({ isActive }) => (isActive ? styles.utilityLinkActive : styles.utilityLink)}
               >
                 <span className={styles.utilityCode}>{item.code}</span>

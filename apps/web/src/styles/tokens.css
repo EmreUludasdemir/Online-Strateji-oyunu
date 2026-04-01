@@ -37,6 +37,31 @@
   --surface-panel-glow: rgba(226, 194, 117, 0.08);
   --surface-panel-border-strong: rgba(226, 194, 117, 0.22);
   --surface-parchment: rgba(226, 194, 117, 0.05);
+  --surface-hero-panel:
+    radial-gradient(circle at 82% 18%, rgba(244, 220, 166, 0.12), transparent 24%),
+    radial-gradient(circle at 14% 14%, rgba(81, 163, 161, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(37, 29, 24, 0.94), rgba(14, 11, 9, 0.99));
+  --surface-hero-panel-alt:
+    radial-gradient(circle at 84% 18%, rgba(81, 163, 161, 0.14), transparent 26%),
+    radial-gradient(circle at 12% 10%, rgba(244, 220, 166, 0.1), transparent 22%),
+    linear-gradient(180deg, rgba(40, 31, 25, 0.92), rgba(14, 11, 9, 0.98));
+  --surface-card-panel:
+    radial-gradient(circle at 18% 0%, rgba(244, 220, 166, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(58, 42, 32, 0.9), rgba(18, 13, 10, 0.98)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
+  --surface-card-panel-active:
+    linear-gradient(180deg, rgba(74, 52, 39, 0.96), rgba(21, 16, 12, 0.98)),
+    linear-gradient(90deg, rgba(244, 220, 166, 0.12), transparent 72%);
+  --surface-card-panel-running:
+    radial-gradient(circle at 18% 0%, rgba(81, 163, 161, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(58, 42, 32, 0.94), rgba(18, 13, 10, 0.98)),
+    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
+  --surface-accent-rail: linear-gradient(180deg, rgba(244, 220, 166, 0.88), rgba(126, 90, 37, 0.24));
+  --shadow-gold-soft: var(--shadow-soft), 0 0 26px rgba(244, 220, 166, 0.1);
+  --shadow-gold-strong: var(--shadow-soft), 0 0 32px rgba(244, 220, 166, 0.14);
+  --shadow-teal-soft: var(--shadow-soft), 0 0 28px rgba(81, 163, 161, 0.12);
+  --color-success-300: #9cd1a6;
+  --color-danger-300: #e19c86;
 
   --shadow-soft: 0 18px 36px rgba(0, 0, 0, 0.45);
   --shadow-heavy: 0 30px 72px rgba(0, 0, 0, 0.65);
