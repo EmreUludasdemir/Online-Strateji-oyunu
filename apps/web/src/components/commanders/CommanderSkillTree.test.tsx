@@ -27,6 +27,7 @@ describe("CommanderSkillTree", () => {
           xpForCurrentLevel: 180,
           xpForNextLevel: 300,
           talentPointsAvailable: 1,
+          assignedSkills: ["spearhead"],
           skillTree: {
             track: "CONQUEST",
             trackLabel: "Conquest",

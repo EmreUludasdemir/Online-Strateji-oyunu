@@ -445,6 +445,12 @@ export function GameLayout() {
     setCommanderPanelOpen(true);
   }, []);
 
+  useEffect(() => {
+    if (!bootstrapQuery.data?.storeEnabled && storePreviewOpen) {
+      setStorePreviewOpen(false);
+    }
+  }, [bootstrapQuery.data?.storeEnabled, storePreviewOpen]);
+
   const contextValue = useMemo<GameLayoutContext | null>(() => {
     if (!stateQuery.data || !bootstrapQuery.data) {
       return null;
@@ -941,6 +947,7 @@ export function GameLayout() {
         </div>
       </BottomSheet>
 
+      {storeEnabled ? (
       <BottomSheet
         open={storePreviewOpen}
         title={copy.store.title}
@@ -1038,6 +1045,7 @@ export function GameLayout() {
         </div>
       </BottomSheet>
 
+      ) : null}
       <BottomSheet
         open={themeSheetOpen}
         title="Display Theme"
