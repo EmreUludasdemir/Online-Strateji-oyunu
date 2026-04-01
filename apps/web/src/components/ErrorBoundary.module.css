@@ -4,15 +4,14 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-md);
-  background: var(--color-bg-primary);
+  background: var(--color-surface);
 }
 
 .card {
   max-width: 480px;
   padding: var(--spacing-xl);
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface-container-high);
+  border-radius: var(--radius-sm);
   text-align: center;
 }
 
@@ -24,14 +23,16 @@
 .title {
   font-family: var(--font-display);
   font-size: 1.5rem;
-  color: var(--color-text-primary);
+  font-style: italic;
+  color: var(--color-primary-fixed);
   margin: 0 0 var(--spacing-sm);
 }
 
 .message {
-  color: var(--color-text-secondary);
+  color: var(--color-outline);
   margin: 0 0 var(--spacing-lg);
   line-height: 1.5;
+  font-size: 0.875rem;
 }
 
 .details {
@@ -41,18 +42,18 @@
 
 .details summary {
   cursor: pointer;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  color: var(--color-outline);
+  font-size: 0.8rem;
 }
 
 .errorText {
   margin-top: var(--spacing-sm);
   padding: var(--spacing-sm);
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-highest);
+  border-radius: var(--radius-xs);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--color-danger);
+  font-size: 0.7rem;
+  color: var(--color-error);
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -67,28 +68,29 @@
 .retryButton,
 .reloadButton {
   padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
-  font-weight: 500;
+  border-radius: var(--radius-xs);
+  font-weight: 600;
   cursor: pointer;
   transition: var(--motion-fast);
 }
 
 .retryButton {
-  background: var(--color-primary);
-  color: var(--color-bg-primary);
+  background: linear-gradient(180deg, var(--color-primary-fixed), var(--color-primary-fixed-dim));
+  color: var(--color-on-primary-fixed);
   border: none;
 }
 
 .retryButton:hover {
-  background: var(--color-primary-hover);
+  box-shadow: var(--shadow-gold-soft);
 }
 
 .reloadButton {
   background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  color: var(--color-on-surface-variant);
+  border: none;
+  background: var(--color-surface-container-highest);
 }
 
 .reloadButton:hover {
-  background: var(--color-bg-tertiary);
+  background: var(--color-surface-container-low);
 }

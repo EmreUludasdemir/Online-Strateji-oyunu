@@ -10,13 +10,11 @@
   overflow: hidden;
   display: grid;
   gap: 1rem;
-  padding: 1.15rem;
-  border: 1px solid rgba(244, 220, 166, 0.14);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(48, 35, 26, 0.92), rgba(19, 14, 11, 0.98)),
-    radial-gradient(circle at top right, rgba(81, 163, 161, 0.12), transparent 36%),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.08), transparent 55%);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
 }
 
@@ -24,13 +22,13 @@
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
-  width: 6px;
-  background: linear-gradient(180deg, rgba(244, 220, 166, 0.88), rgba(126, 90, 37, 0.2));
+  width: 4px;
+  background: linear-gradient(180deg, var(--color-primary-fixed-dim), transparent);
 }
 
 .heroLeadBlock {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.75rem;
 }
 
 .kicker,
@@ -39,17 +37,20 @@
 .cardEyebrow,
 .portraitKicker,
 .loadoutLabel {
-  color: var(--color-gold-200);
+  color: var(--color-outline);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  font-size: 0.625rem;
+  font-weight: 700;
 }
 
 .heroTitle {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 5vw, 3.5rem);
-  line-height: 0.95;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1;
+  color: var(--color-primary-fixed);
+  font-style: italic;
 }
 
 .heroLead,
@@ -58,33 +59,34 @@
 .loadoutNote,
 .portraitMeta,
 .orderLead {
-  color: var(--color-ink-300);
+  color: var(--color-outline);
   line-height: 1.6;
+  font-size: 0.875rem;
 }
 
 .heroMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
 .heroMetaItem {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 0.85rem;
-  border: 1px solid rgba(244, 220, 166, 0.12);
-  border-radius: 999px;
-  background: rgba(20, 14, 11, 0.72);
-  color: var(--color-ink-200);
-  font-size: 0.82rem;
+  min-height: 32px;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface-variant);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
 }
 
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .summaryCard,
@@ -95,47 +97,30 @@
   position: relative;
   overflow: hidden;
   padding: 1rem;
-  border-radius: 16px;
-  border: 1px solid rgba(244, 220, 166, 0.12);
-  background:
-    linear-gradient(180deg, rgba(55, 39, 29, 0.9), rgba(18, 14, 11, 0.96)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.08), transparent 30%),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.12), transparent 72%);
-  box-shadow: var(--shadow-soft);
-}
-
-.summaryCard::after,
-.rosterCard::after,
-.portraitCard::after,
-.stageCard::after,
-.attributeCard::after {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  border: 1px solid rgba(244, 220, 166, 0.08);
-  border-radius: 10px;
-  pointer-events: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
 }
 
 .summaryValue,
 .attributeValue,
 .loadoutValue {
   display: block;
-  margin-top: 0.3rem;
-  font-family: var(--font-display);
-  font-size: 1.45rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  color: var(--color-primary-fixed);
 }
 
 .summaryHint {
   display: block;
-  margin-top: 0.28rem;
-  color: var(--color-ink-300);
-  font-size: 0.82rem;
+  margin-top: 0.25rem;
+  color: var(--color-outline);
+  font-size: 0.75rem;
 }
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
   gap: 1rem;
 }
 
@@ -145,18 +130,19 @@
   cursor: pointer;
   transition:
     transform var(--motion-base),
-    border-color var(--motion-base),
+    background var(--motion-base),
     box-shadow var(--motion-base);
 }
 
 .rosterCard:hover {
   transform: translateY(-2px);
-  border-color: rgba(244, 215, 156, 0.28);
+  background: var(--color-surface-container-highest);
 }
 
 .rosterCardActive {
-  border-color: rgba(244, 215, 156, 0.42);
-  box-shadow: var(--glow-gold);
+  background: linear-gradient(90deg, rgba(233, 193, 118, 0.1), transparent);
+  border-left: 3px solid var(--color-primary-fixed-dim);
+  box-shadow: var(--shadow-gold-soft);
 }
 
 .rosterHeader,
@@ -171,10 +157,10 @@
 
 .progressRail,
 .attributeRail {
-  margin-top: 0.8rem;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 244, 220, 0.08);
+  margin-top: 0.75rem;
+  height: 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-highest);
   overflow: hidden;
 }
 
@@ -183,33 +169,30 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--color-teal-400), var(--color-gold-300));
+  background: linear-gradient(90deg, var(--color-secondary), var(--color-primary-fixed-dim));
 }
 
 .commanderStage {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
   gap: 1rem;
 }
 
 .portraitCard {
-  min-height: 420px;
+  min-height: 400px;
   display: grid;
   align-content: space-between;
-  background:
-    linear-gradient(180deg, rgba(48, 34, 26, 0.76), rgba(14, 10, 8, 0.94)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.12), transparent 32%),
-    linear-gradient(135deg, rgba(81, 163, 161, 0.1), transparent 55%);
+  background: linear-gradient(180deg, var(--color-surface-container-high), var(--color-surface-container));
 }
 
 .portraitCard::before {
   content: "";
   position: absolute;
   inset: auto -8% -18% auto;
-  width: 260px;
-  height: 260px;
+  width: 240px;
+  height: 240px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(244, 220, 166, 0.16), transparent 70%);
+  background: radial-gradient(circle, rgba(233, 193, 118, 0.1), transparent 70%);
   pointer-events: none;
 }
 
@@ -224,37 +207,37 @@
 .portraitMonogram {
   display: grid;
   place-items: center;
-  width: clamp(150px, 22vw, 220px);
+  width: clamp(140px, 20vw, 200px);
   aspect-ratio: 1;
-  border: 1px solid rgba(244, 220, 166, 0.16);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(82, 58, 43, 0.72), rgba(20, 15, 12, 0.92)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.14), transparent 66%);
-  color: var(--color-gold-200);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-highest);
+  color: var(--color-primary-fixed);
   font-family: var(--font-display);
-  font-size: clamp(3rem, 10vw, 5.25rem);
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
   line-height: 1;
+  font-style: italic;
 }
 
 .portraitName {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.25rem;
+  color: var(--color-primary-fixed);
+  font-style: italic;
 }
 
 .portraitFooter {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(244, 220, 166, 0.1);
+  border-top: 1px solid var(--color-outline-variant);
 }
 
 .portraitRow {
   display: flex;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -266,7 +249,7 @@
 .loadoutList,
 .serviceGrid {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.75rem;
 }
 
 .loadoutRow,
@@ -274,9 +257,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.9rem;
-  padding-bottom: 0.8rem;
-  border-bottom: 1px solid rgba(244, 220, 166, 0.08);
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-outline-variant);
 }
 
 .loadoutRow:last-child,
@@ -292,24 +275,25 @@
 
 .loadoutNote,
 .serviceRow dt {
-  margin: 0.2rem 0 0;
-  font-size: 0.82rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
 }
 
 .serviceRow dt {
-  color: var(--color-ink-300);
+  color: var(--color-outline);
 }
 
 .serviceRow dd {
   margin: 0;
   text-align: right;
-  color: var(--color-ink-100);
+  color: var(--color-on-surface);
+  font-family: var(--font-mono);
 }
 
 .attributeGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .orderGrid {
@@ -320,11 +304,10 @@
 }
 
 .feedback {
-  padding: 1.3rem;
-  border: 1px solid var(--color-panel-edge);
-  border-radius: var(--radius-lg);
-  background: rgba(35, 20, 14, 0.9);
-  color: var(--color-ink-200);
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface-variant);
 }
 
 @media (max-width: 1180px) {

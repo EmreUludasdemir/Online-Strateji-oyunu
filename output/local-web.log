@@ -1,0 +1,243 @@
+
+> @frontier/web@0.0.1 dev C:\Users\Emre\Desktop\Online Strateji oyunu\apps\web
+> vite "--" "--host" "127.0.0.1"
+
+[2m23:26:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+
+  [32m[1mVITE[22m v7.3.1[39m  [2mready in [0m[1m822[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m23:41:15[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m23:41:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m23:41:44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m23:41:48[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
+[2m23:45:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/TimerChip.tsx, /src/components/ui/ResourcePill.tsx, /src/components/ui/SectionCard.tsx, /src/components/ui/Badge.tsx, /src/components/ui/Button.tsx, /src/components/ui/EmptyState.tsx, /src/components/ui/IconButton.tsx[22m
+[2m23:49:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/InboxDrawer.tsx[22m
+[2m23:51:50[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/AlliancePage.tsx[22m
+[2m23:52:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
+[2m23:53:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m
+[2m23:53:43[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+[2m23:53:44[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+      at Input.error (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\input.js:135:16)
+      at Parser.unexpectedClose (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:587:22)
+      at Parser.end (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:330:12)
+      at Parser.parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:456:16)
+      at parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parse.js:11:12)
+      at new LazyResult (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\lazy-result.js:165:16)
+      at Processor.process (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\processor.js:53:14)
+      at runPostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30145:68)
+      at async compilePostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30129:6)
+      at async compileCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30059:26)
+      at async TransformPluginContext.handler (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:29592:54)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:28797:14)
+      at async loadAndTransform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:22670:26)
+      at async viteTransformMiddleware (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:24542:20)
+[2m23:54:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m
+[2m23:54:46[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+[2m23:54:46[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+      at Input.error (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\input.js:135:16)
+      at Parser.unexpectedClose (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:587:22)
+      at Parser.end (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:330:12)
+      at Parser.parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:456:16)
+      at parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parse.js:11:12)
+      at new LazyResult (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\lazy-result.js:165:16)
+      at Processor.process (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\processor.js:53:14)
+      at runPostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30145:68)
+      at async compilePostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30129:6)
+      at async compileCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30059:26)
+      at async TransformPluginContext.handler (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:29592:54)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:28797:14)
+      at async loadAndTransform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:22670:26)
+      at async viteTransformMiddleware (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:24542:20)
+[2m23:55:17[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m
+[2m23:55:17[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+[2m23:55:18[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+      at Input.error (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\input.js:135:16)
+      at Parser.unexpectedClose (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:587:22)
+      at Parser.end (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:330:12)
+      at Parser.parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:456:16)
+      at parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parse.js:11:12)
+      at new LazyResult (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\lazy-result.js:165:16)
+      at Processor.process (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\processor.js:53:14)
+      at runPostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30145:68)
+      at async compilePostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30129:6)
+      at async compileCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30059:26)
+      at async TransformPluginContext.handler (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:29592:54)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:28797:14)
+      at async loadAndTransform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:22670:26)
+      at async viteTransformMiddleware (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:24542:20)
+[2m23:55:50[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m
+[2m23:55:51[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+[2m23:55:51[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+      at Input.error (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\input.js:135:16)
+      at Parser.unexpectedClose (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:587:22)
+      at Parser.end (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:330:12)
+      at Parser.parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:456:16)
+      at parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parse.js:11:12)
+      at new LazyResult (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\lazy-result.js:165:16)
+      at Processor.process (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\processor.js:53:14)
+      at runPostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30145:68)
+      at async compilePostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30129:6)
+      at async compileCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30059:26)
+      at async TransformPluginContext.handler (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:29592:54)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:28797:14)
+      at async loadAndTransform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:22670:26)
+      at async viteTransformMiddleware (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:24542:20)
+[2m23:56:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MapPage.tsx[22m
+[2m23:56:06[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+[2m23:56:07[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+      at Input.error (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\input.js:135:16)
+      at Parser.unexpectedClose (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:587:22)
+      at Parser.end (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:330:12)
+      at Parser.parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:456:16)
+      at parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parse.js:11:12)
+      at new LazyResult (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\lazy-result.js:165:16)
+      at Processor.process (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\processor.js:53:14)
+      at runPostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30145:68)
+      at async compilePostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30129:6)
+      at async compileCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30059:26)
+      at async TransformPluginContext.handler (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:29592:54)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:28797:14)
+      at async loadAndTransform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:22670:26)
+      at async viteTransformMiddleware (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:24542:20)
+[2m23:57:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/AuthPage.tsx[22m
+[2m23:58:11[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ErrorBoundary.tsx[22m
+[2m23:58:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/BottomSheet.tsx[22m
+[2m23:59:03[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/ui/ToastStack.tsx[22m
+[2m00:01:05[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+[2m00:01:05[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+      at Input.error (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\input.js:135:16)
+      at Parser.unexpectedClose (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:587:22)
+      at Parser.end (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:330:12)
+      at Parser.parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:456:16)
+      at parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parse.js:11:12)
+      at new LazyResult (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\lazy-result.js:165:16)
+      at Processor.process (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\processor.js:53:14)
+      at runPostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30145:68)
+      at async compilePostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30129:6)
+      at async compileCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30059:26)
+      at async TransformPluginContext.handler (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:29592:54)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:28797:14)
+      at async loadAndTransform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:22670:26)
+      at async viteTransformMiddleware (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:24542:20)
+[2m00:01:09[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css:199:1: Unexpected }[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Emre/Desktop/Online Strateji oyunu/apps/web/src/pages/MapPage.module.css[39m:199:0
+[33m  197 |    color: var(--color-primary-fixed);
+  198 |  }
+  199 |  }
+      |  ^
+  200 |  
+  201 |  .battlefieldLayout {[39m
+      at Input.error (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\input.js:135:16)
+      at Parser.unexpectedClose (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:587:22)
+      at Parser.end (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:330:12)
+      at Parser.parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parser.js:456:16)
+      at parse (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\parse.js:11:12)
+      at new LazyResult (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\lazy-result.js:165:16)
+      at Processor.process (C:\Users\Emre\Desktop\Online Strateji oyunu\node_modules\.pnpm\postcss@8.5.8\node_modules\postcss\lib\processor.js:53:14)
+      at runPostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30145:68)
+      at async compilePostCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30129:6)
+      at async compileCSS (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:30059:26)
+      at async TransformPluginContext.handler (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:29592:54)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:28797:14)
+      at async loadAndTransform (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:22670:26)
+      at async viteTransformMiddleware (file:///C:/Users/Emre/Desktop/Online%20Strateji%20oyunu/node_modules/.pnpm/vite@7.3.1_@types+node@25.3_9621260b35719e289ac17ff4d7db1f78/node_modules/vite/dist/node/chunks/config.js:24542:20)

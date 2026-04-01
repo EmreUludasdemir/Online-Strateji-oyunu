@@ -1,11 +1,15 @@
 @import "./tokens.css";
 
+/* Google Fonts - Sovereign Archive Design System */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
 :root {
   font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
   background: var(--color-bg-950);
-  color: var(--color-ink-100);
+  color: var(--color-on-surface);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -26,10 +30,10 @@ body,
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 14% 8%, rgba(208, 166, 91, 0.16), transparent 22%),
-    radial-gradient(circle at 84% 12%, rgba(75, 147, 145, 0.14), transparent 24%),
-    radial-gradient(circle at 52% 94%, rgba(176, 111, 76, 0.12), transparent 28%),
-    linear-gradient(180deg, var(--color-bg-850) 0%, var(--color-bg-900) 42%, var(--color-bg-950) 100%);
+    radial-gradient(circle at 14% 8%, rgba(233, 193, 118, 0.10), transparent 22%),
+    radial-gradient(circle at 84% 12%, rgba(184, 201, 211, 0.08), transparent 24%),
+    radial-gradient(circle at 52% 94%, rgba(255, 184, 112, 0.06), transparent 28%),
+    linear-gradient(180deg, var(--color-surface-container-low) 0%, var(--color-surface) 42%, var(--color-surface-container-lowest) 100%);
 }
 
 body::before,
@@ -42,17 +46,17 @@ body::after {
 
 body::before {
   background:
-    linear-gradient(90deg, rgba(247, 239, 223, 0.02), transparent 14%, rgba(247, 239, 223, 0.02)),
-    repeating-linear-gradient(135deg, rgba(247, 239, 223, 0.015) 0 2px, transparent 2px 18px),
-    repeating-radial-gradient(circle at center, rgba(247, 239, 223, 0.012) 0 1px, transparent 1px 32px);
-  opacity: 0.48;
+    linear-gradient(90deg, rgba(226, 226, 230, 0.015), transparent 14%, rgba(226, 226, 230, 0.015)),
+    repeating-linear-gradient(135deg, rgba(226, 226, 230, 0.01) 0 2px, transparent 2px 18px),
+    repeating-radial-gradient(circle at center, rgba(226, 226, 230, 0.008) 0 1px, transparent 1px 32px);
+  opacity: 0.36;
   animation: ambientDrift 18s ease-in-out infinite alternate;
 }
 
 body::after {
   background:
-    radial-gradient(circle at 50% 50%, transparent 56%, rgba(13, 8, 6, 0.42) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%, rgba(0, 0, 0, 0.1));
+    radial-gradient(circle at 50% 50%, transparent 56%, rgba(12, 14, 17, 0.42) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 22%, rgba(0, 0, 0, 0.08));
   animation: ambientPulse 12s ease-in-out infinite;
 }
 
@@ -92,8 +96,21 @@ a {
 }
 
 ::selection {
-  background: rgba(208, 166, 91, 0.28);
-  color: #fff5e2;
+  background: rgba(233, 193, 118, 0.28);
+  color: #fff5e9;
+}
+
+/* Glass Panel Utility - Sovereign Archive */
+.glass-panel {
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+/* Material Symbols Configuration */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
 }
 
 /* ─── Keyframe Animasyonları ─────────────────────────────────────────── */
@@ -184,8 +201,8 @@ a {
 }
 
 @keyframes borderGlow {
-  0%,  100% { border-color: rgba(244, 215, 156, 0.12); }
-  50%        { border-color: rgba(244, 215, 156, 0.36); }
+  0%,  100% { border-color: rgba(233, 193, 118, 0.12); }
+  50%        { border-color: rgba(233, 193, 118, 0.36); }
 }
 
 @keyframes float {

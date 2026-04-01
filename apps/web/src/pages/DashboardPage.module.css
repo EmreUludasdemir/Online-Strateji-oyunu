@@ -22,24 +22,20 @@
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 1.2rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-panel-edge);
-  background:
-    radial-gradient(circle at 84% 16%, rgba(76, 140, 136, 0.12), transparent 24%),
-    radial-gradient(circle at 14% 10%, rgba(237, 211, 160, 0.12), transparent 18%),
-    linear-gradient(180deg, rgba(97, 69, 49, 0.5), rgba(34, 24, 18, 0.95));
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
-  animation: borderGlow 4s ease-in-out infinite;
 }
 
 .hero::before {
   content: "";
   position: absolute;
-  inset: 10px;
-  border-radius: calc(var(--radius-lg) - 6px);
-  border: 1px solid rgba(247, 239, 223, 0.08);
-  pointer-events: none;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--color-primary-fixed-dim), transparent);
 }
 
 .heroTop,
@@ -65,16 +61,19 @@
 .buildingTitle,
 .statValue {
   font-family: var(--font-display);
+  font-style: italic;
 }
 
 .heroTitle {
-  font-size: clamp(2rem, 1.6rem + 1.6vw, 2.95rem);
+  font-size: clamp(1.75rem, 1.5rem + 1.5vw, 2.5rem);
+  color: var(--color-primary-fixed);
 }
 
 .heroLead {
-  margin-top: 0.4rem;
+  margin-top: 0.35rem;
   max-width: 72ch;
-  color: var(--color-ink-200);
+  color: var(--color-outline);
+  font-size: 0.875rem;
 }
 
 .heroSignals {
@@ -106,31 +105,14 @@
 .operationsCard {
   position: relative;
   overflow: hidden;
-  padding: 0.95rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-panel-line);
-  background:
-    radial-gradient(circle at 16% 0%, rgba(244, 220, 166, 0.08), transparent 22%),
-    linear-gradient(180deg, var(--surface-panel-top), var(--surface-panel-mid) 46%, var(--surface-panel-bottom)),
-    linear-gradient(90deg, var(--surface-panel-glow), transparent 72%);
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
   transition:
-    border-color var(--motion-base),
+    background var(--motion-base),
     box-shadow var(--motion-base),
     transform var(--motion-smooth);
   animation: liftIn 420ms var(--motion-smooth) both;
-}
-
-.signalCard::after,
-.statCard::after,
-.buildingCard::after,
-.taskCard::after,
-.operationsCard::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: calc(var(--radius-md) - 6px);
-  border: 1px solid var(--color-panel-line);
-  pointer-events: none;
 }
 
 .signalCard:hover,
@@ -139,27 +121,31 @@
 .buildingCard:hover,
 .operationsCard:hover {
   transform: translateY(-2px);
-  border-color: var(--surface-panel-border-strong);
-  box-shadow: var(--shadow-soft), 0 0 24px rgba(218, 176, 101, 0.12);
+  background: var(--color-surface-container-highest);
+  box-shadow: var(--shadow-gold-soft);
 }
 
 .statLabel,
 .buildingMeta,
 .stackHint {
-  color: var(--color-ink-300);
-  font-size: 0.82rem;
+  color: var(--color-outline);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 700;
 }
 
 .signalValue,
 .statValue {
   display: block;
-  margin-top: 0.28rem;
-  font-size: 1.18rem;
+  margin-top: 0.25rem;
+  font-size: 1.25rem;
+  color: var(--color-primary-fixed);
 }
 
 .operationsCard {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.75rem;
 }
 
 .operationsHeader,
@@ -172,22 +158,25 @@
 
 .operationsEyebrow,
 .operationsLabel {
-  color: var(--color-gold-200);
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
+  color: var(--color-outline);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
 .operationsValue {
   display: block;
-  margin-top: 0.25rem;
-  font-family: var(--font-display);
-  font-size: 1.18rem;
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  color: var(--color-primary-fixed);
 }
 
 .operationsBody,
 .queueLedgerHint {
-  color: var(--color-ink-200);
+  color: var(--color-outline);
+  font-size: 0.8rem;
 }
 
 .operationsList {
@@ -196,17 +185,16 @@
 
 .operationsListItem,
 .queueLedgerItem {
-  padding: 0.8rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(237, 211, 160, 0.12);
-  background: rgba(16, 12, 10, 0.54);
+  padding: 0.75rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-highest);
 }
 
 .operationsListItem {
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .queueLedger {
@@ -215,7 +203,7 @@
 
 .queueLedgerItem {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .quickOrderGrid {
@@ -228,7 +216,7 @@
 
 .columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.48fr) minmax(300px, 0.92fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.9fr);
   gap: 1rem;
 }
 
@@ -248,22 +236,22 @@
 .inlineForm select,
 .inlineForm input {
   min-height: var(--touch-target);
-  padding: 0 0.95rem;
-  border-radius: 18px;
-  border: 1px solid rgba(237, 211, 160, 0.18);
-  background: rgba(18, 13, 11, 0.84);
-  color: var(--color-ink-100);
+  padding: 0 1rem;
+  border-radius: var(--radius-xs);
+  border: none;
+  background: var(--color-surface-container-highest);
+  color: var(--color-on-surface);
 }
 
 .inlineForm select:focus-visible,
 .inlineForm input:focus-visible {
-  outline: none;
-  border-color: rgba(125, 184, 179, 0.45);
-  box-shadow: 0 0 0 1px rgba(125, 184, 179, 0.14);
+  outline: 2px solid var(--color-primary-fixed-dim);
+  outline-offset: -2px;
 }
 
 .resourceList {
-  color: var(--color-ink-200);
+  color: var(--color-outline);
+  font-size: 0.8rem;
 }
 
 .buildingGrid {
@@ -271,16 +259,18 @@
 }
 
 .buildingTitle {
-  font-size: 1.1rem;
+  font-size: 1.125rem;
+  color: var(--color-on-surface);
 }
 
 .buildingBody {
   margin-top: 0.75rem;
-  color: var(--color-ink-200);
+  color: var(--color-outline);
+  font-size: 0.8rem;
 }
 
 .actionRow {
-  margin-top: 0.9rem;
+  margin-top: 0.75rem;
   justify-content: flex-end;
 }
 

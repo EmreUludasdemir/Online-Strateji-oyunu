@@ -10,33 +10,32 @@
 
 .toast {
   padding: 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-panel-edge);
-  background:
-    linear-gradient(180deg, rgba(86, 50, 31, 0.94), rgba(34, 19, 13, 0.96)),
-    linear-gradient(90deg, rgba(75, 158, 160, 0.16), transparent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-heavy);
   animation: slideInRight 260ms var(--motion-smooth) both;
 }
 
 .success {
-  border-color: rgba(65, 168, 119, 0.5);
-  box-shadow: var(--shadow-heavy), 0 0 20px rgba(65, 168, 119, 0.14);
+  border-left: 3px solid var(--color-tertiary);
+  box-shadow: var(--shadow-heavy);
 }
 
 .info {
-  border-color: rgba(75, 158, 160, 0.5);
-  box-shadow: var(--shadow-heavy), 0 0 20px rgba(75, 158, 160, 0.14);
+  border-left: 3px solid var(--color-secondary);
+  box-shadow: var(--shadow-heavy);
 }
 
 .warning {
-  border-color: rgba(226, 187, 114, 0.5);
-  box-shadow: var(--shadow-heavy), 0 0 20px rgba(226, 187, 114, 0.14);
+  border-left: 3px solid var(--color-primary-fixed-dim);
+  box-shadow: var(--shadow-heavy);
 }
 
 .error {
-  border-color: rgba(212, 100, 79, 0.5);
-  box-shadow: var(--shadow-heavy), 0 0 20px rgba(212, 100, 79, 0.14);
+  border-left: 3px solid var(--color-error);
+  box-shadow: var(--shadow-heavy);
 }
 
 .header {
@@ -49,11 +48,14 @@
 .title {
   font-family: var(--font-display);
   font-size: 1rem;
+  font-style: italic;
+  color: var(--color-on-surface);
 }
 
 .body {
-  margin-top: 0.45rem;
-  color: var(--color-ink-200);
+  margin-top: 0.4rem;
+  color: var(--color-outline);
+  font-size: 0.8rem;
 }
 
 .dismiss {
@@ -61,7 +63,7 @@
   min-width: 32px;
   border: none;
   background: transparent;
-  color: var(--color-ink-200);
+  color: var(--color-outline);
   cursor: pointer;
 }
 

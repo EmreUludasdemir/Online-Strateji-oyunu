@@ -1,6 +1,6 @@
 ﻿.layout {
   display: grid;
-  grid-template-columns: minmax(300px, 0.42fr) minmax(0, 0.58fr);
+  grid-template-columns: minmax(300px, 0.4fr) minmax(0, 0.6fr);
   gap: 1rem;
   min-height: 560px;
 }
@@ -10,7 +10,7 @@
 .groupList,
 .archiveGroups {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.75rem;
 }
 
 .archiveHeader,
@@ -30,24 +30,27 @@
 .detailLabel,
 .detailCardLabel,
 .detailRef {
-  color: var(--color-gold-200);
+  color: var(--color-outline);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  font-size: 0.625rem;
+  font-weight: 700;
 }
 
 .archiveTitle,
 .detailTitle {
   font-family: var(--font-display);
+  color: var(--color-primary-fixed);
+  font-style: italic;
 }
 
 .archiveTitle {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
 }
 
 .groupBlock {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .entryButton,
@@ -56,22 +59,17 @@
   position: relative;
   overflow: hidden;
   padding: 1rem;
-  border-radius: 16px;
-  border: 1px solid rgba(244, 220, 166, 0.12);
-  background:
-    linear-gradient(180deg, rgba(55, 39, 29, 0.9), rgba(18, 14, 11, 0.96)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.08), transparent 30%),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
-  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
 }
 
 .entryButton {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.5rem;
   text-align: left;
   cursor: pointer;
+  border: none;
   transition:
-    border-color var(--motion-base),
     background var(--motion-base),
     transform var(--motion-base),
     box-shadow var(--motion-base);
@@ -79,15 +77,13 @@
 
 .entryButton:hover {
   transform: translateY(-1px);
-  border-color: rgba(244, 220, 166, 0.24);
+  background: var(--color-surface-container-highest);
 }
 
 .entryButtonActive {
-  border-color: rgba(244, 220, 166, 0.34);
-  background:
-    linear-gradient(180deg, rgba(74, 52, 39, 0.96), rgba(21, 16, 12, 0.98)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.12), transparent 72%);
-  box-shadow: var(--glow-gold);
+  background: linear-gradient(90deg, rgba(233, 193, 118, 0.1), transparent);
+  border-left: 3px solid var(--color-primary-fixed-dim);
+  box-shadow: var(--shadow-gold-soft);
 }
 
 .entryHead span,
@@ -97,8 +93,9 @@
 .quote,
 .intelBlock span,
 .rewardList span {
-  color: var(--color-ink-300);
+  color: var(--color-outline);
   line-height: 1.6;
+  font-size: 0.8rem;
 }
 
 .entryExcerpt {
@@ -112,20 +109,18 @@
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 0.8rem;
-  padding: 1.25rem;
-  border: 1px solid rgba(244, 220, 166, 0.14);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(48, 34, 26, 0.92), rgba(18, 13, 11, 0.98)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.14), transparent 34%),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.12), transparent 72%);
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
 }
 
 .detailTitle {
-  font-size: clamp(2rem, 4vw, 3.1rem);
-  line-height: 0.94;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  line-height: 1;
 }
 
 .detailColumns {
@@ -135,17 +130,18 @@
 .detailColumns div,
 .intelBlock {
   display: grid;
-  gap: 0.28rem;
+  gap: 0.25rem;
 }
 
 .detailColumns strong,
 .intelBlock strong {
-  color: var(--color-ink-100);
+  color: var(--color-on-surface);
+  font-family: var(--font-mono);
 }
 
 .letterCard,
 .detailCard {
-  gap: 0.9rem;
+  gap: 0.75rem;
 }
 
 .letterBody,
@@ -158,26 +154,27 @@
 .quote {
   margin: 0;
   padding-left: 1rem;
-  border-left: 1px solid rgba(244, 220, 166, 0.32);
+  border-left: 2px solid var(--color-primary-fixed-dim);
   font-family: var(--font-display);
   font-style: italic;
+  color: var(--color-on-surface-variant);
 }
 
 .intelGrid,
 .rewardList {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.5rem;
 }
 
 .rewardList span {
-  padding: 0.7rem 0.8rem;
-  border-radius: 12px;
-  background: rgba(17, 13, 11, 0.68);
-  border: 1px solid rgba(244, 220, 166, 0.08);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-highest);
 }
 
 .actionRow {
   justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 @media (max-width: 960px) {

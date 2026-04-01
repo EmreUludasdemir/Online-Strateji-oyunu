@@ -1,88 +1,161 @@
 :root,
 :root[data-theme="night"] {
   color-scheme: dark;
-  --font-display: "Playfair Display", "Cinzel", "Cormorant Garamond", "Baskerville Old Face", "Palatino Linotype", Georgia, serif;
-  --font-body: "Inter", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
+  
+  /* Typography - Sovereign Archive System */
+  --font-display: "Newsreader", "Playfair Display", Georgia, serif;
+  --font-body: "Manrope", "Inter", "Segoe UI", sans-serif;
+  --font-mono: "Space Grotesk", "JetBrains Mono", monospace;
 
-  --color-bg-950: #0a0a0c;
-  --color-bg-900: #101012;
-  --color-bg-850: #161618;
-  --color-surface-900: rgba(22, 22, 24, 0.96);
-  --color-surface-850: rgba(28, 28, 30, 0.94);
-  --color-surface-800: rgba(36, 36, 38, 0.90);
-  --color-surface-760: rgba(44, 44, 46, 0.85);
-  --color-surface-720: rgba(56, 56, 58, 0.78);
-  --color-ink-100: #f4f4f5;
-  --color-ink-200: #e4e4e7;
-  --color-ink-300: #a1a1aa;
-  --color-ink-400: #71717a;
-  --color-gold-400: #b58d22;
-  --color-gold-300: #d4af37;
-  --color-gold-200: #e2c275;
-  --color-teal-500: #2f7a7f;
-  --color-teal-400: #51a3a1;
-  --color-teal-300: #88c8c3;
-  --color-copper-500: #965a3b;
-  --color-copper-400: #be7a55;
-  --color-red-500: #d86851;
+  /* Surface Hierarchy - Metallic Depth */
+  --color-bg-950: #0c0e11;
+  --color-bg-900: #111316;
+  --color-bg-850: #1a1c1f;
+  --color-surface: #111316;
+  --color-surface-container-lowest: #0c0e11;
+  --color-surface-container-low: #1a1c1f;
+  --color-surface-container: #1e2023;
+  --color-surface-container-high: #282a2d;
+  --color-surface-container-highest: #333538;
+  --color-surface-variant: #333538;
+  --color-surface-bright: #37393d;
+  --color-surface-dim: #111316;
+  
+  /* Legacy surface mappings */
+  --color-surface-900: rgba(17, 19, 22, 0.96);
+  --color-surface-850: rgba(26, 28, 31, 0.94);
+  --color-surface-800: rgba(40, 42, 45, 0.90);
+  --color-surface-760: rgba(51, 53, 56, 0.85);
+  --color-surface-720: rgba(55, 57, 61, 0.78);
+
+  /* Gold/Primary Palette - Gilded Focus */
+  --color-primary: #fff5e9;
+  --color-primary-container: #fdd488;
+  --color-primary-fixed: #ffdea5;
+  --color-primary-fixed-dim: #e9c176;
+  --color-on-primary: #412d00;
+  --color-on-primary-container: #785a1a;
+  --color-on-primary-fixed: #261900;
+  --color-inverse-primary: #775a19;
+  --color-surface-tint: #e9c176;
+  
+  /* Legacy gold mappings */
+  --color-gold-400: #e9c176;
+  --color-gold-300: #fdd488;
+  --color-gold-200: #ffdea5;
+
+  /* Secondary Palette - Cool Metallic */
+  --color-secondary: #b8c9d3;
+  --color-secondary-container: #3b4b53;
+  --color-secondary-fixed: #d4e5ef;
+  --color-secondary-fixed-dim: #b8c9d3;
+  --color-on-secondary: #23333a;
+  --color-on-secondary-container: #aabbc5;
+  --color-on-secondary-fixed: #0d1e25;
+
+  /* Tertiary Palette - Resource Colors */
+  --color-tertiary: #fff4ed;
+  --color-tertiary-container: #ffd1a7;
+  --color-tertiary-fixed: #ffdcbe;
+  --color-tertiary-fixed-dim: #ffb870;
+  --color-on-tertiary: #4a2800;
+  --color-on-tertiary-container: #8b5100;
+  --color-on-tertiary-fixed: #2c1600;
+
+  /* Legacy color mappings */
+  --color-teal-500: #394951;
+  --color-teal-400: #3b4b53;
+  --color-teal-300: #b8c9d3;
+  --color-copper-500: #8b5100;
+  --color-copper-400: #ffb870;
+  
+  /* Text Colors - On Surface */
+  --color-ink-100: #e2e2e6;
+  --color-ink-200: #d0c6ab;
+  --color-ink-300: #999077;
+  --color-ink-400: #4d4732;
+  --color-on-surface: #e2e2e6;
+  --color-on-surface-variant: #d0c6ab;
+  --color-on-background: #e2e2e6;
+  --color-inverse-surface: #e2e2e6;
+  --color-inverse-on-surface: #2f3034;
+
+  /* Status Colors */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+  --color-red-500: #ffb4ab;
   --color-green-500: #54a978;
-  --color-blue-500: #598bc0;
-  --color-panel-edge: rgba(226, 194, 117, 0.28);
-  --color-panel-line: rgba(226, 194, 117, 0.12);
-  --color-overlay: rgba(5, 5, 6, 0.82);
-  --surface-panel-top: rgba(42, 42, 44, 0.38);
-  --surface-panel-mid: rgba(30, 30, 32, 0.92);
-  --surface-panel-bottom: rgba(24, 24, 26, 0.98);
-  --surface-panel-glow: rgba(226, 194, 117, 0.08);
-  --surface-panel-border-strong: rgba(226, 194, 117, 0.22);
-  --surface-parchment: rgba(226, 194, 117, 0.05);
+  --color-blue-500: #b8c9d3;
+  --color-success-300: #54a978;
+  --color-danger-300: #ffb4ab;
+
+  /* Outline & Borders - Ghost Border Rule */
+  --color-outline: #999077;
+  --color-outline-variant: #4d4732;
+  --color-panel-edge: rgba(77, 71, 50, 0.20);
+  --color-panel-line: rgba(153, 144, 119, 0.12);
+  --color-overlay: rgba(12, 14, 17, 0.82);
+  
+  /* Surface Gradients - Tonal Layering */
+  --surface-panel-top: rgba(40, 42, 45, 0.38);
+  --surface-panel-mid: rgba(30, 32, 35, 0.92);
+  --surface-panel-bottom: rgba(26, 28, 31, 0.98);
+  --surface-panel-glow: rgba(233, 193, 118, 0.08);
+  --surface-panel-border-strong: rgba(233, 193, 118, 0.22);
+  --surface-parchment: rgba(253, 212, 136, 0.05);
+  
   --surface-hero-panel:
-    radial-gradient(circle at 82% 18%, rgba(244, 220, 166, 0.12), transparent 24%),
-    radial-gradient(circle at 14% 14%, rgba(81, 163, 161, 0.12), transparent 26%),
-    linear-gradient(180deg, rgba(37, 29, 24, 0.94), rgba(14, 11, 9, 0.99));
+    radial-gradient(circle at 82% 18%, rgba(253, 212, 136, 0.12), transparent 24%),
+    radial-gradient(circle at 14% 14%, rgba(184, 201, 211, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(26, 28, 31, 0.94), rgba(17, 19, 22, 0.99));
   --surface-hero-panel-alt:
-    radial-gradient(circle at 84% 18%, rgba(81, 163, 161, 0.14), transparent 26%),
-    radial-gradient(circle at 12% 10%, rgba(244, 220, 166, 0.1), transparent 22%),
-    linear-gradient(180deg, rgba(40, 31, 25, 0.92), rgba(14, 11, 9, 0.98));
+    radial-gradient(circle at 84% 18%, rgba(184, 201, 211, 0.10), transparent 26%),
+    radial-gradient(circle at 12% 10%, rgba(253, 212, 136, 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(30, 32, 35, 0.92), rgba(17, 19, 22, 0.98));
   --surface-card-panel:
-    radial-gradient(circle at 18% 0%, rgba(244, 220, 166, 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(58, 42, 32, 0.9), rgba(18, 13, 10, 0.98)),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.08), transparent 72%);
+    radial-gradient(circle at 18% 0%, rgba(253, 212, 136, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(40, 42, 45, 0.9), rgba(26, 28, 31, 0.98));
   --surface-card-panel-active:
-    linear-gradient(180deg, rgba(74, 52, 39, 0.96), rgba(21, 16, 12, 0.98)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.12), transparent 72%);
+    linear-gradient(180deg, rgba(51, 53, 56, 0.96), rgba(30, 32, 35, 0.98)),
+    linear-gradient(90deg, rgba(253, 212, 136, 0.12), transparent 72%);
   --surface-card-panel-running:
-    radial-gradient(circle at 18% 0%, rgba(81, 163, 161, 0.16), transparent 24%),
-    linear-gradient(180deg, rgba(58, 42, 32, 0.94), rgba(18, 13, 10, 0.98)),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
-  --surface-accent-rail: linear-gradient(180deg, rgba(244, 220, 166, 0.88), rgba(126, 90, 37, 0.24));
-  --shadow-gold-soft: var(--shadow-soft), 0 0 26px rgba(244, 220, 166, 0.1);
-  --shadow-gold-strong: var(--shadow-soft), 0 0 32px rgba(244, 220, 166, 0.14);
-  --shadow-teal-soft: var(--shadow-soft), 0 0 28px rgba(81, 163, 161, 0.12);
-  --color-success-300: #9cd1a6;
-  --color-danger-300: #e19c86;
+    radial-gradient(circle at 18% 0%, rgba(184, 201, 211, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(40, 42, 45, 0.94), rgba(26, 28, 31, 0.98));
+  --surface-accent-rail: linear-gradient(180deg, rgba(253, 212, 136, 0.88), rgba(233, 193, 118, 0.24));
+  
+  /* Glass Effect */
+  --surface-glass: rgba(40, 42, 45, 0.70);
+  --glass-blur: blur(12px);
 
-  --shadow-soft: 0 18px 36px rgba(0, 0, 0, 0.45);
-  --shadow-heavy: 0 30px 72px rgba(0, 0, 0, 0.65);
-  --shadow-inset: inset 0 1px 0 rgba(247, 239, 223, 0.12);
-  --glass-blur: blur(16px);
+  /* Shadows - Ambient Shadows */
+  --shadow-soft: 0 16px 32px rgba(0, 0, 0, 0.40);
+  --shadow-heavy: 0 32px 64px rgba(0, 0, 0, 0.55);
+  --shadow-inset: inset 0 1px 0 rgba(226, 226, 230, 0.08);
+  --shadow-ambient: 0 16px 32px rgba(226, 226, 230, 0.06);
+  --shadow-gold-soft: var(--shadow-soft), 0 0 24px rgba(233, 193, 118, 0.10);
+  --shadow-gold-strong: var(--shadow-soft), 0 0 32px rgba(233, 193, 118, 0.14);
+  --shadow-teal-soft: var(--shadow-soft), 0 0 28px rgba(184, 201, 211, 0.10);
 
-  --radius-xs: 10px;
-  --radius-sm: 16px;
-  --radius-md: 24px;
-  --radius-lg: 32px;
+  /* Border Radius - Sharp Corners (Sovereign Archive) */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
   --radius-pill: 999px;
 
+  /* Spacing */
   --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
+  --space-2: 0.4rem;
+  --space-3: 0.6rem;
   --space-4: 1rem;
   --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-10: 2.5rem;
 
+  /* Z-Index & Motion */
   --touch-target: 48px;
   --z-base: 1;
   --z-sticky: 20;
@@ -93,11 +166,12 @@
   --motion-base: 220ms ease;
   --motion-slow: 460ms ease;
   --motion-spring: 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  --motion-smooth: 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --motion-smooth: 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-  --glow-gold: 0 0 24px rgba(218, 176, 101, 0.45), 0 0 64px rgba(218, 176, 101, 0.2);
-  --glow-teal: 0 0 24px rgba(81, 163, 161, 0.45), 0 0 64px rgba(81, 163, 161, 0.18);
-  --glow-danger: 0 0 24px rgba(216, 104, 81, 0.45), 0 0 64px rgba(216, 104, 81, 0.18);
+  /* Glows */
+  --glow-gold: 0 0 24px rgba(233, 193, 118, 0.45), 0 0 64px rgba(233, 193, 118, 0.2);
+  --glow-teal: 0 0 24px rgba(184, 201, 211, 0.35), 0 0 64px rgba(184, 201, 211, 0.15);
+  --glow-danger: 0 0 24px rgba(255, 180, 171, 0.45), 0 0 64px rgba(255, 180, 171, 0.18);
   --glow-success: 0 0 24px rgba(84, 169, 120, 0.45), 0 0 64px rgba(84, 169, 120, 0.18);
 }
 
