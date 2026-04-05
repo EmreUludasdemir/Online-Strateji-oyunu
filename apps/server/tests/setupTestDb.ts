@@ -68,6 +68,44 @@ async function waitForPort(port: number, host: string, timeoutMs: number) {
   throw new Error(`Timed out while waiting for Postgres on ${host}:${port}.`);
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isDatabaseBootError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("Can't reach database server") ||
+    message.includes("ECONNREFUSED") ||
+    message.includes("Timed out") ||
+    message.includes("P1001")
+  );
+}
+
+async function resetTestDatabase(endpoint: { host: string; port: number }) {
+  const resetCommand = "corepack pnpm exec prisma db push --force-reset --skip-generate";
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      execSync(resetCommand, {
+        stdio: "inherit",
+        env: process.env,
+      });
+      return;
+    } catch (error) {
+      if (attempt >= maxAttempts || !isDatabaseBootError(error)) {
+        throw error;
+      }
+
+      console.warn(
+        `Test database on ${endpoint.host}:${endpoint.port} is still warming up. Retrying Prisma reset (${attempt + 1}/${maxAttempts})...`,
+      );
+      await sleep(2_000);
+    }
+  }
+}
+
 async function main() {
   const endpoint = resolveDatabaseEndpoint(databaseUrl);
   if (isLocalHost(endpoint.host) && !(await isPortOpen(endpoint.port, endpoint.host))) {
@@ -94,13 +132,10 @@ async function main() {
   }
 
   try {
-    execSync("corepack pnpm exec prisma db push --force-reset --skip-generate", {
-      stdio: "inherit",
-      env: process.env,
-    });
+    await resetTestDatabase(endpoint);
   } catch (error) {
     throw new Error(
-      `Prisma test database reset failed for ${endpoint.host}:${endpoint.port}. Verify TEST_DATABASE_URL and local Postgres health before retrying. Root cause: ${error instanceof Error ? error.message : String(error)}.`,
+      `Prisma test database reset failed for ${endpoint.host}:${endpoint.port}. Verify TEST_DATABASE_URL (${databaseUrl}), local Postgres health, and Docker startup before retrying. Root cause: ${error instanceof Error ? error.message : String(error)}.`,
     );
   }
 }

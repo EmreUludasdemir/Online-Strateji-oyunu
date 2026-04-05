@@ -89,6 +89,14 @@
   gap: 0.75rem;
 }
 
+.surfaceHeader {
+  margin-bottom: 0.9rem;
+}
+
+.rosterStats {
+  margin-bottom: 1rem;
+}
+
 .summaryCard,
 .rosterCard,
 .portraitCard,

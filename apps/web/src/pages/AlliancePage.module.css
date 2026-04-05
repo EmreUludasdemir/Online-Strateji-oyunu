@@ -123,6 +123,10 @@
   gap: 0.75rem;
 }
 
+.railStats {
+  margin-bottom: 0.9rem;
+}
+
 .summaryHint {
   display: block;
   margin-top: 0.25rem;

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Imperial Market | Frontier Dominion</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,700;1,400&amp;family=Manrope:wght@400;500;700&amp;family=Space+Grotesk:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-fixed-variant": "#394951",
+                        "on-surface": "#e2e2e6",
+                        "on-background": "#e2e2e6",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "error-container": "#93000a",
+                        "surface-bright": "#37393d",
+                        "surface-variant": "#333538",
+                        "surface-container-high": "#282a2d",
+                        "secondary-fixed-dim": "#b8c9d3",
+                        "surface-tint": "#e9c176",
+                        "surface-container-low": "#1a1c1f",
+                        "primary": "#fff5e9",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#ffd1a7",
+                        "primary-container": "#fdd488",
+                        "surface-dim": "#111316",
+                        "surface-container-lowest": "#0c0e11",
+                        "surface-container": "#1e2023",
+                        "on-tertiary": "#4a2800",
+                        "surface": "#111316",
+                        "on-error-container": "#ffdad6",
+                        "inverse-on-surface": "#2f3034",
+                        "primary-fixed-dim": "#e9c176",
+                        "on-tertiary-fixed": "#2c1600",
+                        "tertiary": "#fff4ed",
+                        "secondary-container": "#3b4b53",
+                        "surface-container-highest": "#333538",
+                        "tertiary-fixed-dim": "#ffb870",
+                        "on-primary": "#412d00",
+                        "on-secondary": "#23333a",
+                        "on-tertiary-container": "#8b5100",
+                        "secondary": "#b8c9d3",
+                        "outline-variant": "#4d4732",
+                        "on-secondary-container": "#aabbc5",
+                        "on-primary-fixed": "#261900",
+                        "background": "#111316",
+                        "on-secondary-fixed": "#0d1e25",
+                        "on-surface-variant": "#d0c6ab",
+                        "secondary-fixed": "#d4e5ef",
+                        "on-primary-fixed-variant": "#5d4201",
+                        "on-error": "#690005",
+                        "inverse-primary": "#775a19",
+                        "primary-fixed": "#ffdea5",
+                        "inverse-surface": "#e2e2e6",
+                        "on-primary-container": "#785a1a",
+                        "tertiary-fixed": "#ffdcbe",
+                        "outline": "#999077"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Space Grotesk", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #111316;
+            color: #e2e2e6;
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-[#111316] fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-3 shadow-[0_16px_32px_rgba(0,0,0,0.4)]">
+<div class="text-2xl font-serif italic text-[#fdd488]">Frontier Dominion</div>
+<nav class="hidden md:flex items-center gap-8">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-sm">
+<span class="material-symbols-outlined text-primary-fixed" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Gold: 12.4k</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-sm">
+<span class="material-symbols-outlined text-tertiary-fixed-dim" style="font-variation-settings: 'FILL' 1;">forest</span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Wood: 8.2k</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-sm">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">foundation</span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Stone: 5.1k</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-sm">
+<span class="material-symbols-outlined text-tertiary-container" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Food: 15.9k</span>
+</div>
+</div>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface hover:bg-[#282a2d] transition-colors duration-300">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface hover:bg-[#282a2d] transition-colors duration-300">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-[#1a1c1f] flex flex-col py-8 z-40 hidden md:flex">
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 bg-primary-container flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<div>
+<div class="text-lg font-serif text-[#fdd488]">Dominion Command</div>
+<div class="text-xs font-label uppercase tracking-widest text-on-surface-variant">Sovereign Rank IV</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 hover:text-[#fdd488] group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="map">map</span>
+<span class="font-medium">Strategic Map</span>
+</a>
+<a class="flex items-center gap-3 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 hover:text-[#fdd488] group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="shield">shield</span>
+<span class="font-medium">Grand Alliance</span>
+</a>
+<a class="flex items-center gap-3 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 hover:text-[#fdd488] group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="biotech">biotech</span>
+<span class="font-medium">Imperial Research</span>
+</a>
+<a class="flex items-center gap-3 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 hover:text-[#fdd488] group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="swords">swords</span>
+<span class="font-medium">War Council</span>
+</a>
+<a class="flex items-center gap-3 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 hover:text-[#fdd488] group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="mail">mail</span>
+<span class="font-medium">Message Center</span>
+</a>
+<a class="flex items-center gap-3 py-3 text-[#fdd488] bg-[#282a2d] border-l-4 border-[#fdd488] pl-3 transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="storefront">storefront</span>
+<span class="font-medium">Market</span>
+</a>
+<a class="flex items-center gap-3 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 hover:text-[#fdd488] group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="leaderboard">leaderboard</span>
+<span class="font-medium">Leaderboard</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pt-20 pb-24 md:pb-8 px-6 min-h-screen bg-surface overflow-x-hidden">
+<!-- Header Section -->
+<header class="mb-10 max-w-7xl mx-auto">
+<h1 class="text-4xl md:text-5xl font-serif font-bold text-on-surface tracking-tight mb-2">Imperial Market</h1>
+<p class="text-on-surface-variant max-w-2xl font-body italic">"The wealth of the empire is not measured by its borders, but by the flow of its lifeblood through the veins of commerce."</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
+<!-- Left Column: Resource Trading & Exchange Rates -->
+<section class="lg:col-span-7 space-y-8">
+<!-- Exchange Rates Panel -->
+<div class="bg-surface-container-low p-6 shadow-xl rounded-sm">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-serif text-xl text-[#fdd488]">Resource Exchange Indices</h2>
+<span class="font-label text-xs uppercase tracking-tighter text-on-surface-variant bg-surface-container-highest px-2 py-1">Live Updates</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Resource Rate Card -->
+<div class="bg-surface-container p-4 border-l-2 border-tertiary-fixed-dim">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label text-xs text-on-surface-variant">WOOD / GOLD</span>
+<span class="text-xs text-green-400 font-label">+2.4%</span>
+</div>
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-2xl font-label text-on-surface">1.42</span>
+<span class="text-xs text-on-surface-variant">per unit</span>
+</div>
+<div class="h-12 w-full bg-surface-container-highest/20 flex items-end gap-1">
+<div class="w-full bg-tertiary-fixed-dim/30 h-[40%]"></div>
+<div class="w-full bg-tertiary-fixed-dim/30 h-[60%]"></div>
+<div class="w-full bg-tertiary-fixed-dim/30 h-[50%]"></div>
+<div class="w-full bg-tertiary-fixed-dim/30 h-[80%]"></div>
+<div class="w-full bg-tertiary-fixed-dim/30 h-[70%]"></div>
+<div class="w-full bg-tertiary-fixed-dim/50 h-[90%]"></div>
+</div>
+</div>
+<!-- Resource Rate Card -->
+<div class="bg-surface-container p-4 border-l-2 border-secondary">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label text-xs text-on-surface-variant">STONE / GOLD</span>
+<span class="text-xs text-red-400 font-label">-1.1%</span>
+</div>
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-2xl font-label text-on-surface">2.18</span>
+<span class="text-xs text-on-surface-variant">per unit</span>
+</div>
+<div class="h-12 w-full bg-surface-container-highest/20 flex items-end gap-1">
+<div class="w-full bg-secondary/30 h-[70%]"></div>
+<div class="w-full bg-secondary/30 h-[65%]"></div>
+<div class="w-full bg-secondary/30 h-[55%]"></div>
+<div class="w-full bg-secondary/30 h-[45%]"></div>
+<div class="w-full bg-secondary/30 h-[35%]"></div>
+<div class="w-full bg-secondary/50 h-[30%]"></div>
+</div>
+</div>
+</div>
+<div class="mt-8">
+<div class="flex items-center gap-4 p-4 bg-surface-container-high">
+<div class="flex-1">
+<label class="block text-xs font-label text-on-surface-variant mb-1 uppercase">Sell Resource</label>
+<select class="w-full bg-transparent border-b border-outline-variant text-on-surface font-label py-2 focus:ring-0 focus:border-primary">
+<option>Wood (8.2k available)</option>
+<option>Stone (5.1k available)</option>
+<option>Food (15.9k available)</option>
+</select>
+</div>
+<div class="pt-4">
+<span class="material-symbols-outlined text-primary-fixed">swap_horiz</span>
+</div>
+<div class="flex-1">
+<label class="block text-xs font-label text-on-surface-variant mb-1 uppercase">Receive Gold</label>
+<input class="w-full bg-transparent border-b border-outline-variant text-on-surface font-label py-2 focus:ring-0 focus:border-primary" type="number" value="1500"/>
+</div>
+</div>
+<button class="w-full mt-4 bg-primary-fixed-dim text-on-primary-fixed font-label py-3 rounded-sm font-bold tracking-widest uppercase hover:brightness-110 transition-all active:scale-[0.98]">Execute Exchange</button>
+</div>
+</div>
+<!-- Trade History -->
+<div class="space-y-4">
+<h2 class="font-serif text-xl text-[#fdd488] pl-2">Imperial Trade History</h2>
+<div class="bg-surface-container-low divide-y divide-outline-variant/10 overflow-hidden">
+<div class="grid grid-cols-4 p-4 text-xs font-label text-on-surface-variant uppercase tracking-wider">
+<span>Manifest</span>
+<span>Transaction</span>
+<span>Quantity</span>
+<span class="text-right">Settled Date</span>
+</div>
+<div class="grid grid-cols-4 p-4 hover:bg-surface-container transition-colors items-center">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-green-400">south_west</span>
+<span class="text-sm">Imperial Levy</span>
+</span>
+<span class="text-sm font-label text-tertiary-fixed-dim">WOOD → GOLD</span>
+<span class="text-sm font-label text-on-surface">+1,240 <span class="text-[10px] opacity-50">GP</span></span>
+<span class="text-xs text-on-surface-variant text-right">3h ago</span>
+</div>
+<div class="grid grid-cols-4 p-4 hover:bg-surface-container transition-colors items-center">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-red-400">north_east</span>
+<span class="text-sm">Provisioning</span>
+</span>
+<span class="text-sm font-label text-tertiary-container">GOLD → FOOD</span>
+<span class="text-sm font-label text-on-surface">-450 <span class="text-[10px] opacity-50">GP</span></span>
+<span class="text-xs text-on-surface-variant text-right">Yesterday</span>
+</div>
+<div class="grid grid-cols-4 p-4 hover:bg-surface-container transition-colors items-center">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-green-400">south_west</span>
+<span class="text-sm">Mine Surplus</span>
+</span>
+<span class="text-sm font-label text-secondary">STONE → GOLD</span>
+<span class="text-sm font-label text-on-surface">+2,100 <span class="text-[10px] opacity-50">GP</span></span>
+<span class="text-xs text-on-surface-variant text-right">2 days ago</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Imperial Caravans & Specialized Items -->
+<aside class="lg:col-span-5 space-y-8">
+<!-- Imperial Caravans Section -->
+<div class="relative group">
+<div class="absolute inset-0 bg-primary-container/5 blur-xl group-hover:bg-primary-container/10 transition-colors"></div>
+<div class="relative bg-surface-container-high p-1 rounded-sm overflow-hidden">
+<div class="bg-surface-container-low p-6 border border-primary-container/20">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-fixed text-3xl" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+<div>
+<h2 class="font-serif text-2xl text-[#fdd488]">Imperial Caravans</h2>
+<p class="text-xs font-label text-on-surface-variant">Arriving from the Far Reaches</p>
+</div>
+</div>
+<span class="font-label text-sm text-primary-fixed">04:22:18</span>
+</div>
+<div class="space-y-4">
+<!-- Rare Item Card -->
+<div class="flex gap-4 p-4 bg-surface-container rounded-sm border-r-2 border-primary-fixed-dim">
+<div class="w-16 h-16 bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl text-primary-fixed" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="flex-1">
+<h3 class="font-serif text-lg text-on-surface">Architect's Decree</h3>
+<p class="text-xs text-on-surface-variant mb-2">Instantly finish all active building projects.</p>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1 font-label text-primary-fixed">
+<span class="material-symbols-outlined text-sm">payments</span>
+<span>450</span>
+</div>
+<button class="px-3 py-1 bg-primary-fixed-dim text-on-primary-fixed font-label text-xs uppercase font-bold">Acquire</button>
+</div>
+</div>
+</div>
+<!-- Rare Item Card -->
+<div class="flex gap-4 p-4 bg-surface-container rounded-sm border-r-2 border-tertiary-fixed-dim">
+<div class="w-16 h-16 bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl text-tertiary-fixed-dim" style="font-variation-settings: 'FILL' 1;">swords</span>
+</div>
+<div class="flex-1">
+<h3 class="font-serif text-lg text-on-surface">Vanguard's Resolve</h3>
+<p class="text-xs text-on-surface-variant mb-2">+25% attack for 12 hours on all frontiers.</p>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1 font-label text-primary-fixed">
+<span class="material-symbols-outlined text-sm">payments</span>
+<span>280</span>
+</div>
+<button class="px-3 py-1 bg-primary-fixed-dim text-on-primary-fixed font-label text-xs uppercase font-bold">Acquire</button>
+</div>
+</div>
+</div>
+<!-- Rare Item Card -->
+<div class="flex gap-4 p-4 bg-surface-container rounded-sm border-r-2 border-secondary">
+<div class="w-16 h-16 bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl text-secondary" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<div class="flex-1">
+<h3 class="font-serif text-lg text-on-surface">Tax Exemption</h3>
+<p class="text-xs text-on-surface-variant mb-2">Double gold production in the Capital for 24h.</p>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1 font-label text-primary-fixed">
+<span class="material-symbols-outlined text-sm">payments</span>
+<span>750</span>
+</div>
+<button class="px-3 py-1 bg-primary-fixed-dim text-on-primary-fixed font-label text-xs uppercase font-bold">Acquire</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Premium Offers Banner -->
+<div class="bg-[#1a1c1f] relative overflow-hidden h-40 flex items-center p-8 group cursor-pointer border border-outline-variant/20 hover:border-primary-container/30 transition-all">
+<img alt="" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity" data-alt="Abstract golden silk and dark metal texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC561A5PWjWwdzoC-cvxs34ELfigcT06-hLmRBMjKeYxadHGKmlzQ-3zYnnmtPbpc3mGLj6uUj8rn5yLDYRarzpvtGfMk1vzAY0kpgQc0roUBUFJgRswCmc9LIeouc5Nz4Sbf9frIS2ATPHd5IXhhIl100XnVYx0qkjRen4e67Knq_uk0WxQFPm790Ub75LJxdsZgAup69H988dEHzwSZjcmNIjsa5Q7ZGMs0-QWSxLsreeO6rEd8ERrRVaN657f8UvGESt-dn--xs"/>
+<div class="relative z-10">
+<div class="text-xs font-label text-primary-fixed uppercase tracking-widest mb-2">Limited Edition</div>
+<h2 class="font-serif text-2xl text-on-surface group-hover:text-primary-container transition-colors">Founder's Treasury</h2>
+<p class="text-sm text-on-surface-variant">Unlock exclusive sigils and 50k Gold</p>
+</div>
+<span class="absolute right-8 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary-fixed text-4xl opacity-50 group-hover:translate-x-2 transition-transform">chevron_right</span>
+</div>
+</aside>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-[#111316]/80 backdrop-blur-xl border-t border-[#4d4732]/20 shadow-[0_-8px_24px_rgba(0,0,0,0.5)]">
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-mono text-[10px] uppercase tracking-widest mt-1">Status</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+<span class="font-mono text-[10px] uppercase tracking-widest mt-1">Build</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="military_tech">military_tech</span>
+<span class="font-mono text-[10px] uppercase tracking-widest mt-1">War</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#fdd488] scale-110" href="#">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+<span class="font-mono text-[10px] uppercase tracking-widest mt-1">Trade</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-mono text-[10px] uppercase tracking-widest mt-1">Archive</span>
+</a>
+</nav>
+</body></html>

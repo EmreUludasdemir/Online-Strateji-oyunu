@@ -7,6 +7,7 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { PanelStatGrid, type PanelStatItem } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -190,6 +191,91 @@ export function AlliancePage() {
   );
   const treasuryTotal = alliance ? Object.values(alliance.treasury).reduce((sum, value) => sum + value, 0) : 0;
   const latestDonation = alliance?.donations[0] ?? null;
+  const treasuryStats: PanelStatItem[] = alliance
+    ? [
+        {
+          id: "reserve",
+          label: "Reserve",
+          value: formatNumber(treasuryTotal),
+          note: "shared war stock",
+          tone: "success",
+        },
+        {
+          id: "city-stock",
+          label: "City Stock",
+          value: formatNumber(state.city.resources[donationResource]),
+          note: formatResourceLabel(donationResource),
+          tone: "info",
+        },
+        {
+          id: "latest-convoy",
+          label: "Latest Convoy",
+          value: latestDonation ? latestDonation.username : "Pending",
+          note: latestDonation ? `${formatNumber(latestDonation.totalValue)} value` : "awaiting first ledger entry",
+          tone: "warning",
+        },
+        {
+          id: "support-queue",
+          label: "Support Queue",
+          value: formatNumber(alliance.helpRequests.length),
+          note: "open accelerations",
+        },
+      ]
+    : [];
+  const contributionStats: PanelStatItem[] = alliance
+    ? [
+        {
+          id: "top-score",
+          label: "Lead Score",
+          value: formatNumber(alliance.contributions[0]?.points ?? 0),
+          note: alliance.contributions[0]?.username ?? "No scorer yet",
+          tone: "warning",
+        },
+        {
+          id: "active-donors",
+          label: "Active Donors",
+          value: formatNumber(alliance.contributions.length),
+          note: "members on the ledger",
+          tone: "info",
+        },
+      ]
+    : [];
+  const markerStats: PanelStatItem[] = alliance
+    ? [
+        {
+          id: "pins",
+          label: "Pins",
+          value: formatNumber(alliance.markers.length),
+          note: "live map directives",
+          tone: "info",
+        },
+        {
+          id: "expiring-pins",
+          label: "Expiring",
+          value: formatNumber(alliance.markers.filter((marker) => marker.expiresAt != null).length),
+          note: "timed beacons",
+          tone: "warning",
+        },
+      ]
+    : [];
+  const chronicleStats: PanelStatItem[] = alliance
+    ? [
+        {
+          id: "entries",
+          label: "Entries",
+          value: formatNumber(alliance.logs.length),
+          note: "recent alliance events",
+          tone: "info",
+        },
+        {
+          id: "latest-kind",
+          label: "Latest",
+          value: alliance.logs[0]?.kind.replaceAll("_", " ") ?? "Quiet",
+          note: alliance.logs[0] ? formatDateTime(alliance.logs[0].createdAt) : "awaiting first chronicle entry",
+          tone: "success",
+        },
+      ]
+    : [];
 
   useEffect(() => {
     if (!alliance) {
@@ -500,6 +586,7 @@ export function AlliancePage() {
 
           <aside className={styles.sideColumn}>
             <SectionCard kicker="Strategic Treasury" title="Shared reserve" aside={<Badge tone="success">Active</Badge>}>
+              <PanelStatGrid items={treasuryStats} columns={2} compact className={styles.railStats} />
               <div className={styles.treasuryTotal}>
                 <span>Total reserve</span>
                 <strong>{formatNumber(treasuryTotal)}</strong>
@@ -545,6 +632,7 @@ export function AlliancePage() {
             </SectionCard>
 
             <SectionCard kicker="Contribution Rank" title="Top contributors">
+              <PanelStatGrid items={contributionStats} columns={2} compact className={styles.railStats} />
               <div className={styles.feedList}>
                 {alliance.contributions.length === 0 ? (
                   <EmptyState title="No Score Yet" body="Donation and aid actions fill the contribution table." />
@@ -562,6 +650,7 @@ export function AlliancePage() {
             </SectionCard>
 
             <SectionCard kicker="War Markers" title="Active pins">
+              <PanelStatGrid items={markerStats} columns={2} compact className={styles.railStats} />
               <div className={styles.feedList}>
                 {alliance.markers.length === 0 ? (
                   <EmptyState title="No Markers" body="Lock rally, defense, and target points here." />
@@ -597,6 +686,7 @@ export function AlliancePage() {
             </SectionCard>
 
             <SectionCard kicker="Chronicle" title="Recent events" aside={<Badge tone="info">{alliance.logs.length} entries</Badge>}>
+              <PanelStatGrid items={chronicleStats} columns={2} compact className={styles.railStats} />
               <div className={styles.feedList}>
                 {alliance.logs.length === 0 ? (
                   <EmptyState title="Log Empty" body="New aid, donation, and diplomacy actions will land here." />

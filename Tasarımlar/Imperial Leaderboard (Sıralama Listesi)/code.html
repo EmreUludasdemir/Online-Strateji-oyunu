@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Frontier Dominion - Imperial Leaderboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,700;1,400&amp;family=Manrope:wght@400;500;700&amp;family=Space+Grotesk:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-fixed-variant": "#394951",
+              "on-surface": "#e2e2e6",
+              "on-background": "#e2e2e6",
+              "on-tertiary-fixed-variant": "#693c00",
+              "error-container": "#93000a",
+              "surface-bright": "#37393d",
+              "surface-variant": "#333538",
+              "surface-container-high": "#282a2d",
+              "secondary-fixed-dim": "#b8c9d3",
+              "surface-tint": "#e9c176",
+              "surface-container-low": "#1a1c1f",
+              "primary": "#fff5e9",
+              "error": "#ffb4ab",
+              "tertiary-container": "#ffd1a7",
+              "primary-container": "#fdd488",
+              "surface-dim": "#111316",
+              "surface-container-lowest": "#0c0e11",
+              "surface-container": "#1e2023",
+              "on-tertiary": "#4a2800",
+              "surface": "#111316",
+              "on-error-container": "#ffdad6",
+              "inverse-on-surface": "#2f3034",
+              "primary-fixed-dim": "#e9c176",
+              "on-tertiary-fixed": "#2c1600",
+              "tertiary": "#fff4ed",
+              "secondary-container": "#3b4b53",
+              "surface-container-highest": "#333538",
+              "tertiary-fixed-dim": "#ffb870",
+              "on-primary": "#412d00",
+              "on-secondary": "#23333a",
+              "on-tertiary-container": "#8b5100",
+              "secondary": "#b8c9d3",
+              "outline-variant": "#4d4732",
+              "on-secondary-container": "#aabbc5",
+              "on-primary-fixed": "#261900",
+              "background": "#111316",
+              "on-secondary-fixed": "#0d1e25",
+              "on-surface-variant": "#d0c6ab",
+              "secondary-fixed": "#d4e5ef",
+              "on-primary-fixed-variant": "#5d4201",
+              "on-error": "#690005",
+              "inverse-primary": "#775a19",
+              "primary-fixed": "#ffdea5",
+              "inverse-surface": "#e2e2e6",
+              "on-primary-container": "#785a1a",
+              "tertiary-fixed": "#ffdcbe",
+              "outline": "#999077"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Manrope"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .imperial-gradient-gold {
+            background: linear-gradient(135deg, #fdd488 0%, #e9c176 50%, #785a1a 100%);
+        }
+        .imperial-gradient-silver {
+            background: linear-gradient(135deg, #e2e2e6 0%, #b8c9d3 50%, #394951 100%);
+        }
+        .imperial-gradient-bronze {
+            background: linear-gradient(135deg, #ffb870 0%, #8b5100 50%, #4a2800 100%);
+        }
+        .glass-panel {
+            backdrop-filter: blur(12px);
+            background-color: rgba(40, 42, 45, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body min-h-screen overflow-x-hidden">
+<!-- SideNavBar (Authority: JSON) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-8 z-40 bg-[#1a1c1f] dark:bg-[#1a1c1f] w-64 border-r-0">
+<div class="px-6 mb-10">
+<h1 class="text-lg font-serif text-[#fdd488] font-headline">Dominion Command</h1>
+<p class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant opacity-70">Sovereign Rank IV</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-4 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="map">map</span>
+<span class="font-medium font-body group-hover:text-[#fdd488]">Strategic Map</span>
+</a>
+<a class="flex items-center px-4 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="shield">shield</span>
+<span class="font-medium font-body group-hover:text-[#fdd488]">Grand Alliance</span>
+</a>
+<a class="flex items-center px-4 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="biotech">biotech</span>
+<span class="font-medium font-body group-hover:text-[#fdd488]">Imperial Research</span>
+</a>
+<a class="flex items-center px-4 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="swords">swords</span>
+<span class="font-medium font-body group-hover:text-[#fdd488]">War Council</span>
+</a>
+<a class="flex items-center px-4 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="mail">mail</span>
+<span class="font-medium font-body group-hover:text-[#fdd488]">Message Center</span>
+</a>
+<a class="flex items-center px-4 py-3 text-[#e2e2e6] hover:bg-[#333538] pl-4 transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="storefront">storefront</span>
+<span class="font-medium font-body group-hover:text-[#fdd488]">Market</span>
+</a>
+<!-- Active Tab: Leaderboard -->
+<a class="flex items-center px-4 py-3 text-[#fdd488] bg-[#282a2d] border-l-4 border-[#fdd488] pl-3 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-lg" data-icon="leaderboard">leaderboard</span>
+<span class="font-medium font-body">Leaderboard</span>
+</a>
+</nav>
+<div class="px-6 pt-6 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-highest rounded-sm flex items-center justify-center overflow-hidden">
+<img alt="Imperial Seal" class="w-full h-full object-cover" data-alt="Golden Imperial Crown Seal" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAojQE4wVPCDK08UzcdtT23oFTOczPjBIgnt60NZcmT29jVnrK9H9SqFYSpkI_9OuoGK9rXfUK7-Dbf3LonQ_Ib-C6NUVFOPh_CZTm3StyI363kALVt6SdcjKSap1AJSNuCYDaah59ig7XO4ynXwwKr2DL55f4utHjwBIgwku0fmSstKdS70xGznrDRP_SwZboCMrTV0Q64tCkqCsrmh28mu5L9zXDxRLqOLSadtvjzYG5pNVFe8zXgGEJ8zBUH-OAKRmH4YKaKeEg"/>
+</div>
+<div>
+<p class="text-xs font-headline font-bold text-primary-fixed">Lord Commander</p>
+<p class="text-[10px] font-label text-on-surface-variant">House Aethelgard</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen pb-24">
+<!-- TopAppBar (Authority: JSON) -->
+<header class="sticky top-0 z-30 flex justify-between items-center w-full px-8 py-4 bg-[#111316] shadow-[0_16px_32px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-serif italic text-[#fdd488] dark:text-[#fdd488] font-headline">Frontier Dominion</span>
+<div class="hidden lg:flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-1 h-4 bg-[#fdd488]"></span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Gold: 12.4k</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1 h-4 bg-tertiary-fixed-dim"></span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Wood: 8.2k</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1 h-4 bg-secondary"></span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Stone: 5.1k</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1 h-4 bg-tertiary-container"></span>
+<span class="font-label text-sm text-[#e2e2e6] opacity-80">Food: 15.9k</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#e2e2e6] hover:bg-[#282a2d] transition-colors duration-300 rounded-sm">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-[#e2e2e6] hover:bg-[#282a2d] transition-colors duration-300 rounded-sm">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<!-- Leaderboard Hero / Categories -->
+<div class="px-12 py-10 max-w-7xl mx-auto">
+<div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
+<div>
+<h2 class="text-5xl font-headline font-bold text-on-surface tracking-tight mb-2">Imperial Rankings</h2>
+<p class="text-on-surface-variant font-body max-w-md italic">The grand record of sovereignty across the Frontier. Every score is a testament to blood, research, and expansion.</p>
+</div>
+<div class="flex bg-surface-container-low p-1 rounded-sm gap-1">
+<button class="px-6 py-2 bg-primary-container text-on-primary-container font-headline font-bold text-sm rounded-sm">Power</button>
+<button class="px-6 py-2 hover:bg-surface-container-high transition-colors font-headline text-sm rounded-sm">Territory</button>
+<button class="px-6 py-2 hover:bg-surface-container-high transition-colors font-headline text-sm rounded-sm">Military</button>
+<button class="px-6 py-2 hover:bg-surface-container-high transition-colors font-headline text-sm rounded-sm">Alliance</button>
+</div>
+</div>
+<!-- Top 3 Podium (Bento Grid Style) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 items-end">
+<!-- Rank 2: Silver -->
+<div class="order-2 md:order-1 glass-panel p-8 border-t-2 border-secondary-fixed-dim relative group hover:bg-surface-variant/40 transition-all">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-surface p-2 border-2 border-secondary-fixed-dim rounded-full w-12 h-12 flex items-center justify-center font-label font-bold text-secondary">II</div>
+<div class="flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-sm imperial-gradient-silver p-1 mb-4 shadow-xl">
+<div class="bg-surface h-full w-full flex items-center justify-center">
+<img alt="Silver Player" class="w-full h-full object-cover" data-alt="Imperial Knight portrait with silver frame" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiGrdT3Pb9bS4c8ermSirOfbGJOsJZA-hfdzzWooHFyJIhO6cHNNzcMVw7heXAo99sknwXTQYrJmAABtY-cJ0GM8OQbIHjkqKcHRG-jsHsmjzEPGZSNgDdtsi0r5k4aZmabhyg367ZrKchgaLdf8PbpmnorjV8wOs1Ttoy0UgohVR6Is1hql3EzP88l53_8OYV-XadOpnqGWZn7GPrQpoWLiKz3epf4v62Y46JwT-SzgOJpPaSag53Cnpasj3kDN1sy0CNK-kwXNI"/>
+</div>
+</div>
+<h3 class="font-headline text-2xl font-bold text-on-surface">Duke Valerius</h3>
+<p class="font-label text-secondary tracking-widest text-xs uppercase mb-4">[IRON] Iron Legion</p>
+<div class="w-full h-px bg-gradient-to-r from-transparent via-secondary/30 to-transparent mb-4"></div>
+<p class="font-label text-3xl font-bold">12,490,200</p>
+<p class="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Power Score</p>
+</div>
+</div>
+<!-- Rank 1: Gold -->
+<div class="order-1 md:order-2 glass-panel p-10 border-t-4 border-primary-container relative group hover:bg-surface-variant/50 transition-all scale-105 z-10 shadow-[0_32px_64px_rgba(0,0,0,0.6)]">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface p-2 border-4 border-primary-container rounded-full w-16 h-16 flex items-center justify-center font-label font-bold text-primary-fixed text-xl shadow-[0_0_20px_rgba(253,212,136,0.4)]">I</div>
+<div class="flex flex-col items-center text-center">
+<div class="w-32 h-32 rounded-sm imperial-gradient-gold p-1.5 mb-6 shadow-2xl">
+<div class="bg-surface h-full w-full flex items-center justify-center">
+<img alt="Gold Player" class="w-full h-full object-cover" data-alt="Regal Emperor portrait with gold ornate frame" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZikqtJmzgu-kAZSK-F63udOIjOxQO42wpZnEf37FlVVk37OJX2zGZi3GLDKoZKy4SB0btHLJaksMXzZKJgLlCWCZrv0wGOoRbVYQ643Xiry88N1ZWWKpr0ZVZGs9yrJIMNmXy-UcWsQgbvFWKO1QD5fGXdClDbu-4PU-_pPhvNunphp_iETFKCQBI4Q43pte5BpQecRj-W8CsZaKPrqEUs-H6faci1VQpvkHwsX4P6m6rDPYYTIHpLEUKFrImPj1vGFQ3w_8q7HM"/>
+</div>
+</div>
+<h3 class="font-headline text-3xl font-bold text-primary-container">Emperor Alaric</h3>
+<p class="font-label text-primary-fixed tracking-widest text-xs uppercase mb-4">[DOM] Dominion Prime</p>
+<div class="w-full h-px bg-gradient-to-r from-transparent via-primary-container/40 to-transparent mb-4"></div>
+<p class="font-label text-4xl font-bold">18,922,450</p>
+<p class="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Imperial Power Score</p>
+</div>
+</div>
+<!-- Rank 3: Bronze -->
+<div class="order-3 glass-panel p-8 border-t-2 border-tertiary-fixed-dim relative group hover:bg-surface-variant/40 transition-all">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-surface p-2 border-2 border-tertiary-fixed-dim rounded-full w-12 h-12 flex items-center justify-center font-label font-bold text-tertiary-fixed-dim">III</div>
+<div class="flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-sm imperial-gradient-bronze p-1 mb-4 shadow-xl">
+<div class="bg-surface h-full w-full flex items-center justify-center">
+<img alt="Bronze Player" class="w-full h-full object-cover" data-alt="Warden portrait with bronze rustic frame" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACyB1bC2ZB8UyntY2YPAg4jxKkjVi8P0AF80auOKLmZB5w5OA8ymZghyVFCHpLSZCofRPn2wQl4qNIpwr5voUbQPY7gvSQ0qUh2Cu4SQRqYYopN_WNw0REu0w_KnT5Puwgr2pT01V9pWP6XTdE0GLXXHQtjoTl6jqeSgFcYrRqHt3W39Nnz94BFbUuQtxZQvTbI2-6BX_iHNpKzQXtkbChuDKIWCirNmOgw6caBJR8RZ_5_1BUyBZ9RbgOnsUpxEjGzmHDwr50IS8"/>
+</div>
+</div>
+<h3 class="font-headline text-2xl font-bold text-on-surface">Archon Selene</h3>
+<p class="font-label text-tertiary-fixed-dim tracking-widest text-xs uppercase mb-4">[SKY] Sun Seekers</p>
+<div class="w-full h-px bg-gradient-to-r from-transparent via-tertiary-fixed-dim/30 to-transparent mb-4"></div>
+<p class="font-label text-3xl font-bold">10,815,000</p>
+<p class="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Power Score</p>
+</div>
+</div>
+</div>
+<!-- List View (Authority: Sovereign Archive - No divider rule) -->
+<div class="space-y-2 mb-12">
+<!-- Header Labels -->
+<div class="grid grid-cols-12 px-6 py-2 text-[10px] font-label uppercase tracking-[0.2em] text-on-surface-variant opacity-60">
+<div class="col-span-1">Rank</div>
+<div class="col-span-5">Sovereign Name</div>
+<div class="col-span-3">Alliance</div>
+<div class="col-span-3 text-right">Power Score</div>
+</div>
+<!-- Row 4 -->
+<div class="grid grid-cols-12 items-center px-6 py-5 bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer border-l-2 border-transparent hover:border-primary-container">
+<div class="col-span-1 font-label text-xl font-bold opacity-40 group-hover:opacity-100">04</div>
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-10 h-10 bg-surface-container-highest rounded-sm">
+<img alt="Player 4" class="w-full h-full object-cover opacity-70" data-alt="Abstract fortress heraldry icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3BEOs8BNiEaFj3wgGPelAqoO4byUegf8ACPBugmOqKW9kUAYspc3Nca4ime6fL_vnv8getl9IJn82zeguoptCkItOz-y-hQ91rLjkHHOkxexRfalsErkelQoMbzOUWiu3poROG5D4wVN_6IHskjkYGR-Ey9o1XPaOybesoXj-Nl1tkdyQPZINTjOS9yfZwwY0KhDCMYpXpBiNt14Cc4PuYvOazs7v_amHKCCpYX8XZ6YgkCurqBI62Wdk8JA-oP7IKQeyz5CLYyY"/>
+</div>
+<span class="font-headline text-lg font-bold">Baron Mordecai</span>
+</div>
+<div class="col-span-3 font-label text-sm text-on-surface-variant">[GOLD] Golden Guild</div>
+<div class="col-span-3 text-right font-label text-xl font-bold">9,240,100</div>
+</div>
+<!-- Row 5 -->
+<div class="grid grid-cols-12 items-center px-6 py-5 bg-surface-container-lowest hover:bg-surface-container-high transition-all group cursor-pointer border-l-2 border-transparent hover:border-primary-container">
+<div class="col-span-1 font-label text-xl font-bold opacity-40 group-hover:opacity-100">05</div>
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-10 h-10 bg-surface-container-highest rounded-sm">
+<img alt="Player 5" class="w-full h-full object-cover opacity-70" data-alt="Stylized wolf crest silhouette" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpSMXA-FNpPIzJWkuqG1G3s-Au2sTqgeUp0cE6aeg1fqkFu6t47x7yCKofrApbTVYLQFVxgAbo3xSPuu7o_FkOVtreqP11da17D_ghqQHnPO2IUAWLpJYM4nOYoqK6_zG7rSP4hV5UgPmRf_Ro1HlgTkYC3BjHXMfIP4JhozIZIvcBR2Ihb_KsGgnUGfFTedkpziGYYAwCCkWV-MiVAfNU5F6TvIIO3jYeCvorsDxyyl5Z21jEeDqiPZoTyr4QWV731uSQUqJ5V0k"/>
+</div>
+<span class="font-headline text-lg font-bold">Vanguard Thorne</span>
+</div>
+<div class="col-span-3 font-label text-sm text-on-surface-variant">[WOLF] Dire Clan</div>
+<div class="col-span-3 text-right font-label text-xl font-bold">8,875,300</div>
+</div>
+<!-- Row 6 -->
+<div class="grid grid-cols-12 items-center px-6 py-5 bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer border-l-2 border-transparent hover:border-primary-container">
+<div class="col-span-1 font-label text-xl font-bold opacity-40 group-hover:opacity-100">06</div>
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-10 h-10 bg-surface-container-highest rounded-sm">
+<img alt="Player 6" class="w-full h-full object-cover opacity-70" data-alt="Eagle wing motif emblem" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_PjtK_isdOV-V8kFDYr_CppfRRctE1RGu2WCGPP3dgXlXaYUnoTLJollUbGGQgpIJXqvirFhptv0l-0GyeC_NCf6DSaVVbrGJkQPz1q0f0FR2sIsJmmCJ4wPOKbIRlz6mOubQT0Sm55cCH8JspI0ip4jYz5sb_eJTOSEKyszu-4nQxBKx4rbvzauqkWQKcHOOeEITJATF1MPUwESOx7MjWVKuoOpxBiCTn3T8MqPsw_yj-V8a9_egDW2hEb3aEr8HU12xWPIgQqQ"/>
+</div>
+<span class="font-headline text-lg font-bold">High Priestess Elara</span>
+</div>
+<div class="col-span-3 font-label text-sm text-on-surface-variant">[VOID] Void Walkers</div>
+<div class="col-span-3 text-right font-label text-xl font-bold">7,120,400</div>
+</div>
+<!-- Row 7 -->
+<div class="grid grid-cols-12 items-center px-6 py-5 bg-surface-container-lowest hover:bg-surface-container-high transition-all group cursor-pointer border-l-2 border-transparent hover:border-primary-container">
+<div class="col-span-1 font-label text-xl font-bold opacity-40 group-hover:opacity-100">07</div>
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-10 h-10 bg-surface-container-highest rounded-sm">
+<img alt="Player 7" class="w-full h-full object-cover opacity-70" data-alt="Ancient flame symbol icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQTDcAAtvo_iaY3pd1zs1n1_ElXeUt3ZgG2zk1HI1TXFx6DlbBuDjh9PE2NAploJI3XQ2PknpN0AM13mv7zoNwrjvge0pWNlyddsnzS0WhDWXPEboHM6YH7bKdtPLwtZmxf8R04mr6uM3gh3I1oqxOgtTcxDwQ7DeONow_TFBbKsU_1VAn7dMEY6uzl_tcYRcSIRCMIMeZjyJvRwKEnvrWvEo7fMJZqfk120zhzPE7sMEIuOLrvmB6jjVnDeZ86_KquOQNdC9VZLw"/>
+</div>
+<span class="font-headline text-lg font-bold">General Kael</span>
+</div>
+<div class="col-span-3 font-label text-sm text-on-surface-variant">[IRON] Iron Legion</div>
+<div class="col-span-3 text-right font-label text-xl font-bold">6,950,000</div>
+</div>
+<!-- Gap Indicator -->
+<div class="flex justify-center py-4">
+<div class="flex gap-2">
+<div class="w-1 h-1 bg-outline-variant rounded-full"></div>
+<div class="w-1 h-1 bg-outline-variant rounded-full"></div>
+<div class="w-1 h-1 bg-outline-variant rounded-full"></div>
+</div>
+</div>
+<!-- "Your Rank" Highlight -->
+<div class="grid grid-cols-12 items-center px-8 py-6 bg-primary-container/10 border-t border-b border-primary-container/30 relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-primary-container/5 via-transparent to-primary-container/5"></div>
+<div class="col-span-1 font-label text-2xl font-bold text-primary-fixed relative z-10">42</div>
+<div class="col-span-5 flex items-center gap-4 relative z-10">
+<div class="w-12 h-12 bg-primary-container/20 rounded-sm border border-primary-container/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+<div>
+<span class="font-headline text-xl font-bold text-on-surface">Lord Commander Aethelgard</span>
+<div class="text-[10px] font-label text-primary-container uppercase tracking-widest mt-0.5">Your Imperial Standing</div>
+</div>
+</div>
+<div class="col-span-3 font-label text-sm text-on-surface-variant relative z-10">[OATH] The Oathbound</div>
+<div class="col-span-3 text-right font-label text-2xl font-bold text-primary-container relative z-10">2,145,900</div>
+</div>
+</div>
+<!-- Footer Pagination -->
+<div class="flex justify-between items-center px-6">
+<button class="flex items-center gap-2 font-headline text-sm text-on-surface-variant hover:text-primary-container transition-colors group">
+<span class="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform" data-icon="arrow_back">arrow_back</span>
+                    Previous Hundred
+                </button>
+<div class="font-label text-xs tracking-widest text-on-surface-variant uppercase">Record 01 - 100 / 12,401 Total</div>
+<button class="flex items-center gap-2 font-headline text-sm text-on-surface-variant hover:text-primary-container transition-colors group">
+                    Next Hundred
+                    <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Authority: JSON - Mobile Only View via responsive logic) -->
+<footer class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-[#111316]/80 backdrop-blur-xl border-t border-[#4d4732]/20 shadow-[0_-8px_24px_rgba(0,0,0,0.5)]">
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="text-[10px] font-mono uppercase tracking-widest font-label">Global Status</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+<span class="text-[10px] font-mono uppercase tracking-widest font-label">Quick Build</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="military_tech">military_tech</span>
+<span class="text-[10px] font-mono uppercase tracking-widest font-label">Declare War</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e2e2e6] opacity-60" href="#">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+<span class="text-[10px] font-mono uppercase tracking-widest font-label">Trade Hub</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#fdd488] scale-110" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="text-[10px] font-mono uppercase tracking-widest font-label">Archives</span>
+</a>
+</footer>
+</body></html>

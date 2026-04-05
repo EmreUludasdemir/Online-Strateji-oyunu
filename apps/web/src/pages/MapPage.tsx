@@ -828,11 +828,11 @@ export function MapPage() {
       : null;
   const selectedTargetSubtitle = selectedCity
     ? selectedCity.isCurrentPlayer
-      ? `Home city • ${selectedCity.x}, ${selectedCity.y}`
-      : `${selectedCity.ownerName} • hostile city • ${selectedCity.x}, ${selectedCity.y}`
+      ? `Home city | ${selectedCity.x}, ${selectedCity.y}`
+      : `${selectedCity.ownerName} | hostile city | ${selectedCity.x}, ${selectedCity.y}`
     : selectedPoi
-      ? `${selectedPoi.kind === "BARBARIAN_CAMP" ? "Barbarian camp" : "Resource node"} • ${selectedPoi.x}, ${selectedPoi.y}`
-      : "Drag to pan • Wheel to zoom • Right-click for field command";
+      ? `${selectedPoi.kind === "BARBARIAN_CAMP" ? "Barbarian camp" : "Resource site"} | ${selectedPoi.x}, ${selectedPoi.y}`
+      : "Drag to pan | Wheel to zoom | Right-click for field command";
   const selectedTargetDistance = getTargetDistance(state.city.coordinates, selectedCity, selectedPoi);
   const estimatedMarchEtaMs =
     composerMode && composerMode !== "SCOUT" && selectedTargetDistance != null && selectedCommander
@@ -1135,7 +1135,7 @@ export function MapPage() {
             label: "Commander",
             value: selectedCommander?.name ?? "Unassigned",
             note: selectedCommander
-              ? `Spd +${selectedCommander.marchSpeedBonusPct}% • Carry +${selectedCommander.carryBonusPct}%`
+              ? `Spd +${selectedCommander.marchSpeedBonusPct}% | Carry +${selectedCommander.carryBonusPct}%`
               : "Assign a commander before launch",
             tone: selectedCommander ? ("success" as const) : ("warning" as const),
           },
@@ -1155,7 +1155,7 @@ export function MapPage() {
             label: "Signals",
             value: latestAllianceMarker ? latestAllianceMarker.label : "Post a new beacon",
             note: latestVisibleReport
-              ? `Latest report • ${latestVisibleReport.label}`
+              ? `Latest report | ${latestVisibleReport.label}`
               : "Markers and reports keep the tray readable after camera drift",
             tone: latestAllianceMarker ? ("success" as const) : ("info" as const),
           },

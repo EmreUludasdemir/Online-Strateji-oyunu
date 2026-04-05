@@ -312,6 +312,7 @@ class FrontierMapScene extends Phaser.Scene {
   private scoutEntities = new Map<string, ScoutTrailEntity>();
   private selectionObjects: Phaser.GameObjects.GameObject[] = [];
   private lastCameraState: MapCameraState | null = null;
+  private lastObjectLayerSignature: string | null = null;
   private lastRouteSnapshot: RouteLayerSnapshot | null = null;
   private lastSelectionSnapshot: SelectionFxSnapshot | null = null;
   private currentDetailLevel: MapDetailLevel = getMapDetailLevel(MAP_CAMERA_DEFAULT_ZOOM);
@@ -696,6 +697,11 @@ class FrontierMapScene extends Phaser.Scene {
   }
 
   private syncObjectLayer() {
+    const nextSignature = this.getObjectLayerSignature();
+    if (nextSignature === this.lastObjectLayerSignature) {
+      return;
+    }
+
     this.clearLayer(this.objectLayer);
     this.clearLayer(this.uiLayer);
     this.cityLookup.clear();
@@ -705,6 +711,8 @@ class FrontierMapScene extends Phaser.Scene {
     if (!this.objectLayer || !this.uiLayer) {
       return;
     }
+
+    this.lastObjectLayerSignature = nextSignature;
 
     const showLabels = this.currentDetailLevel !== "far";
     const showNearDetail = this.currentDetailLevel === "near";
@@ -975,6 +983,51 @@ class FrontierMapScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  private getObjectLayerSignature() {
+    const alliedOwnerSignature = Array.from(this.alliedOwnerNames).sort().join("|");
+    const citySignature = this.cities
+      .map((city) =>
+        [
+          city.cityId,
+          city.x,
+          city.y,
+          city.cityName,
+          city.ownerName,
+          city.fogState,
+          city.isCurrentPlayer ? 1 : 0,
+          city.stagedMarchCount,
+          city.projectedOutcome ?? "",
+        ].join(":"),
+      )
+      .join("|");
+    const poiSignature = this.pois
+      .map((poi) =>
+        [poi.id, poi.x, poi.y, poi.kind, poi.state, poi.level, poi.resourceType ?? "", poi.remainingAmount ?? ""].join(":"),
+      )
+      .join("|");
+    const reportSignature = this.showReports
+      ? this.reportMarkers.map((report) => [report.id, report.kind, report.label, report.x, report.y, report.resultTone].join(":")).join("|")
+      : "";
+    const markerSignature = this.allianceMarkers
+      .map((marker) => [marker.id, marker.label, marker.x, marker.y, marker.expiresAt ?? ""].join(":"))
+      .join("|");
+
+    return [
+      this.worldSize,
+      this.currentDetailLevel,
+      this.filter,
+      this.showReports ? "reports-on" : "reports-off",
+      this.selectedCityId ?? "",
+      this.selectedPoiId ?? "",
+      this.allianceTag ?? "",
+      alliedOwnerSignature,
+      citySignature,
+      poiSignature,
+      reportSignature,
+      markerSignature,
+    ].join(";");
   }
 
   private syncSelectionFx() {

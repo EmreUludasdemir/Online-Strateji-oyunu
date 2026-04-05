@@ -6,6 +6,7 @@ import { api } from "../api";
 import { CommanderSkillTree } from "../components/commanders/CommanderSkillTree";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { PanelStatGrid, SectionHeaderBlock, type PanelStatItem } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -112,6 +113,36 @@ export function CommanderPage() {
     { label: "Speed", value: selectedCommander.marchSpeedBonusPct },
     { label: "Carry", value: selectedCommander.carryBonusPct },
   ];
+  const selectedCommanderRailStats: PanelStatItem[] = [
+    {
+      id: "level",
+      label: "Level",
+      value: `L${selectedCommander.level}`,
+      note: `${selectedCommander.starLevel} stars`,
+      tone: selectedCommander.isPrimary ? "success" : "info",
+    },
+    {
+      id: "power",
+      label: "Power",
+      value: formatNumber(selectedCommander.totalPowerScore),
+      note: selectedCommander.skillTree.trackLabel,
+      tone: "warning",
+    },
+    {
+      id: "xp",
+      label: "XP to next",
+      value: formatNumber(selectedCommander.xpToNextLevel),
+      note: "promotion window",
+      tone: "info",
+    },
+    {
+      id: "talent",
+      label: "Doctrine",
+      value: selectedCommander.talentPointsAvailable,
+      note: "points ready",
+      tone: "success",
+    },
+  ] as const;
 
   return (
     <section className={styles.page}>
@@ -157,6 +188,16 @@ export function CommanderPage() {
       <div className={styles.layout}>
         <aside className={styles.rosterColumn}>
           <SectionCard kicker="Command Ledger" title="Available commanders" aside={<Badge tone="info">{commanders.length} total</Badge>}>
+            <SectionHeaderBlock
+              kicker="Active Banner"
+              title={selectedCommander.name}
+              lead={`${selectedCommander.skillTree.trackLabel} doctrine • ${
+                selectedCommander.isPrimary ? "Primary banner" : "Reserve wing"
+              }`}
+              aside={<Badge tone={selectedCommander.isPrimary ? "success" : "info"}>{selectedCommander.isPrimary ? "Lead" : "Reserve"}</Badge>}
+              className={styles.surfaceHeader}
+            />
+            <PanelStatGrid items={selectedCommanderRailStats} columns={2} compact className={styles.rosterStats} />
             <div className={styles.rosterList}>
               {commanders.map((commander) => (
                 <button
@@ -208,7 +249,12 @@ export function CommanderPage() {
 
             <div className={styles.stageStack}>
               <article className={styles.stageCard}>
-                <span className={styles.cardEyebrow}>War Cabinet</span>
+                <SectionHeaderBlock
+                  kicker="War Cabinet"
+                  title="Field doctrine"
+                  lead="Frontline pressure, wall discipline, march tempo, and carry lift stay readable before promotion."
+                  className={styles.surfaceHeader}
+                />
                 <div className={styles.loadoutList}>
                   {bonusCards.map((card) => (
                     <div key={card.label} className={styles.loadoutRow}>
@@ -223,10 +269,13 @@ export function CommanderPage() {
               </article>
 
               <article className={styles.stageCard}>
-                <div className={styles.stageHeader}>
-                  <span className={styles.cardEyebrow}>Service Record</span>
-                  <Badge tone="warning">{selectedCommander.starLevel} stars</Badge>
-                </div>
+                <SectionHeaderBlock
+                  kicker="Service Record"
+                  title="Campaign ledger"
+                  lead="Preset, reserve doctrine, and command status stay visible while you plan the next rank."
+                  aside={<Badge tone="warning">{selectedCommander.starLevel} stars</Badge>}
+                  className={styles.surfaceHeader}
+                />
                 <dl className={styles.serviceGrid}>
                   {serviceRows.map((row) => (
                     <div key={row.label} className={styles.serviceRow}>

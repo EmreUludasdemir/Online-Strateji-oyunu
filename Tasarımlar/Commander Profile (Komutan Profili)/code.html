@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,700;1,400&amp;family=Manrope:wght@400;500;700&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-container": "#fdd488",
+              "background": "#111316",
+              "outline": "#999077",
+              "on-secondary-container": "#aabbc5",
+              "on-surface-variant": "#d0c6ab",
+              "on-error": "#690005",
+              "error-container": "#93000a",
+              "secondary-fixed": "#d4e5ef",
+              "on-primary": "#412d00",
+              "inverse-on-surface": "#2f3034",
+              "surface-bright": "#37393d",
+              "primary-fixed-dim": "#e9c176",
+              "on-background": "#e2e2e6",
+              "inverse-surface": "#e2e2e6",
+              "tertiary-container": "#ffd1a7",
+              "surface-variant": "#333538",
+              "on-secondary": "#23333a",
+              "primary-fixed": "#ffdea5",
+              "on-tertiary-container": "#8b5100",
+              "tertiary": "#fff4ed",
+              "surface": "#111316",
+              "surface-container": "#1e2023",
+              "surface-container-highest": "#333538",
+              "surface-container-lowest": "#0c0e11",
+              "tertiary-fixed-dim": "#ffb870",
+              "surface-dim": "#111316",
+              "on-secondary-fixed-variant": "#394951",
+              "secondary-container": "#3b4b53",
+              "error": "#ffb4ab",
+              "surface-tint": "#e9c176",
+              "on-error-container": "#ffdad6",
+              "surface-container-high": "#282a2d",
+              "on-tertiary-fixed": "#2c1600",
+              "tertiary-fixed": "#ffdcbe",
+              "inverse-primary": "#775a19",
+              "secondary-fixed-dim": "#b8c9d3",
+              "on-surface": "#e2e2e6",
+              "primary": "#fff5e9",
+              "on-primary-container": "#785a1a",
+              "outline-variant": "#4d4732",
+              "secondary": "#b8c9d3",
+              "on-secondary-fixed": "#0d1e25",
+              "surface-container-low": "#1a1c1f",
+              "on-primary-fixed": "#261900",
+              "on-tertiary-fixed-variant": "#693c00",
+              "on-tertiary": "#4a2800",
+              "on-primary-fixed-variant": "#5d4201"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Manrope"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-effect {
+        backdrop-filter: blur(12px);
+        background-color: rgba(51, 53, 56, 0.6);
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-fixed-dim selection:text-on-primary-fixed overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-[#1a1c1f] shadow-[0_16px_32px_rgba(0,0,0,0.4)] flex justify-between items-center px-6 h-16">
+<div class="text-2xl font-serif italic text-[#ffdea5] tracking-widest font-headline">Frontier Dominion</div>
+<div class="hidden md:flex gap-8 items-center">
+<div class="text-[#ffdea5] border-b-2 border-[#e9c176] font-headline tracking-tight py-1 cursor-pointer">Command</div>
+<div class="text-[#b8c9d3] opacity-70 font-headline tracking-tight hover:bg-[#282a2d] transition-colors duration-300 px-3 py-1 cursor-pointer">Alliance</div>
+<div class="text-[#b8c9d3] opacity-70 font-headline tracking-tight hover:bg-[#282a2d] transition-colors duration-300 px-3 py-1 cursor-pointer">Archives</div>
+<div class="text-[#b8c9d3] opacity-70 font-headline tracking-tight hover:bg-[#282a2d] transition-colors duration-300 px-3 py-1 cursor-pointer">Treasury</div>
+</div>
+<div class="flex items-center gap-4 font-label text-sm">
+<div class="flex items-center gap-2 bg-surface-container-high px-3 py-1 rounded-sm">
+<span class="material-symbols-outlined text-primary-fixed-dim text-lg">payments</span>
+<span class="text-primary-fixed">Gold: 12.4k</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-high px-3 py-1 rounded-sm">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-lg">restaurant</span>
+<span class="text-tertiary-fixed-dim">Food: 8.2k</span>
+</div>
+<div class="flex gap-2 ml-2">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary-fixed transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary-fixed transition-colors">settings</span>
+</div>
+</div>
+</nav>
+<!-- Side Navigation Bar -->
+<aside class="fixed left-0 top-0 h-screen w-64 z-40 bg-[#1a1c1f] border-r border-[#4d4732]/20 flex flex-col py-8 hidden lg:flex">
+<div class="px-6 mb-12">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-sm bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+<img alt="Commander Avatar" class="w-full h-full object-cover" data-alt="Close up portrait of a stern military commander" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDquPNVkYYl0ej_a7C20SwflKF2H-kFmwameLyjOqLjwDQZOXsq6pua4NamE9cxGT702GrebITCzN6cADorvjdtpeT0gvP_By5COFI2178rxk5QwtMngSWFex1Fdd02BysDPLFc6eapVLMPFFZdgPCC00z5tghpDHXVgfn4gxSBQmXGtYx01QzHxA1tFQvtoo117ZuDQaKBPgM_Fo19pvVWfOeLOcCc9lAIJR1mEGob3qJTYpGzKRQw1Q31D87Nlblwh3KBfY96zNE"/>
+</div>
+<div>
+<div class="font-headline text-[#ffdea5] text-lg leading-tight">Sovereign Archive</div>
+<div class="font-label text-[10px] text-on-secondary-container uppercase tracking-widest">Dominion Level 42</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 flex flex-col">
+<a class="bg-gradient-to-r from-[#fdd488]/10 to-transparent text-[#ffdea5] border-l-4 border-[#e9c176] px-6 py-4 flex items-center gap-4 font-body font-medium uppercase tracking-wider text-xs transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shield</span> Command
+            </a>
+<a class="text-[#b8c9d3] px-6 py-4 opacity-60 flex items-center gap-4 font-body font-medium uppercase tracking-wider text-xs hover:text-[#ffdea5] hover:bg-[#282a2d] transition-all duration-200" href="#">
+<span class="material-symbols-outlined">group</span> Alliance
+            </a>
+<a class="text-[#b8c9d3] px-6 py-4 opacity-60 flex items-center gap-4 font-body font-medium uppercase tracking-wider text-xs hover:text-[#ffdea5] hover:bg-[#282a2d] transition-all duration-200" href="#">
+<span class="material-symbols-outlined">auto_stories</span> Archives
+            </a>
+<a class="text-[#b8c9d3] px-6 py-4 opacity-60 flex items-center gap-4 font-body font-medium uppercase tracking-wider text-xs hover:text-[#ffdea5] hover:bg-[#282a2d] transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_balance</span> Treasury
+            </a>
+<a class="text-[#b8c9d3] px-6 py-4 opacity-60 flex items-center gap-4 font-body font-medium uppercase tracking-wider text-xs hover:text-[#ffdea5] hover:bg-[#282a2d] transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+            </a>
+</nav>
+<div class="px-6 mt-auto flex flex-col gap-4">
+<button class="w-full py-3 bg-primary-fixed-dim text-on-primary-fixed font-body font-bold uppercase tracking-widest text-[10px] rounded-sm active:scale-95 transition-transform">
+                Declare War
+            </button>
+<div class="flex flex-col gap-2">
+<a class="text-[#b8c9d3] opacity-60 flex items-center gap-2 font-body text-[10px] uppercase tracking-widest hover:text-[#ffdea5]" href="#">
+<span class="material-symbols-outlined text-sm">help</span> Support
+                </a>
+<a class="text-[#b8c9d3] opacity-60 flex items-center gap-2 font-body text-[10px] uppercase tracking-widest hover:text-[#ffdea5]" href="#">
+<span class="material-symbols-outlined text-sm">logout</span> Log Out
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:ml-64 pt-24 pb-12 px-6 lg:px-12 max-w-7xl mx-auto">
+<!-- Header Section -->
+<header class="mb-12 border-l-4 border-primary-fixed-dim pl-6">
+<h1 class="font-headline text-5xl font-bold tracking-tight text-on-surface mb-2">Commander Alaric Thorne</h1>
+<div class="flex items-center gap-4">
+<span class="font-label text-primary-fixed-dim tracking-[0.2em] uppercase text-sm">Shield of Frontier</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant/50"></span>
+<span class="font-label text-on-surface-variant text-sm">Dominion Level 42</span>
+</div>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6 items-start">
+<!-- Left Column: Hero Portrait & Equipment (Large Focus) -->
+<div class="col-span-12 lg:col-span-7 grid grid-cols-12 gap-6">
+<!-- Portrait Section -->
+<div class="col-span-12 md:col-span-8 bg-surface-container-low rounded-sm relative group overflow-hidden h-[500px]">
+<img alt="Commander Alaric" class="w-full h-full object-cover grayscale-[20%] sepia-[10%] group-hover:scale-105 transition-transform duration-700" data-alt="Cinematic high fantasy portrait of a scarred commander in golden armor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACuIhKT0EFnUNJKLkCaX91E124hmaEiOpCehtyi_RUM413mvILigRbCJqHu4KFN5rqZeOFp__wrFAzwqIpv4wo04qI1Rh5tITrbw5bLZPwkdVngW1FHCSta2WAiA4doh_rfaW96o7uFGsvHjjJWjGUjTsPm3ziCIj070b-c5M52-C4mE5fZzrlcRdxrpPolz2kUCQRSS-aNgfVzVB0msm4hIZ3IuIoGSiqqWi-ragb-IsrWY6xaXIp5sC-J9YZSg76DfBuJcqVrWE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80"></div>
+<div class="absolute bottom-6 left-6 right-6">
+<div class="font-headline text-2xl text-primary-fixed mb-1 italic">Vanguard Vanguard</div>
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-fixed-dim w-[78%]"></div>
+</div>
+<div class="flex justify-between mt-2 font-label text-[10px] text-on-surface-variant uppercase tracking-widest">
+<span>Experience Progress</span>
+<span>14,240 / 18,000 XP</span>
+</div>
+</div>
+</div>
+<!-- Equipment Slots (Asymmetric Stack) -->
+<div class="col-span-12 md:col-span-4 flex flex-col gap-4">
+<!-- Head -->
+<div class="bg-surface-container-high p-4 border-l-2 border-primary-fixed-dim flex items-center gap-4 group cursor-pointer hover:bg-surface-variant transition-colors">
+<div class="w-12 h-12 bg-surface-container-highest flex items-center justify-center text-primary-fixed-dim">
+<span class="material-symbols-outlined text-3xl">military_tech</span>
+</div>
+<div>
+<div class="font-label text-[10px] text-primary-fixed-dim uppercase tracking-widest">Head</div>
+<div class="font-body text-xs font-bold text-on-surface">Imperial Greathelm</div>
+</div>
+</div>
+<!-- Torso -->
+<div class="bg-surface-container-high p-4 border-l-2 border-[#b8c9d3] flex items-center gap-4 group cursor-pointer hover:bg-surface-variant transition-colors">
+<div class="w-12 h-12 bg-surface-container-highest flex items-center justify-center text-[#b8c9d3]">
+<span class="material-symbols-outlined text-3xl">shield</span>
+</div>
+<div>
+<div class="font-label text-[10px] text-secondary uppercase tracking-widest">Torso</div>
+<div class="font-body text-xs font-bold text-on-surface">Iron Legion Cuirass</div>
+</div>
+</div>
+<!-- Weapon -->
+<div class="bg-surface-container-high p-4 border-l-2 border-tertiary-fixed-dim flex items-center gap-4 group cursor-pointer hover:bg-surface-variant transition-colors">
+<div class="w-12 h-12 bg-surface-container-highest flex items-center justify-center text-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-3xl">swords</span>
+</div>
+<div>
+<div class="font-label text-[10px] text-tertiary-fixed-dim uppercase tracking-widest">Weapon</div>
+<div class="font-body text-xs font-bold text-on-surface">Sovereign's Edge</div>
+</div>
+</div>
+<!-- Accessory -->
+<div class="bg-surface-container-high p-4 border-l-2 border-outline-variant flex items-center gap-4 group cursor-pointer hover:bg-surface-variant transition-colors opacity-50">
+<div class="w-12 h-12 bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-3xl">add</span>
+</div>
+<div>
+<div class="font-label text-[10px] text-on-surface-variant uppercase tracking-widest">Accessory</div>
+<div class="font-body text-xs font-bold text-on-surface">Empty Slot</div>
+</div>
+</div>
+</div>
+<!-- Attribute Stats Section (Full Width below portrait) -->
+<div class="col-span-12 bg-surface-container-low p-8 border-t border-outline-variant/10">
+<h3 class="font-headline text-xl text-primary-fixed mb-6 italic">Strategic Attributes</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+<!-- Stat: Strength -->
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="font-body font-bold text-xs uppercase tracking-widest text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-lg text-primary-fixed-dim">fitness_center</span> Strength
+                                </span>
+<span class="font-label text-lg font-bold text-primary-fixed">84</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full">
+<div class="h-full bg-primary-fixed-dim w-[84%]"></div>
+</div>
+</div>
+<!-- Stat: Intelligence -->
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="font-body font-bold text-xs uppercase tracking-widest text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-lg text-secondary">psychology</span> Intelligence
+                                </span>
+<span class="font-label text-lg font-bold text-secondary">92</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full">
+<div class="h-full bg-secondary w-[92%]"></div>
+</div>
+</div>
+<!-- Stat: Charisma -->
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="font-body font-bold text-xs uppercase tracking-widest text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-lg text-tertiary-fixed-dim">campaign</span> Charisma
+                                </span>
+<span class="font-label text-lg font-bold text-tertiary-fixed-dim">65</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full">
+<div class="h-full bg-tertiary-fixed-dim w-[65%]"></div>
+</div>
+</div>
+<!-- Stat: Logistics -->
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="font-body font-bold text-xs uppercase tracking-widest text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-lg text-on-surface-variant">inventory_2</span> Logistics
+                                </span>
+<span class="font-label text-lg font-bold text-on-surface">71</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full">
+<div class="h-full bg-on-surface-variant w-[71%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Talent Tree & Records -->
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-6">
+<!-- Talent Tree Mini-view -->
+<div class="bg-surface-container-low p-8 h-full border-l border-outline-variant/10">
+<div class="flex justify-between items-center mb-8">
+<h3 class="font-headline text-xl text-primary-fixed italic">Ascension Talents</h3>
+<span class="font-label text-[10px] bg-primary-container/10 text-primary-fixed-dim px-2 py-1 border border-primary-fixed-dim/30">5 Points Available</span>
+</div>
+<div class="relative flex flex-col items-center gap-12 py-4">
+<!-- Top Talent -->
+<div class="z-10 bg-primary-fixed-dim p-4 rounded-sm shadow-[0_0_20px_rgba(233,193,118,0.3)] border-2 border-primary-fixed">
+<span class="material-symbols-outlined text-on-primary-fixed text-4xl" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<!-- Branches -->
+<div class="grid grid-cols-2 gap-24 relative">
+<!-- Connecting lines (simplified visual) -->
+<div class="absolute top-[-3rem] left-1/2 -translate-x-1/2 w-[2px] h-12 bg-primary-fixed-dim opacity-30"></div>
+<div class="relative flex flex-col items-center">
+<div class="absolute top-[-1.5rem] right-[-3rem] w-12 h-[2px] bg-primary-fixed-dim opacity-30"></div>
+<div class="bg-surface-container-highest p-4 rounded-sm border border-primary-fixed-dim/50 cursor-pointer hover:border-primary-fixed transition-all">
+<span class="material-symbols-outlined text-primary-fixed text-3xl">swords</span>
+</div>
+<span class="font-label text-[9px] mt-2 text-on-surface-variant uppercase tracking-tighter text-center">Martial<br/>Dominance</span>
+</div>
+<div class="relative flex flex-col items-center">
+<div class="absolute top-[-1.5rem] left-[-3rem] w-12 h-[2px] bg-primary-fixed-dim opacity-30"></div>
+<div class="bg-surface-container-highest p-4 rounded-sm border border-outline-variant cursor-not-allowed opacity-40">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">auto_stories</span>
+</div>
+<span class="font-label text-[9px] mt-2 text-on-surface-variant uppercase tracking-tighter text-center">Forbidden<br/>Knowledge</span>
+</div>
+</div>
+<!-- Level 3 Row -->
+<div class="grid grid-cols-1 relative">
+<div class="absolute top-[-3rem] left-1/2 -translate-x-1/2 w-[2px] h-12 bg-outline-variant opacity-30"></div>
+<div class="bg-surface-container-highest p-4 rounded-sm border border-outline-variant opacity-40">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">temple_hindu</span>
+</div>
+<span class="font-label text-[9px] mt-2 text-on-surface-variant uppercase tracking-tighter text-center">Divine<br/>Mandate</span>
+</div>
+</div>
+<div class="mt-12 pt-8 border-t border-outline-variant/10">
+<button class="w-full py-4 border border-outline-variant text-on-surface font-body font-bold uppercase tracking-widest text-xs rounded-sm hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+                            Open Full Skill Tree <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Tactical Records Card -->
+<div class="bg-surface-container-high p-6 flex flex-col gap-4">
+<h4 class="font-label text-[10px] text-primary-fixed-dim uppercase tracking-[0.3em]">Imperial Service Record</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-center text-xs border-b border-outline-variant/10 pb-2">
+<span class="text-on-surface-variant">Territories Annexed</span>
+<span class="font-label text-primary-fixed">14</span>
+</div>
+<div class="flex justify-between items-center text-xs border-b border-outline-variant/10 pb-2">
+<span class="text-on-surface-variant">Great Sieges Won</span>
+<span class="font-label text-primary-fixed">03</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Days in Service</span>
+<span class="font-label text-primary-fixed">412</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Mobile only) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#1a1c1f] shadow-[0_-16px_32px_rgba(0,0,0,0.4)] flex justify-around items-center z-50">
+<div class="flex flex-col items-center gap-1 text-[#ffdea5]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shield</span>
+<span class="font-label text-[8px] uppercase tracking-tighter">Command</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-[#b8c9d3] opacity-70">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label text-[8px] uppercase tracking-tighter">Alliance</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-[#b8c9d3] opacity-70">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-label text-[8px] uppercase tracking-tighter">Archives</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-[#b8c9d3] opacity-70">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label text-[8px] uppercase tracking-tighter">Treasury</span>
+</div>
+</nav>
+</body></html>

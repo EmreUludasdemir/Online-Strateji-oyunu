@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Frontier Dominion | City Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,700;1,400;1,700&amp;family=Manrope:wght@400;600;800&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline": "#999077",
+                        "surface": "#111316",
+                        "error-container": "#93000a",
+                        "surface-container-lowest": "#0c0e11",
+                        "on-secondary": "#23333a",
+                        "on-error-container": "#ffdad6",
+                        "inverse-surface": "#e2e2e6",
+                        "background": "#111316",
+                        "on-secondary-fixed": "#0d1e25",
+                        "on-primary-fixed-variant": "#5d4201",
+                        "on-tertiary-fixed": "#2c1600",
+                        "inverse-primary": "#775a19",
+                        "outline-variant": "#4d4732",
+                        "surface-tint": "#e9c176",
+                        "primary-fixed-dim": "#e9c176",
+                        "error": "#ffb4ab",
+                        "on-tertiary-container": "#8b5100",
+                        "on-error": "#690005",
+                        "surface-variant": "#333538",
+                        "surface-container-high": "#282a2d",
+                        "primary-fixed": "#ffdea5",
+                        "on-surface": "#e2e2e6",
+                        "surface-container": "#1e2023",
+                        "surface-bright": "#37393d",
+                        "secondary": "#b8c9d3",
+                        "tertiary-container": "#ffd1a7",
+                        "primary-container": "#fdd488",
+                        "tertiary-fixed": "#ffdcbe",
+                        "surface-dim": "#111316",
+                        "tertiary-fixed-dim": "#ffb870",
+                        "secondary-fixed": "#d4e5ef",
+                        "inverse-on-surface": "#2f3034",
+                        "primary": "#fff5e9",
+                        "on-secondary-container": "#aabbc5",
+                        "on-secondary-fixed-variant": "#394951",
+                        "surface-container-low": "#1a1c1f",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "on-primary-fixed": "#261900",
+                        "on-background": "#e2e2e6",
+                        "surface-container-highest": "#333538",
+                        "tertiary": "#fff4ed",
+                        "secondary-container": "#3b4b53",
+                        "secondary-fixed-dim": "#b8c9d3",
+                        "on-tertiary": "#4a2800",
+                        "on-surface-variant": "#d0c6ab",
+                        "on-primary": "#412d00",
+                        "on-primary-container": "#785a1a"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Space Grotesk", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(40, 42, 45, 0.7);
+            backdrop-filter: blur(12px);
+        }
+        body {
+            background-color: #111316;
+            color: #e2e2e6;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#111316] shadow-[0_4px_20px_rgba(0,0,0,0.5)] transition-colors duration-300">
+<div class="flex items-center gap-8">
+<h1 class="text-2xl font-bold text-[#ffdea5] uppercase tracking-widest font-headline italic">Frontier Dominion</h1>
+<nav class="hidden md:flex items-center space-x-2">
+<div class="flex items-center gap-2 bg-surface-container-highest/40 px-3 py-1 rounded-sm border-l-2 border-primary-fixed-dim">
+<span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="payments">payments</span>
+<span class="font-label text-sm text-primary-fixed">Gold: 14.2k</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-highest/40 px-3 py-1 rounded-sm border-l-2 border-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-sm" data-icon="forest">forest</span>
+<span class="font-label text-sm text-tertiary-fixed-dim">Wood: 8.5k</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-highest/40 px-3 py-1 rounded-sm border-l-2 border-secondary">
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="foundation">foundation</span>
+<span class="font-label text-sm text-secondary">Stone: 3.1k</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-highest/40 px-3 py-1 rounded-sm border-l-2 border-tertiary-container">
+<span class="material-symbols-outlined text-tertiary-container text-sm" data-icon="restaurant">restaurant</span>
+<span class="font-label text-sm text-tertiary-container">Food: 12.0k</span>
+</div>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4">
+<button class="text-[#b8c9d3] hover:text-[#ffdea5] transition-all material-symbols-outlined" data-icon="notifications">notifications</button>
+<button class="text-[#b8c9d3] hover:text-[#ffdea5] transition-all material-symbols-outlined" data-icon="settings">settings</button>
+</div>
+<div class="h-10 w-10 bg-surface-container-high rounded-sm border border-outline-variant/30 overflow-hidden">
+<img alt="Commander Avatar" class="w-full h-full object-cover" data-alt="Stylized military commander portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUHz3hmq4H2FQSV8Ky9oLFFOVhRM9m34N-QJX2SaMJ3-mo6OPuAZNtVB1hV1CTTY5-zhPiwIw_CDaCc9UnT9TlAT_YJtN-EorrL6uxj4o0I82A-W8FPVKD1OISqeKMYeGgQal_HKthrq5MNoJoPO-NiwtnCpdn_lr2nlG3s8dw-SSMNR8v4I9QSGHFj3C_As7d0AmPkBJJXLhDq8C7feS6gzf9LIzRc6B3uEV375E6oS0DS22KCMWhIiFTWhrik3l207KuME2skbI"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 flex flex-col py-8 bg-[#1a1c1f]/90 backdrop-blur-xl h-[calc(100vh-4rem)] mt-16 w-64 shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-40">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-[#e9c176] text-3xl" data-icon="shield">shield</span>
+<h2 class="font-headline text-xl text-[#ffdea5]">Sovereign Archive</h2>
+</div>
+<p class="text-[10px] uppercase tracking-[0.2em] text-outline font-bold">Age of Conquest</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-4 bg-[#282a2d] text-[#ffdea5] border-r-4 border-[#e9c176] shadow-[inset_0_0_10px_rgba(233,193,118,0.1)] transition-transform duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="map">map</span>
+<span class="font-manrope font-semibold tracking-wide text-sm">Strategic Map</span>
+</a>
+<a class="flex items-center px-6 py-4 text-[#b8c9d3] hover:bg-[#282a2d]/50 hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="group">group</span>
+<span class="font-manrope font-semibold tracking-wide text-sm">Grand Alliance</span>
+</a>
+<a class="flex items-center px-6 py-4 text-[#b8c9d3] hover:bg-[#282a2d]/50 hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="science">science</span>
+<span class="font-manrope font-semibold tracking-wide text-sm">Imperial Research</span>
+</a>
+<a class="flex items-center px-6 py-4 text-[#b8c9d3] hover:bg-[#282a2d]/50 hover:translate-x-1 transition-all" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="military_tech">military_tech</span>
+<span class="font-manrope font-semibold tracking-wide text-sm">War Council</span>
+</a>
+</nav>
+<div class="px-6 mt-auto space-y-4">
+<button class="w-full py-3 bg-primary-fixed-dim text-on-primary-fixed font-bold text-xs uppercase tracking-widest rounded-sm hover:shadow-[0_0_15px_rgba(233,193,118,0.4)] transition-all">
+                Declare War
+            </button>
+<div class="pt-4 border-t border-outline-variant/20 flex justify-between px-2">
+<button class="text-[#b8c9d3] hover:text-[#ffdea5] material-symbols-outlined" data-icon="help">help</button>
+<button class="text-[#b8c9d3] hover:text-[#ffdea5] material-symbols-outlined" data-icon="history">history</button>
+</div>
+</div>
+</aside>
+<!-- Main Content: City Canvas -->
+<main class="ml-64 mt-16 h-[calc(100vh-4rem)] relative overflow-hidden bg-surface-container-lowest">
+<!-- Background Map Image -->
+<div class="absolute inset-0 opacity-80 mix-blend-lighten">
+<img alt="Imperial City Map" class="w-full h-full object-cover" data-alt="Epic top-down view of a massive medieval stone fortress city" data-location="The Citadel" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdk0UN_jGhPDuCU-LU6Ud4NUVVR8jYwkCdGcBU5N8YSJi3AlMtmIyLS51xlNPspI4yg8RMr9F-j_KUC8UhMqgScn_Bc7K8tdPWyJW6_YqaOl2mxKm2M5H57SgfrK1GWWDyCZOMA--YsKjpthJxDsFz-j-U_XFrIrqhouUwZBmZRScN17Xjq8IzzMz_oUu4cYQhAav0TDSTkFRrNaM5QLmY3LUxNM3JQl0i61XWTFij609FyJTTkK9lumvyzFhhrfaCvNRhRXlJxTU"/>
+</div>
+<!-- Atmospheric Overlays -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent"></div>
+<div class="absolute inset-0 bg-gradient-to-r from-surface/40 via-transparent to-surface/40"></div>
+<!-- Interactive Building Nodes -->
+<div class="absolute top-[25%] left-[30%] group">
+<div class="relative flex flex-col items-center">
+<div class="w-4 h-4 rounded-full bg-primary-fixed animate-pulse mb-2 shadow-[0_0_10px_#ffdea5]"></div>
+<div class="glass-panel px-3 py-1 rounded-sm border border-primary-fixed-dim/30 transform transition-transform group-hover:scale-105">
+<p class="font-headline text-xs italic text-primary-fixed-dim">Great Keep</p>
+<p class="font-label text-[10px] text-on-surface-variant">LVL 14</p>
+</div>
+</div>
+</div>
+<div class="absolute top-[45%] left-[55%] group">
+<div class="relative flex flex-col items-center">
+<div class="w-4 h-4 rounded-full bg-secondary animate-pulse mb-2 shadow-[0_0_10px_#b8c9d3]"></div>
+<div class="glass-panel px-3 py-1 rounded-sm border border-secondary/30 transform transition-transform group-hover:scale-105">
+<p class="font-headline text-xs italic text-secondary">Masonry Hub</p>
+<p class="font-label text-[10px] text-on-surface-variant">LVL 08</p>
+</div>
+</div>
+</div>
+<!-- Right: Actions Panel (Asymmetrical Sidebar) -->
+<div class="absolute right-0 top-0 bottom-0 w-80 glass-panel border-l border-outline-variant/10 shadow-[-10px_0_30px_rgba(0,0,0,0.4)] flex flex-col">
+<!-- Panel Header -->
+<div class="p-6 border-b border-outline-variant/10 bg-surface-container-highest/20">
+<h3 class="font-headline text-xl italic text-primary-fixed mb-1">Aegis Command</h3>
+<p class="font-label text-[10px] text-outline tracking-widest uppercase">Operational Status: Active</p>
+</div>
+<!-- Active Construction Section -->
+<div class="p-6 flex-1 overflow-y-auto space-y-6">
+<section>
+<div class="flex items-center justify-between mb-4">
+<h4 class="font-manrope font-extrabold text-xs uppercase tracking-widest text-on-surface">Active Construction</h4>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="architecture">architecture</span>
+</div>
+<div class="space-y-3">
+<!-- Construction Item 1 -->
+<div class="bg-surface-container-low p-4 rounded-sm border-l-2 border-primary-fixed transition-colors hover:bg-surface-variant">
+<div class="flex justify-between items-start mb-2">
+<div>
+<p class="font-headline italic text-on-surface">Barracks</p>
+<p class="font-label text-[10px] text-outline">Upgrading to LVL 05</p>
+</div>
+<span class="font-label text-xs text-primary-fixed">2m 45s</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary-fixed-dim h-full w-[65%]"></div>
+</div>
+</div>
+<!-- Construction Item 2 -->
+<div class="bg-surface-container-low p-4 rounded-sm border-l-2 border-tertiary-fixed-dim/40 transition-colors hover:bg-surface-variant">
+<div class="flex justify-between items-start mb-2">
+<div>
+<p class="font-headline italic text-on-surface">Grain Silo</p>
+<p class="font-label text-[10px] text-outline">Upgrading to LVL 12</p>
+</div>
+<span class="font-label text-xs text-on-surface-variant">14m 12s</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-tertiary-fixed-dim h-full w-[22%] opacity-60"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Military Events Section -->
+<section>
+<div class="flex items-center justify-between mb-4 pt-4 border-t border-outline-variant/10">
+<h4 class="font-manrope font-extrabold text-xs uppercase tracking-widest text-on-surface">Military Events</h4>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="swords">swords</span>
+</div>
+<div class="space-y-4">
+<div class="flex gap-4 items-start">
+<div class="w-8 h-8 rounded-sm bg-error-container/20 flex items-center justify-center border border-error/20 flex-shrink-0">
+<span class="material-symbols-outlined text-error text-sm" data-icon="report">report</span>
+</div>
+<div>
+<p class="text-sm font-manrope font-bold text-on-surface">Border Skirmish</p>
+<p class="text-[11px] text-outline leading-tight">Scouts spotted enemy legion near the Northern Reach. Defensive posturing recommended.</p>
+<p class="font-label text-[9px] text-error mt-1">4 minutes ago</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-8 h-8 rounded-sm bg-primary-container/20 flex items-center justify-center border border-primary-fixed/20 flex-shrink-0">
+<span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="check_circle">check_circle</span>
+</div>
+<div>
+<p class="text-sm font-manrope font-bold text-on-surface">Patrol Returned</p>
+<p class="text-[11px] text-outline leading-tight">3rd Cavalry has returned from Ironwood Forest. No hostiles encountered.</p>
+<p class="font-label text-[9px] text-primary-fixed mt-1">22 minutes ago</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Panel Footer Action -->
+<div class="p-6 mt-auto">
+<button class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface py-3 font-manrope font-bold text-xs uppercase tracking-widest hover:bg-surface-variant transition-all">
+                    Open Logistics Hub
+                </button>
+</div>
+</div>
+<!-- Floating UI Widgets (Bottom Left) -->
+<div class="absolute bottom-8 left-8 flex gap-4">
+<div class="glass-panel p-4 rounded-sm border border-outline-variant/20 shadow-xl flex items-center gap-4">
+<div class="relative w-12 h-12 rounded-full border-2 border-primary-fixed-dim p-1">
+<img alt="Advisor" class="w-full h-full object-cover rounded-full" data-alt="Wise elder advisor portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoph1Tlve2A97G43CfXvnsVaZg_8vvh7CFP7Dv8BFbmRJifIP0EsvRSFN5-gCf5SNdWKvtTgK5AS7yJApSvpKg8pxp1uM9E4gl_REhqO_xcZ1QbcG07WItHIjtMiYQczAvHd8-kxOnmRI1e05zMwvKyMTumiTojEPmzlLI0eVdC3OZe6lXksadc2d3_dCWBa8EP9oRA5zyb2LUybupaGVzZCsvjzsTNdcPHqhl0VPr5Bm9w4lDOS7aPjeXDkLxHg6vXcR7Syv0Ssc"/>
+</div>
+<div>
+<p class="font-headline italic text-primary-fixed-dim leading-none mb-1">Advisor Marcus</p>
+<p class="text-[10px] text-on-surface-variant">"Our granaries are reaching capacity, sire."</p>
+</div>
+</div>
+<div class="glass-panel p-4 rounded-sm border border-outline-variant/20 shadow-xl flex items-center gap-4">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-secondary" data-icon="thermostat">thermostat</span>
+<span class="font-label text-[10px] text-secondary">24°C</span>
+</div>
+<div class="h-8 w-px bg-outline-variant/20"></div>
+<div>
+<p class="font-manrope font-bold text-xs text-on-surface">Summer Season</p>
+<p class="font-label text-[9px] text-outline uppercase">Growth Rate +15%</p>
+</div>
+</div>
+</div>
+<!-- Global Ambient Vignette -->
+<div class="absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]"></div>
+</main>
+<!-- Visual Polish: Top Bar Shadow & Gradient -->
+<div class="fixed top-16 left-0 right-0 h-px bg-gradient-to-r from-transparent via-outline-variant/20 to-transparent z-50"></div>
+</body></html>

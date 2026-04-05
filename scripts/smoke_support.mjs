@@ -255,6 +255,41 @@ export async function waitForPort(port, label, timeoutMs, host = "127.0.0.1") {
   await waitFor(() => isPortOpen(port, host), timeoutMs, label, 1_000);
 }
 
+function getProcessFailureMessage(label, processHandle) {
+  if (!processHandle || processHandle.exitCode === null) {
+    return null;
+  }
+
+  return `${label} exited during startup with code ${processHandle.exitCode}. Inspect the smoke log tail for the failing process and verify the repo-owned stack configuration before retrying.`;
+}
+
+export async function waitForManagedPort({ port, host = "127.0.0.1", label, timeoutMs, processHandle }) {
+  await waitFor(async () => {
+    const failureMessage = getProcessFailureMessage(label, processHandle);
+    if (failureMessage) {
+      throw new Error(failureMessage);
+    }
+
+    return (await isPortOpen(port, host)) ? true : null;
+  }, timeoutMs, label, 1_000);
+}
+
+export async function waitForManagedHttp({ url, label, timeoutMs, processHandle }) {
+  await waitFor(async () => {
+    const failureMessage = getProcessFailureMessage(label, processHandle);
+    if (failureMessage) {
+      throw new Error(failureMessage);
+    }
+
+    try {
+      const response = await fetch(url);
+      return response.ok ? response : null;
+    } catch {
+      return null;
+    }
+  }, timeoutMs, label, 1_000);
+}
+
 export function runNodeScript(rootDir, relativePath, args, envOverrides = {}) {
   execFileSync(process.execPath, [path.join(rootDir, relativePath), ...args], {
     cwd: rootDir,
@@ -325,9 +360,24 @@ export async function runRepoOwnedSmokeScenario({
   });
 
   try {
-    await waitForHttp(`http://127.0.0.1:${serverPort}/api/health`, `the ${suiteName} server`, 60_000);
-    await waitForPort(webPort, `the ${suiteName} web shell`, 60_000);
-    await ensureBaseUrlReachable(baseUrl, `the ${suiteName} web shell`, 60_000);
+    await waitForManagedHttp({
+      url: `http://127.0.0.1:${serverPort}/api/health`,
+      label: `the ${suiteName} server`,
+      timeoutMs: 60_000,
+      processHandle: server.child,
+    });
+    await waitForManagedPort({
+      port: webPort,
+      label: `the ${suiteName} web shell`,
+      timeoutMs: 60_000,
+      processHandle: web.child,
+    });
+    await waitForManagedHttp({
+      url: new URL("/login", baseUrl).toString(),
+      label: `the ${suiteName} web shell`,
+      timeoutMs: 60_000,
+      processHandle: web.child,
+    });
 
     const steps =
       scenarioSteps ??
@@ -343,9 +393,17 @@ export async function runRepoOwnedSmokeScenario({
     assert(steps.length > 0, `${suiteName} requires at least one smoke scenario script.`);
 
     for (const step of steps) {
-      runNodeScript(rootDir, step.script, ["--base-url", baseUrl, ...(step.args ?? [])], {
-        DATABASE_URL: databaseUrl,
-      });
+      try {
+        runNodeScript(rootDir, step.script, ["--base-url", baseUrl, ...(step.args ?? [])], {
+          DATABASE_URL: databaseUrl,
+        });
+      } catch (error) {
+        throw new Error(
+          `Smoke scenario ${step.script} failed inside ${suiteName}. Verify the repo-owned stack logs and scenario artifact output before retrying. Root cause: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
     }
   } catch (error) {
     const [serverTail, webTail] = await Promise.all([readLogTail(server.logFile), readLogTail(web.logFile)]);

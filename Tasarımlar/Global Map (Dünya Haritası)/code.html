@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,700;1,400&amp;family=Manrope:wght@400;500;700&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-highest": "#333538",
+              "secondary-fixed": "#d4e5ef",
+              "outline": "#999077",
+              "secondary-fixed-dim": "#b8c9d3",
+              "on-tertiary": "#4a2800",
+              "error-container": "#93000a",
+              "tertiary": "#fff4ed",
+              "surface-bright": "#37393d",
+              "on-primary-fixed": "#261900",
+              "background": "#111316",
+              "on-tertiary-fixed": "#2c1600",
+              "tertiary-fixed-dim": "#ffb870",
+              "surface-tint": "#e9c176",
+              "surface-dim": "#111316",
+              "on-primary-container": "#785a1a",
+              "surface": "#111316",
+              "surface-variant": "#333538",
+              "on-secondary-fixed-variant": "#394951",
+              "primary": "#fff5e9",
+              "secondary": "#b8c9d3",
+              "tertiary-fixed": "#ffdcbe",
+              "on-surface": "#e2e2e6",
+              "on-secondary-fixed": "#0d1e25",
+              "primary-fixed-dim": "#e9c176",
+              "on-primary": "#412d00",
+              "error": "#ffb4ab",
+              "outline-variant": "#4d4732",
+              "secondary-container": "#3b4b53",
+              "surface-container-lowest": "#0c0e11",
+              "tertiary-container": "#ffd1a7",
+              "on-surface-variant": "#d0c6ab",
+              "surface-container-low": "#1a1c1f",
+              "on-tertiary-fixed-variant": "#693c00",
+              "on-secondary-container": "#aabbc5",
+              "inverse-primary": "#775a19",
+              "on-secondary": "#23333a",
+              "surface-container-high": "#282a2d",
+              "surface-container": "#1e2023",
+              "on-error-container": "#ffdad6",
+              "on-error": "#690005",
+              "on-tertiary-container": "#8b5100",
+              "inverse-surface": "#e2e2e6",
+              "primary-container": "#fdd488",
+              "on-primary-fixed-variant": "#5d4201",
+              "inverse-on-surface": "#2f3034",
+              "primary-fixed": "#ffdea5",
+              "on-background": "#e2e2e6"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Manrope"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    vertical-align: middle
+    }
+.map-bg {
+    background-image: linear-gradient(rgba(17, 19, 22, 0.7), rgba(17, 19, 22, 0.7)), url(https://lh3.googleusercontent.com/aida-public/AB6AXuATYAkevIf_VHWPOF6AUwitYWGpvx5VSMYmzVlRhPaGObkkLJyGEgw-qr-u-ubYbuA1AF3AuPPlna_72jkur8p6_uX0R7MFRZZGg31mcwnh0xQSqYGiVMtRlau-B77FbHp6DJB9SagJAA6SXWFGoryDjmPAoYVDefR9KzWvn98gZrGBguLye7HZUaEyJHeN18la6v6XfCnHvRxvGAVVCnCUsiSY8co7jD_8ftJW2WLM_R-BY_2jMsHbPIpQ4_9WwZNnNHKpnI6De2o);
+    background-size: cover;
+    background-position: center
+    }
+.path-line {
+    stroke-dasharray: 8;
+    stroke: #fdd488;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0.6
+    }
+.path-line-enemy {
+    stroke-dasharray: 4;
+    stroke: #ffb4ab;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0.4
+    }</style>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="bg-[#111316] dark:bg-[#111316] text-[#fdd488] dark:text-[#fdd488] docked full-width top-0 z-50 shadow-[0_16px_32px_rgba(0,0,0,0.4)] flex justify-between items-center px-6 h-16 w-full border-b border-[#4d4732]/20">
+<div class="flex items-center gap-8">
+<h1 class="font-serif text-2xl font-bold uppercase tracking-widest text-[#fdd488]">The Sovereign Archive</h1>
+<nav class="hidden md:flex gap-6 items-baseline">
+<span class="text-[#b8c9d3] font-mono Space-Grotesk text-sm hover:text-[#fdd488] transition-colors duration-300">Gold: 14.2k</span>
+<span class="text-[#b8c9d3] font-mono Space-Grotesk text-sm hover:text-[#fdd488] transition-colors duration-300">Wood: 8.4k</span>
+<span class="text-[#b8c9d3] font-mono Space-Grotesk text-sm hover:text-[#fdd488] transition-colors duration-300">Stone: 5.1k</span>
+<span class="text-[#b8c9d3] font-mono Space-Grotesk text-sm hover:text-[#fdd488] transition-colors duration-300">Food: 12.0k</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined hover:text-[#fdd488] transition-colors duration-300" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined hover:text-[#fdd488] transition-colors duration-300" data-icon="settings">settings</button>
+<div class="w-8 h-8 rounded-sm bg-surface-container-highest overflow-hidden border border-outline-variant/30">
+<img class="w-full h-full object-cover" data-alt="Imperial Portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANh-E_TcNVC8M52CFOZxSug6UG9vlJT_5DkoQFH4I8io_1rEgzDYGRbQwK4lXvHSHNFIuGPNxZHq-eRQVzaSQWhPD-I5k1nAVrlN26fUzE5UQUhSItVnJS6AHznfSpummIkpU_64-m8Ie3M_YdzjI8Tu6BnMVHfPwTw80vilPcClTClCk-hZTRi5rDjqqIx5mRkvj0Iyj3z4WU40_seGusX0s2bmqeSGl_N9k8Y3pwGBF5iMZRR6l9CyrQrzepV_gAIRMJkirPA4U"/>
+</div>
+</div>
+</header>
+<div class="flex h-[calc(100vh-4rem)] relative">
+<!-- SideNavBar -->
+<aside class="bg-[#1a1c1f] dark:bg-[#1a1c1f] text-[#fdd488] dark:text-[#fdd488] flex flex-col fixed left-0 top-16 h-full z-40 border-r border-[#4d4732]/10 w-64 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 bg-primary-container/20 flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-primary-fixed-dim" data-icon="shield">shield</span>
+</div>
+<div>
+<h2 class="font-serif text-xl text-[#e9c176]">Imperial Command</h2>
+<p class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant/60">Era of Ascension</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="bg-[#333538] text-[#ffdea5] border-l-4 border-[#fdd488] py-3 px-4 flex items-center gap-3 group transition-all translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-sans text-sm tracking-wide">Strategic Map</span>
+</a>
+<a class="text-[#b8c9d3] py-3 px-4 flex items-center gap-3 hover:bg-[#282a2d] hover:text-[#e2e2e6] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-sans text-sm tracking-wide">Grand Alliance</span>
+</a>
+<a class="text-[#b8c9d3] py-3 px-4 flex items-center gap-3 hover:bg-[#282a2d] hover:text-[#e2e2e6] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="science">science</span>
+<span class="font-sans text-sm tracking-wide">Imperial Research</span>
+</a>
+<a class="text-[#b8c9d3] py-3 px-4 flex items-center gap-3 hover:bg-[#282a2d] hover:text-[#e2e2e6] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="swords">swords</span>
+<span class="font-sans text-sm tracking-wide">War Council</span>
+</a>
+<a class="text-[#b8c9d3] py-3 px-4 flex items-center gap-3 hover:bg-[#282a2d] hover:text-[#e2e2e6] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-sans text-sm tracking-wide">Message Center</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-4">
+<button class="w-full bg-primary-fixed-dim text-on-primary-fixed py-3 font-label uppercase tracking-tighter text-sm rounded-sm hover:brightness-110 transition-all font-bold">
+                    Declare War
+                </button>
+<div class="pt-4 border-t border-outline-variant/10">
+<a class="text-[#b8c9d3] py-2 px-2 flex items-center gap-3 hover:text-on-surface transition-all text-xs" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="history">history</span>
+<span>Archive</span>
+</a>
+<a class="text-[#b8c9d3] py-2 px-2 flex items-center gap-3 hover:text-error transition-all text-xs" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area: Global Map -->
+<main class="ml-64 w-full h-full relative overflow-hidden bg-surface-dim">
+<!-- Map Canvas -->
+<div class="absolute inset-0 map-bg z-0" data-location="The Grand Frontier Territories" style="">
+<!-- SVG Layer for Troop Paths -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-10">
+<!-- Friendly Path -->
+<path class="path-line" d="M 400 300 Q 550 350 700 200"></path>
+<circle class="animate-pulse" cx="700" cy="200" fill="#fdd488" r="4"></circle>
+<!-- Enemy Path -->
+<path class="path-line-enemy" d="M 800 600 L 650 450"></path>
+<circle cx="650" cy="450" fill="#ffb4ab" r="4"></circle>
+</svg>
+<!-- Regions / Cities (Bento-inspired markers) -->
+<!-- Ironspire (Center) -->
+<div class="absolute top-[30%] left-[45%] group cursor-pointer">
+<div class="relative flex flex-col items-center">
+<div class="bg-primary-container text-on-primary-container px-3 py-1 font-headline font-bold text-xs rounded-sm mb-2 shadow-xl border border-primary-fixed-dim">
+                            Ironspire
+                        </div>
+<div class="w-12 h-12 bg-surface-container-highest/80 backdrop-blur-md rounded-sm border border-outline-variant flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary-fixed-dim text-3xl" data-icon="fort">fort</span>
+</div>
+<div class="mt-2 flex gap-1">
+<div class="h-1 w-8 bg-primary-container rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Northern Reach -->
+<div class="absolute top-[15%] left-[65%] group cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
+<div class="flex flex-col items-center">
+<div class="bg-surface-container-high/90 text-on-surface-variant px-2 py-0.5 font-headline text-[10px] rounded-sm mb-1 uppercase tracking-widest border border-outline-variant/30">
+                            Northern Reach
+                        </div>
+<span class="material-symbols-outlined text-secondary-fixed-dim text-2xl" data-icon="ac_unit">ac_unit</span>
+</div>
+</div>
+<!-- Salt Mines -->
+<div class="absolute bottom-[25%] left-[25%] group cursor-pointer">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-4xl" data-icon="mining">manufacturing</span>
+<div class="bg-surface-container-low/80 px-2 py-1 rounded-sm mt-1 border-l-2 border-tertiary-fixed-dim">
+<span class="font-label text-[10px] text-tertiary-fixed-dim">Salt Mines</span>
+</div>
+</div>
+</div>
+<!-- Friendly Army Unit -->
+<div class="absolute top-[40%] left-[30%] z-20">
+<div class="flex items-center gap-2 bg-primary-container/10 backdrop-blur-sm p-1 pr-3 rounded-sm border border-primary-container/30">
+<div class="w-8 h-8 bg-primary-container text-on-primary-container flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-sm" data-icon="military_tech" data-weight="fill">military_tech</span>
+</div>
+<div>
+<p class="font-label text-[10px] font-bold text-primary-fixed">1st Legion</p>
+<p class="font-label text-[8px] text-on-surface-variant uppercase">Marching</p>
+</div>
+</div>
+</div>
+<!-- Enemy Army Unit -->
+<div class="absolute bottom-[35%] right-[20%] z-20">
+<div class="flex items-center gap-2 bg-error-container/10 backdrop-blur-sm p-1 pr-3 rounded-sm border border-error-container/30">
+<div class="w-8 h-8 bg-error-container text-on-error-container flex items-center justify-center rounded-sm">
+<span class="material-symbols-outlined text-sm" data-icon="skull" data-weight="fill">skull</span>
+</div>
+<div>
+<p class="font-label text-[10px] font-bold text-error">Rebel Host</p>
+<p class="font-label text-[8px] text-on-surface-variant uppercase">Encamped</p>
+</div>
+</div>
+</div>
+<!-- Resource Node: Timber Camp -->
+<div class="absolute top-[60%] left-[15%]">
+<div class="flex items-center gap-1 opacity-60">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-lg" data-icon="park">park</span>
+<span class="font-label text-[9px] text-on-surface-variant">Timber Camp #4</span>
+</div>
+</div>
+</div>
+<!-- Mini Map Overlay -->
+<div class="absolute bottom-24 right-6 w-48 h-48 bg-[#1a1c1f]/80 backdrop-blur-xl border border-outline-variant/20 rounded-sm shadow-[0_8px_24px_rgba(0,0,0,0.6)] z-30 overflow-hidden">
+<div class="p-2 border-b border-outline-variant/10 flex justify-between items-center">
+<span class="font-label text-[9px] uppercase tracking-tighter text-on-surface-variant">Tactical Grid</span>
+<span class="material-symbols-outlined text-xs text-primary-fixed-dim" data-icon="fullscreen">fullscreen</span>
+</div>
+<div class="relative w-full h-full p-2">
+<div class="w-full h-full bg-surface-container-highest/50 relative rounded-sm overflow-hidden">
+<!-- Abstract mini-map shape -->
+<div class="absolute inset-0 opacity-20">
+<img class="w-full h-full object-cover grayscale contrast-150" data-alt="Stylized landscape topography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1LMYmVfCt2_F-UZfMgKk4ntOUM4TzJSX33lmHQF_zXIKFDUR6VL5b5JMwpVwSOYlIyfVx5eBcmkTS3SXZ7P5K3QyyfL3-SvrM3VZOp89JInLZjt9Yg83JGYC61whMzkzfvzMqMuCLb_KlXVpEW7af-YINfY_aUhLB2VTibdnr-9gmGIen1nwUB4ARTMi492sF2GCjogWa8DUv3uButAO5PUCloA2FhMwKK8uJpxCTUrGHBeZs6qAId5hUPAXpQGsrJLjVNU1XJFM"/>
+</div>
+<!-- Player marker -->
+<div class="absolute top-[40%] left-[45%] w-2 h-2 bg-primary shadow-[0_0_8px_#fdd488]"></div>
+<!-- Objective marker -->
+<div class="absolute bottom-[20%] right-[30%] w-1.5 h-1.5 bg-error"></div>
+<!-- Viewport indicator -->
+<div class="absolute inset-2 border border-primary/20 bg-primary/5"></div>
+</div>
+</div>
+</div>
+<!-- Floating Tactical Intelligence Panel -->
+<div class="absolute top-6 right-6 w-72 bg-[#1a1c1f]/90 backdrop-blur-2xl border-l-4 border-primary-container p-4 shadow-[0_16px_32px_rgba(0,0,0,0.5)] z-30">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline text-lg text-primary-fixed-dim leading-tight">Tactical Intelligence</h3>
+<p class="font-label text-[9px] text-on-surface-variant uppercase tracking-widest">Sector: Ironspire Basin</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/40" data-icon="info">info</span>
+</div>
+<div class="space-y-3">
+<div class="bg-surface-container-high/40 p-2 rounded-sm border border-outline-variant/10">
+<div class="flex justify-between items-center mb-1">
+<span class="font-body text-[10px] text-on-surface/80">1st Legion Strength</span>
+<span class="font-label text-xs text-primary-fixed">94%</span>
+</div>
+<div class="h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[94%] shadow-[0_0_5px_#fdd488]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="bg-surface-container-high/40 p-2 rounded-sm border border-outline-variant/10">
+<p class="font-label text-[8px] text-on-surface-variant uppercase">Travel Time</p>
+<p class="font-label text-sm text-on-surface">04h 22m</p>
+</div>
+<div class="bg-surface-container-high/40 p-2 rounded-sm border border-outline-variant/10">
+<p class="font-label text-[8px] text-on-surface-variant uppercase">Supply Consumption</p>
+<p class="font-label text-sm text-tertiary-fixed-dim">142/hr</p>
+</div>
+</div>
+<div class="pt-2">
+<p class="font-label text-[8px] text-on-surface-variant uppercase mb-2">Combat Prediction</p>
+<div class="flex items-center gap-2">
+<div class="flex-1 text-center">
+<span class="font-label text-xs text-primary-fixed-dim">VICTORY</span>
+</div>
+<div class="w-full bg-surface-container-highest h-0.5 relative">
+<div class="absolute top-1/2 left-[70%] -translate-y-1/2 w-1 h-3 bg-primary-container"></div>
+</div>
+<div class="flex-1 text-center">
+<span class="font-label text-xs text-error opacity-40">DEFEAT</span>
+</div>
+</div>
+</div>
+</div>
+<button class="mt-4 w-full bg-surface-container-highest hover:bg-surface-variant text-on-surface py-2 font-label text-[10px] uppercase tracking-widest transition-all">
+                    View Full Report
+                </button>
+</div>
+<!-- BottomNavBar (Mobile only context, but here for completeness of shell) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-12 py-3 bg-[#111316]/90 backdrop-blur-xl shadow-[0_-8px_24px_rgba(0,0,0,0.6)] border-t border-[#4d4732]/30">
+<button class="flex flex-col items-center justify-center text-[#b8c9d3] p-2 opacity-70">
+<span class="material-symbols-outlined" data-icon="lightbulb">lightbulb</span>
+<span class="font-mono text-[10px] uppercase Space-Grotesk">Advisor</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#b8c9d3] p-2 opacity-70">
+<span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+<span class="font-mono text-[10px] uppercase Space-Grotesk">Actions</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-[#fdd488] text-[#111316] rounded-sm p-2 shadow-[0_0_15px_rgba(253,212,136,0.3)] scale-105 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+<span class="font-mono text-[10px] uppercase Space-Grotesk">Tactical</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#b8c9d3] p-2 opacity-70">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="font-mono text-[10px] uppercase Space-Grotesk">Reports</span>
+</button>
+</nav>
+<!-- Map Interactions HUD (Floating bottom left) -->
+<div class="absolute bottom-10 left-6 flex gap-3 z-30">
+<div class="bg-[#1a1c1f]/90 backdrop-blur-xl border border-outline-variant/20 p-1 flex rounded-sm shadow-xl">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<div class="w-px h-6 bg-outline-variant/20 self-center"></div>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+</div>
+<div class="bg-[#1a1c1f]/90 backdrop-blur-xl border border-outline-variant/20 p-1 flex rounded-sm shadow-xl">
+<button class="w-10 h-10 flex items-center justify-center text-primary-fixed-dim">
+<span class="material-symbols-outlined" data-icon="layers">layers</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="filter_center_focus">filter_center_focus</span>
+</button>
+</div>
+</div>
+<!-- Corner Coordinates -->
+<div class="absolute bottom-6 right-64 px-4 py-1 font-label text-[10px] text-on-surface-variant/40 bg-surface/40 backdrop-blur-sm z-30 pointer-events-none">
+                COORD: 45.922 / -12.001
+            </div>
+</main>
+</div>
+</body></html>
