@@ -1,7 +1,7 @@
 import type { AllianceMarkerView, FogTileView, MapCity, MarchView, PoiResourceType, PoiView } from "@frontier/shared";
-import Phaser from "phaser";
 import { type MutableRefObject, useEffect, useRef, useState } from "react";
 
+import Phaser from "./phaserRuntime";
 import styles from "./WorldMap.module.css";
 import {
   MAP_CAMERA_DEFAULT_ZOOM,
@@ -26,6 +26,15 @@ const poiResourceLabels: Record<PoiResourceType, string> = {
 
 type MapFilter = "ALL" | "CITIES" | "CAMPS" | "NODES";
 type AnimatedMarchPhase = "moving" | "staging" | "gathering" | "returning";
+
+const MAP_COLOR_ALLIED = 0x72ced1;
+const MAP_COLOR_HOSTILE = 0xd47b5a;
+const MAP_COLOR_NEUTRAL = 0xf4d79c;
+const MAP_COLOR_SCOUT = 0x7dd3fc;
+const MAP_COLOR_GATHER = 0x63b5b2;
+const MAP_COLOR_HOME = 0xe2c275;
+const MAP_COLOR_REPORT = 0xf7edd9;
+const MAP_COLOR_ALLIED_TERRITORY = 0x2b8f98;
 
 export interface MapReportMarkerView {
   id: string;
@@ -103,8 +112,11 @@ interface AnimatedMarchEntity {
   stagingRing: Phaser.GameObjects.Arc;
   gatherSpinner: Phaser.GameObjects.Arc;
   objective: MarchView["objective"];
+  originWorldX: number;
+  originWorldY: number;
   targetWorldX: number;
   targetWorldY: number;
+  bobSeed: number;
   lastPhase: AnimatedMarchPhase;
   lastTrailAt: number;
 }
@@ -149,6 +161,14 @@ interface RouteLayerSnapshot {
   selectedPoiId: string | null;
   selectedMarchId: string | null;
   marchSignature: string;
+}
+
+interface SelectionFxSnapshot {
+  detailLevel: MapDetailLevel;
+  selectedCityId: string | null;
+  selectedPoiId: string | null;
+  selectedMarchId: string | null;
+  hasSelection: boolean;
 }
 
 interface SceneConfig {
@@ -198,12 +218,12 @@ function getTerrainFill(tile: FogTileView): number {
 
 function getMarchColor(objective: MarchView["objective"]): number {
   if (objective === "RESOURCE_GATHER") {
-    return 0x63b5b2;
+    return MAP_COLOR_GATHER;
   }
   if (objective === "BARBARIAN_ATTACK") {
-    return 0xd66c43;
+    return MAP_COLOR_HOSTILE;
   }
-  return 0xe0bf74;
+  return MAP_COLOR_NEUTRAL;
 }
 
 function getAnimatedPhase(march: MarchView): AnimatedMarchPhase {
@@ -219,11 +239,32 @@ function getAnimatedPhase(march: MarchView): AnimatedMarchPhase {
   return "moving";
 }
 
-function interpolate(from: { x: number; y: number }, to: { x: number; y: number }, progress: number) {
-  return {
-    x: Phaser.Math.Linear(from.x, to.x, progress),
-    y: Phaser.Math.Linear(from.y, to.y, progress),
-  };
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function lerp(from: number, to: number, progress: number) {
+  return from + (to - from) * progress;
+}
+
+function distanceBetween(fromX: number, fromY: number, toX: number, toY: number) {
+  return Math.hypot(toX - fromX, toY - fromY);
+}
+
+function angleBetween(fromX: number, fromY: number, toX: number, toY: number) {
+  return Math.atan2(toY - fromY, toX - fromX);
+}
+
+function randomBetween(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomFloatBetween(min: number, max: number) {
+  return min + Math.random() * (max - min);
+}
+
+function easeSineInOut(value: number) {
+  return -(Math.cos(Math.PI * value) - 1) / 2;
 }
 
 class FrontierMapScene extends Phaser.Scene {
@@ -272,6 +313,7 @@ class FrontierMapScene extends Phaser.Scene {
   private selectionObjects: Phaser.GameObjects.GameObject[] = [];
   private lastCameraState: MapCameraState | null = null;
   private lastRouteSnapshot: RouteLayerSnapshot | null = null;
+  private lastSelectionSnapshot: SelectionFxSnapshot | null = null;
   private currentDetailLevel: MapDetailLevel = getMapDetailLevel(MAP_CAMERA_DEFAULT_ZOOM);
   private didInitialFocus = false;
   private dragState: DragState = {
@@ -285,6 +327,7 @@ class FrontierMapScene extends Phaser.Scene {
     velocityY: 0,
   };
   private cameraDrift = { x: 0, y: 0 };
+  private reducedMotion = false;
 
   constructor() {
     super("frontier-map");
@@ -292,6 +335,10 @@ class FrontierMapScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#081319");
+    this.reducedMotion =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false;
     this.input.mouse?.disableContextMenu();
     this.terrainLayer = this.add.layer();
     this.objectLayer = this.add.layer();
@@ -454,7 +501,7 @@ class FrontierMapScene extends Phaser.Scene {
     }
     const camera = this.cameras.main;
     camera.setBounds(0, 0, this.worldPixelSize, this.worldPixelSize);
-    camera.setZoom(Phaser.Math.Clamp(camera.zoom || MAP_CAMERA_DEFAULT_ZOOM, MAP_CAMERA_MIN_ZOOM, MAP_CAMERA_MAX_ZOOM));
+    camera.setZoom(clampNumber(camera.zoom || MAP_CAMERA_DEFAULT_ZOOM, MAP_CAMERA_MIN_ZOOM, MAP_CAMERA_MAX_ZOOM));
   }
 
   private bindInput() {
@@ -487,7 +534,7 @@ class FrontierMapScene extends Phaser.Scene {
         return;
       }
 
-      const distance = Phaser.Math.Distance.Between(
+      const distance = distanceBetween(
         this.dragState.startX,
         this.dragState.startY,
         pointer.x,
@@ -508,8 +555,8 @@ class FrontierMapScene extends Phaser.Scene {
       const scrollDeltaX = -dx / camera.zoom;
       const scrollDeltaY = -dy / camera.zoom;
       this.clampAndSetCameraScroll(camera.scrollX + scrollDeltaX, camera.scrollY + scrollDeltaY);
-      this.dragState.velocityX = Phaser.Math.Linear(this.dragState.velocityX, scrollDeltaX, 0.45);
-      this.dragState.velocityY = Phaser.Math.Linear(this.dragState.velocityY, scrollDeltaY, 0.45);
+      this.dragState.velocityX = lerp(this.dragState.velocityX, scrollDeltaX, 0.45);
+      this.dragState.velocityY = lerp(this.dragState.velocityY, scrollDeltaY, 0.45);
       this.dragState.lastX = pointer.x;
       this.dragState.lastY = pointer.y;
     });
@@ -557,7 +604,7 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
     const camera = this.cameras.main;
-    const clampedZoom = Phaser.Math.Clamp(nextZoom, MAP_CAMERA_MIN_ZOOM, MAP_CAMERA_MAX_ZOOM);
+    const clampedZoom = clampNumber(nextZoom, MAP_CAMERA_MIN_ZOOM, MAP_CAMERA_MAX_ZOOM);
     const worldBefore = camera.getWorldPoint(screenX, screenY);
     camera.setZoom(clampedZoom);
     const worldAfter = camera.getWorldPoint(screenX, screenY);
@@ -596,8 +643,8 @@ class FrontierMapScene extends Phaser.Scene {
     const maxScrollX = Math.max(0, this.worldPixelSize - visibleWidth);
     const maxScrollY = Math.max(0, this.worldPixelSize - visibleHeight);
     camera.setScroll(
-      Phaser.Math.Clamp(nextScrollX, 0, maxScrollX),
-      Phaser.Math.Clamp(nextScrollY, 0, maxScrollY),
+      clampNumber(nextScrollX, 0, maxScrollX),
+      clampNumber(nextScrollY, 0, maxScrollY),
     );
   }
 
@@ -687,8 +734,8 @@ class FrontierMapScene extends Phaser.Scene {
     for (const marker of this.allianceMarkers) {
       const point = tileToWorld(marker.x, marker.y);
       const beacon = this.add.circle(point.x, point.y, this.currentDetailLevel === "far" ? 18 : 24, 0x53c8d2, 0.14);
-      const pin = this.add.triangle(point.x, point.y - 4, 0, 0, 18, 18, 9, 30, 0x72ced1, 0.92);
-      const core = this.add.circle(point.x, point.y + 2, 4, 0xf4d79c, 0.94);
+      const pin = this.add.triangle(point.x, point.y - 4, 0, 0, 18, 18, 9, 30, MAP_COLOR_ALLIED, 0.92);
+      const core = this.add.circle(point.x, point.y + 2, 4, MAP_COLOR_NEUTRAL, 0.94);
       this.objectLayer.add([beacon, pin, core]);
       this.addAmbientPulse(beacon, {
         minScale: 0.96,
@@ -718,7 +765,7 @@ class FrontierMapScene extends Phaser.Scene {
         const point = tileToWorld(report.x, report.y);
         this.reportLookup.set(report.id, { worldX: point.x, worldY: point.y, data: report });
         const bubbleColor =
-          report.resultTone === "success" ? 0x4fb07d : report.resultTone === "warning" ? 0xd66c43 : 0x5e9fcb;
+          report.resultTone === "success" ? 0x4fb07d : report.resultTone === "warning" ? MAP_COLOR_HOSTILE : 0x5e9fcb;
         const bubble = this.add.circle(point.x, point.y - 18, this.currentDetailLevel === "far" ? 10 : 12, bubbleColor, 0.92);
         const ping = this.add.circle(point.x, point.y - 18, this.currentDetailLevel === "far" ? 14 : 18, bubbleColor, 0.08);
         const glyph = this.add
@@ -795,7 +842,7 @@ class FrontierMapScene extends Phaser.Scene {
       if (poi.kind === "BARBARIAN_CAMP") {
         const fortOuter = this.add.rectangle(point.x, point.y, 44, 44, baseColor, poi.state === "ACTIVE" ? 0.95 : 0.55).setAngle(45);
         const fortInner = this.add.rectangle(point.x, point.y, 18, 18, 0x2a130e, 0.78).setAngle(45);
-        fortOuter.setStrokeStyle(selected ? 4 : 2, selected ? 0xf4d79c : 0xf7edd9, 0.95);
+        fortOuter.setStrokeStyle(selected ? 4 : 2, selected ? MAP_COLOR_NEUTRAL : MAP_COLOR_REPORT, 0.95);
         this.objectLayer.add([fortOuter, fortInner]);
         this.addAmbientPulse(fortOuter, {
           minScale: 0.98,
@@ -807,7 +854,7 @@ class FrontierMapScene extends Phaser.Scene {
       } else {
         const marker = this.add.circle(point.x, point.y, 18, baseColor, poi.state === "ACTIVE" ? 0.96 : 0.62);
         const core = this.add.circle(point.x, point.y, 8, 0x1b100b, 0.65);
-        marker.setStrokeStyle(selected ? 4 : 2, selected ? 0xf4d79c : 0xf7edd9, 0.95);
+        marker.setStrokeStyle(selected ? 4 : 2, selected ? MAP_COLOR_NEUTRAL : MAP_COLOR_REPORT, 0.95);
         this.objectLayer.add([marker, core]);
         this.addAmbientPulse(marker, {
           minScale: 0.98,
@@ -852,11 +899,11 @@ class FrontierMapScene extends Phaser.Scene {
       this.cityLookup.set(city.cityId, { worldX: point.x, worldY: point.y, data: city });
       const selected = city.cityId === this.selectedCityId;
       const allied = !city.isCurrentPlayer && this.alliedOwnerNames.has(city.ownerName);
-      const auraColor = city.isCurrentPlayer ? 0xe2c275 : allied ? 0x5c8a99 : city.fogState === "VISIBLE" ? 0x8a2c2c : 0x555558;
+      const auraColor = city.isCurrentPlayer ? MAP_COLOR_HOME : allied ? 0x5c8a99 : city.fogState === "VISIBLE" ? 0x8a2c2c : 0x555558;
       const cityColor = city.isCurrentPlayer ? 0xd4af37 : allied ? 0x4aa7b5 : city.fogState === "VISIBLE" ? 0xa54842 : 0x737376;
 
       if (allied) {
-        const territory = this.add.circle(point.x, point.y, this.currentDetailLevel === "near" ? 72 : 64, 0x2b8f98, 0.08);
+        const territory = this.add.circle(point.x, point.y, this.currentDetailLevel === "near" ? 72 : 64, MAP_COLOR_ALLIED_TERRITORY, 0.08);
         this.objectLayer.add(territory);
         this.addAmbientPulse(territory, {
           minScale: 0.98,
@@ -869,7 +916,7 @@ class FrontierMapScene extends Phaser.Scene {
       const aura = this.add.circle(point.x, point.y, 38, auraColor, city.isCurrentPlayer ? 0.18 : 0.12);
       const marker = this.add.circle(point.x, point.y, 20, cityColor, 0.98);
       const core = this.add.rectangle(point.x, point.y, 12, 12, 0x1b100b, 0.72).setAngle(45);
-      marker.setStrokeStyle(selected ? 4 : 2, selected ? 0xf4d79c : 0xf7edd9, 0.95);
+      marker.setStrokeStyle(selected ? 4 : 2, selected ? MAP_COLOR_NEUTRAL : MAP_COLOR_REPORT, 0.95);
 
       this.objectLayer.add([aura, marker, core]);
       this.addAmbientPulse(aura, {
@@ -931,6 +978,27 @@ class FrontierMapScene extends Phaser.Scene {
   }
 
   private syncSelectionFx() {
+    const selection = this.getSelectionPoint();
+    const snapshot: SelectionFxSnapshot = {
+      detailLevel: this.currentDetailLevel,
+      selectedCityId: this.selectedCityId,
+      selectedPoiId: this.selectedPoiId,
+      selectedMarchId: this.selectedMarchId,
+      hasSelection: Boolean(selection),
+    };
+
+    if (
+      this.lastSelectionSnapshot &&
+      this.lastSelectionSnapshot.detailLevel === snapshot.detailLevel &&
+      this.lastSelectionSnapshot.selectedCityId === snapshot.selectedCityId &&
+      this.lastSelectionSnapshot.selectedPoiId === snapshot.selectedPoiId &&
+      this.lastSelectionSnapshot.selectedMarchId === snapshot.selectedMarchId &&
+      this.lastSelectionSnapshot.hasSelection === snapshot.hasSelection
+    ) {
+      return;
+    }
+
+    this.lastSelectionSnapshot = snapshot;
     for (const object of this.selectionObjects) {
       object.destroy();
     }
@@ -940,14 +1008,13 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
 
-    const selection = this.getSelectionPoint();
     if (!selection) {
       return;
     }
 
     const ringRadius = this.selectedMarchId ? 28 : 32;
-    const accent = this.selectedMarchId ? 0x7dd3fc : 0xf4d79c;
-    const secondary = this.selectedMarchId ? 0xf4d79c : 0x72ced1;
+    const accent = this.selectedMarchId ? MAP_COLOR_SCOUT : MAP_COLOR_NEUTRAL;
+    const secondary = this.selectedMarchId ? MAP_COLOR_NEUTRAL : MAP_COLOR_ALLIED;
     const halo = this.add.circle(selection.x, selection.y, ringRadius + 12, accent, this.selectedMarchId ? 0.08 : 0.1);
     const outer = this.add.circle(selection.x, selection.y, ringRadius, 0x000000, 0);
     outer.setStrokeStyle(3, accent, 0.92);
@@ -958,6 +1025,14 @@ class FrontierMapScene extends Phaser.Scene {
 
     this.fxLayer.add([halo, outer, tracker, core]);
     this.selectionObjects.push(halo, outer, tracker, core);
+
+    if (this.reducedMotion) {
+      halo.setAlpha(0.08);
+      outer.setAlpha(0.72);
+      tracker.setAlpha(0.52);
+      core.setAlpha(0.16);
+      return;
+    }
 
     this.tweens.add({
       targets: halo,
@@ -1051,7 +1126,15 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     for (const march of this.marches) {
-      if (this.marchEntities.has(march.id)) {
+      const origin = tileToWorld(march.origin.x, march.origin.y);
+      const target = tileToWorld(march.target.x, march.target.y);
+      const existingEntity = this.marchEntities.get(march.id);
+      if (existingEntity) {
+        existingEntity.objective = march.objective;
+        existingEntity.originWorldX = origin.x;
+        existingEntity.originWorldY = origin.y;
+        existingEntity.targetWorldX = target.x;
+        existingEntity.targetWorldY = target.y;
         continue;
       }
 
@@ -1091,18 +1174,17 @@ class FrontierMapScene extends Phaser.Scene {
         stagingRing,
         gatherSpinner,
         objective: march.objective,
-        targetWorldX: 0,
-        targetWorldY: 0,
+        originWorldX: origin.x,
+        originWorldY: origin.y,
+        targetWorldX: target.x,
+        targetWorldY: target.y,
+        bobSeed: hashCoordinate(march.origin.x, march.origin.y),
         lastPhase: getAnimatedPhase(march),
         lastTrailAt: 0,
       };
       this.marchEntities.set(march.id, entity);
 
-      const origin = tileToWorld(march.origin.x, march.origin.y);
-      const target = tileToWorld(march.target.x, march.target.y);
       container.setPosition(origin.x, origin.y);
-      entity.targetWorldX = target.x;
-      entity.targetWorldY = target.y;
       this.spawnPulse(origin.x, origin.y, color, 20);
     }
 
@@ -1141,12 +1223,12 @@ class FrontierMapScene extends Phaser.Scene {
       const from = tileToWorld(trail.from.x, trail.from.y);
       const to = tileToWorld(trail.to.x, trail.to.y);
       const routeGraphic = this.add.graphics();
-      routeGraphic.lineStyle(2, 0x7dd3fc, 0.48);
+      routeGraphic.lineStyle(2, MAP_COLOR_SCOUT, 0.48);
       routeGraphic.lineBetween(from.x, from.y, to.x, to.y);
       this.routeLayer.add(routeGraphic);
 
       const shadow = this.add.ellipse(0, 10, 24, 10, 0x000000, 0.22);
-      const body = this.add.circle(0, 0, 8, 0x7dd3fc, 0.98);
+      const body = this.add.circle(0, 0, 8, MAP_COLOR_SCOUT, 0.98);
       body.setStrokeStyle(2, 0xe4f6ff, 0.82);
       const pennant = this.add.triangle(10, -2, 0, 0, 14, 5, 0, 10, 0xdaf7ff, 0.96);
       const container = this.add.container(from.x, from.y, [shadow, body, pennant]);
@@ -1167,7 +1249,7 @@ class FrontierMapScene extends Phaser.Scene {
         lastTrailAt: 0,
       });
 
-      this.spawnPulse(from.x, from.y, 0x7dd3fc, 18);
+      this.spawnPulse(from.x, from.y, MAP_COLOR_SCOUT, 18);
     }
   }
 
@@ -1176,11 +1258,14 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
 
-    const dashOffset = (this.time.now / 36) % 20;
+    const dashOffset = this.currentDetailLevel === "far" ? 0 : (this.time.now / 36) % 20;
     const snapshot: RouteLayerSnapshot = {
       visible: this.showPaths,
       detailLevel: this.currentDetailLevel,
-      dashBucket: Math.floor(dashOffset / (this.currentDetailLevel === "near" ? 1.8 : this.currentDetailLevel === "mid" ? 2.6 : 3.4)),
+      dashBucket:
+        this.currentDetailLevel === "far"
+          ? 0
+          : Math.floor(dashOffset / (this.currentDetailLevel === "near" ? 1.8 : 2.8)),
       selectedCityId: this.selectedCityId,
       selectedPoiId: this.selectedPoiId,
       selectedMarchId: this.selectedMarchId,
@@ -1227,19 +1312,23 @@ class FrontierMapScene extends Phaser.Scene {
         (march.targetCityId && march.targetCityId === this.selectedCityId) ||
         (march.targetPoiId && march.targetPoiId === this.selectedPoiId);
       const alpha = highlight ? 0.95 : this.currentDetailLevel === "far" ? 0.42 : 0.62;
-      const angle = Phaser.Math.Angle.Between(origin.x, origin.y, target.x, target.y);
+      const angle = angleBetween(origin.x, origin.y, target.x, target.y);
       const trailWidth = this.currentDetailLevel === "far" ? 2 : 3;
       const underlayWidth = this.currentDetailLevel === "far" ? 6 : 8;
       const arrowProgress = this.currentDetailLevel === "far" ? 0.56 : 0.68;
       const arrowSize = highlight ? (this.currentDetailLevel === "far" ? 9 : 12) : this.currentDetailLevel === "far" ? 7 : 10;
-      const arrowX = Phaser.Math.Linear(origin.x, target.x, arrowProgress);
-      const arrowY = Phaser.Math.Linear(origin.y, target.y, arrowProgress);
+      const arrowX = lerp(origin.x, target.x, arrowProgress);
+      const arrowY = lerp(origin.y, target.y, arrowProgress);
       this.routeGraphics.lineStyle(underlayWidth, 0x090d10, highlight ? 0.34 : 0.2);
       this.routeGraphics.lineBetween(origin.x, origin.y, target.x, target.y);
       this.routeGraphics.lineStyle(trailWidth + 1, color, highlight ? 0.24 : 0.16);
       this.routeGraphics.lineBetween(origin.x, origin.y, target.x, target.y);
       this.routeGraphics.lineStyle(trailWidth, color, alpha);
-      this.drawDashedLine(this.routeGraphics, origin.x, origin.y, target.x, target.y, dashOffset);
+      if (this.currentDetailLevel === "far") {
+        this.routeGraphics.lineBetween(origin.x, origin.y, target.x, target.y);
+      } else {
+        this.drawDashedLine(this.routeGraphics, origin.x, origin.y, target.x, target.y, dashOffset);
+      }
       this.routeGraphics.fillStyle(color, highlight ? 0.92 : 0.72);
       this.routeGraphics.beginPath();
       this.routeGraphics.moveTo(arrowX + Math.cos(angle) * arrowSize, arrowY + Math.sin(angle) * arrowSize);
@@ -1265,12 +1354,12 @@ class FrontierMapScene extends Phaser.Scene {
   private drawDashedLine(graphics: Phaser.GameObjects.Graphics, fromX: number, fromY: number, toX: number, toY: number, offset: number) {
     const dashLength = this.currentDetailLevel === "far" ? 16 : 22;
     const gapLength = this.currentDetailLevel === "far" ? 12 : 14;
-    const totalLength = Phaser.Math.Distance.Between(fromX, fromY, toX, toY);
+    const totalLength = distanceBetween(fromX, fromY, toX, toY);
     if (totalLength <= 0) {
       return;
     }
 
-    const angle = Phaser.Math.Angle.Between(fromX, fromY, toX, toY);
+    const angle = angleBetween(fromX, fromY, toX, toY);
     for (let progress = -offset; progress < totalLength; progress += dashLength + gapLength) {
       const start = Math.max(0, progress);
       const end = Math.min(totalLength, progress + dashLength);
@@ -1297,27 +1386,29 @@ class FrontierMapScene extends Phaser.Scene {
       }
 
       const phase = getAnimatedPhase(march);
-      const point = this.getMarchPoint(march, phase, nowMs);
-      const destination =
-        phase === "returning"
-          ? tileToWorld(march.origin.x, march.origin.y)
-          : tileToWorld(march.target.x, march.target.y);
-      const attackTarget = tileToWorld(march.target.x, march.target.y);
-      const direction = Phaser.Math.Angle.Between(point.x, point.y, destination.x, destination.y);
+      const travelProgress = this.getMarchProgress(march, phase, nowMs);
+      const pointX =
+        phase === "staging" || phase === "gathering"
+          ? entity.targetWorldX
+          : phase === "returning"
+            ? lerp(entity.targetWorldX, entity.originWorldX, travelProgress)
+            : lerp(entity.originWorldX, entity.targetWorldX, travelProgress);
+      const pointY =
+        phase === "staging" || phase === "gathering"
+          ? entity.targetWorldY
+          : phase === "returning"
+            ? lerp(entity.targetWorldY, entity.originWorldY, travelProgress)
+            : lerp(entity.originWorldY, entity.targetWorldY, travelProgress);
+      const destinationX = phase === "returning" ? entity.originWorldX : entity.targetWorldX;
+      const destinationY = phase === "returning" ? entity.originWorldY : entity.targetWorldY;
+      const direction = angleBetween(pointX, pointY, destinationX, destinationY);
 
       if (entity.lastPhase !== phase && (phase === "staging" || phase === "gathering")) {
-        this.spawnPulse(destination.x, destination.y, getMarchColor(march.objective), 20);
+        this.spawnPulse(destinationX, destinationY, getMarchColor(march.objective), 20);
       }
 
-      entity.container.setPosition(point.x, point.y);
+      entity.container.setPosition(pointX, pointY);
       entity.container.setRotation(direction + Math.PI / 2);
-      entity.targetWorldX = attackTarget.x;
-      entity.targetWorldY = attackTarget.y;
-
-      const bob = Math.sin(this.time.now / 180 + hashCoordinate(march.origin.x, march.origin.y)) * 1.4;
-      entity.troopLead.setY(2 + bob);
-      entity.troopSupport.setY(4 - bob * 0.7);
-      entity.bannerPennant.setScale(1, 1 + Math.sin(this.time.now / 120 + march.distance) * 0.08);
 
       const compact = detail === "far";
       entity.compactToken.setVisible(compact);
@@ -1327,21 +1418,31 @@ class FrontierMapScene extends Phaser.Scene {
       entity.bannerPole.setVisible(!compact);
       entity.bannerPennant.setVisible(!compact);
 
-      entity.stagingRing.setVisible(phase === "staging");
-      entity.gatherSpinner.setVisible(phase === "gathering");
-      if (phase === "staging") {
-        entity.stagingRing.setScale(1 + Math.sin(this.time.now / 160) * 0.08);
-        entity.stagingRing.setAlpha(0.55 + Math.sin(this.time.now / 180) * 0.2);
+      if (compact) {
+        entity.compactToken.setScale(phase === "staging" ? 0.98 : 0.88);
+        entity.stagingRing.setVisible(false);
+        entity.gatherSpinner.setVisible(false);
+      } else {
+        const bob = Math.sin(this.time.now / 180 + entity.bobSeed) * 1.4;
+        entity.troopLead.setY(2 + bob);
+        entity.troopSupport.setY(4 - bob * 0.7);
+        entity.bannerPennant.setScale(1, 1 + Math.sin(this.time.now / 120 + march.distance) * 0.08);
+        entity.stagingRing.setVisible(phase === "staging");
+        entity.gatherSpinner.setVisible(phase === "gathering");
+        if (phase === "staging") {
+          entity.stagingRing.setScale(1 + Math.sin(this.time.now / 160) * 0.08);
+          entity.stagingRing.setAlpha(0.55 + Math.sin(this.time.now / 180) * 0.2);
+        }
+        if (phase === "gathering") {
+          entity.gatherSpinner.rotation += 0.08;
+          entity.gatherSpinner.setAlpha(0.86);
+        }
       }
-      if (phase === "gathering") {
-        entity.gatherSpinner.rotation += 0.08;
-        entity.gatherSpinner.setAlpha(0.86);
-      }
-      const trailInterval = detail === "near" ? 130 : detail === "mid" ? 180 : 260;
-      const trailScale = detail === "near" ? 0.8 : detail === "mid" ? 0.62 : 0.44;
-      if ((phase === "moving" || phase === "returning") && this.time.now - entity.lastTrailAt > trailInterval) {
+      const trailInterval = detail === "near" ? 130 : detail === "mid" ? 240 : 480;
+      const trailScale = detail === "near" ? 0.76 : detail === "mid" ? 0.46 : 0;
+      if ((phase === "moving" || phase === "returning") && trailScale > 0 && this.time.now - entity.lastTrailAt > trailInterval) {
         entity.lastTrailAt = this.time.now;
-        this.spawnTrailDust(point.x, point.y, getMarchColor(march.objective), direction + Math.PI, trailScale);
+        this.spawnTrailDust(pointX, pointY, getMarchColor(march.objective), direction + Math.PI, trailScale);
       }
 
       entity.lastPhase = phase;
@@ -1356,22 +1457,26 @@ class FrontierMapScene extends Phaser.Scene {
     const nowMs = Date.now();
 
     for (const entity of this.scoutEntities.values()) {
-      const progress = Phaser.Math.Clamp((nowMs - entity.startedAtMs) / entity.durationMs, 0, 1);
-      const easedProgress = Phaser.Math.Easing.Sine.InOut(progress);
-      const point = interpolate(entity.from, entity.to, easedProgress);
-      const direction = Phaser.Math.Angle.Between(point.x, point.y, entity.to.x, entity.to.y);
+      const progress = clampNumber((nowMs - entity.startedAtMs) / entity.durationMs, 0, 1);
+      const easedProgress = easeSineInOut(progress);
+      const pointX = lerp(entity.from.x, entity.to.x, easedProgress);
+      const pointY = lerp(entity.from.y, entity.to.y, easedProgress);
+      const direction = angleBetween(pointX, pointY, entity.to.x, entity.to.y);
 
-      entity.container.setPosition(point.x, point.y);
+      entity.container.setPosition(pointX, pointY);
       entity.container.setRotation(direction + Math.PI / 2);
-      entity.shadow.setScale(1 + Math.sin(this.time.now / 180) * 0.08);
-      entity.pennant.setScale(1, 1 + Math.sin(this.time.now / 140) * 0.1);
-
       if (this.currentDetailLevel === "far") {
         entity.container.setScale(0.82);
+        entity.shadow.setScale(1);
+        entity.pennant.setScale(1, 1);
       } else if (this.currentDetailLevel === "near") {
         entity.container.setScale(1.05);
+        entity.shadow.setScale(1 + Math.sin(this.time.now / 180) * 0.08);
+        entity.pennant.setScale(1, 1 + Math.sin(this.time.now / 140) * 0.1);
       } else {
         entity.container.setScale(0.94);
+        entity.shadow.setScale(1 + Math.sin(this.time.now / 220) * 0.05);
+        entity.pennant.setScale(1, 1 + Math.sin(this.time.now / 170) * 0.06);
       }
 
       if (progress >= 1 && !entity.arrived) {
@@ -1379,34 +1484,28 @@ class FrontierMapScene extends Phaser.Scene {
         this.spawnPulse(entity.to.x, entity.to.y, 0xfacc15, 16);
       }
 
-      const trailInterval = this.currentDetailLevel === "near" ? 120 : this.currentDetailLevel === "mid" ? 170 : 240;
-      const trailScale = this.currentDetailLevel === "near" ? 0.55 : this.currentDetailLevel === "mid" ? 0.44 : 0.34;
-      if (progress < 1 && this.time.now - entity.lastTrailAt > trailInterval) {
+      const trailInterval = this.currentDetailLevel === "near" ? 120 : this.currentDetailLevel === "mid" ? 190 : 360;
+      const trailScale = this.currentDetailLevel === "near" ? 0.48 : this.currentDetailLevel === "mid" ? 0.32 : 0;
+      if (progress < 1 && trailScale > 0 && this.time.now - entity.lastTrailAt > trailInterval) {
         entity.lastTrailAt = this.time.now;
-        this.spawnTrailDust(point.x, point.y, 0x7dd3fc, direction + Math.PI, trailScale);
+        this.spawnTrailDust(pointX, pointY, MAP_COLOR_SCOUT, direction + Math.PI, trailScale);
       }
     }
   }
 
-  private getMarchPoint(march: MarchView, phase: AnimatedMarchPhase, nowMs: number) {
-    const origin = tileToWorld(march.origin.x, march.origin.y);
-    const target = tileToWorld(march.target.x, march.target.y);
-
+  private getMarchProgress(march: MarchView, phase: AnimatedMarchPhase, nowMs: number) {
     if (phase === "staging" || phase === "gathering") {
-      return target;
+      return 1;
     }
-
     if (phase === "returning") {
       const startedAt = Date.parse(march.gatherStartedAt ?? march.etaAt);
       const endsAt = Date.parse(march.returnEtaAt ?? march.etaAt);
-      const progress = endsAt <= startedAt ? 1 : Phaser.Math.Clamp((nowMs - startedAt) / (endsAt - startedAt), 0, 1);
-      return interpolate(target, origin, progress);
+      return endsAt <= startedAt ? 1 : clampNumber((nowMs - startedAt) / (endsAt - startedAt), 0, 1);
     }
 
     const startedAt = Date.parse(march.startedAt);
     const endsAt = Date.parse(march.etaAt);
-    const progress = endsAt <= startedAt ? 1 : Phaser.Math.Clamp((nowMs - startedAt) / (endsAt - startedAt), 0, 1);
-    return interpolate(origin, target, progress);
+    return endsAt <= startedAt ? 1 : clampNumber((nowMs - startedAt) / (endsAt - startedAt), 0, 1);
   }
 
   private spawnPulse(x: number, y: number, color: number, radius: number) {
@@ -1417,6 +1516,11 @@ class FrontierMapScene extends Phaser.Scene {
     const pulse = this.add.circle(x, y, radius, color, 0);
     pulse.setStrokeStyle(3, color, 0.72);
     this.fxLayer.add(pulse);
+    if (this.reducedMotion) {
+      pulse.setAlpha(0.32);
+      this.time.delayedCall(180, () => pulse.destroy());
+      return;
+    }
     this.tweens.add({
       targets: pulse,
       scale: 2.2,
@@ -1432,18 +1536,20 @@ class FrontierMapScene extends Phaser.Scene {
     const x = container.x;
     const y = container.y;
     const color = getMarchColor(objective);
-    const reachedTarget = Phaser.Math.Distance.Between(x, y, targetWorldX, targetWorldY) < MAP_TILE_WORLD_SIZE * 0.35;
+    const reachedTarget = distanceBetween(x, y, targetWorldX, targetWorldY) < MAP_TILE_WORLD_SIZE * 0.35;
 
     if (objective === "RESOURCE_GATHER" && lastPhase === "returning") {
-      this.spawnPulse(x, y, 0x7dd3fc, 20);
-      this.spawnSparkBurst(x, y, 0xf4d79c, 6, 22, 420);
+      this.spawnPulse(x, y, MAP_COLOR_SCOUT, 20);
+      this.spawnSparkBurst(x, y, MAP_COLOR_NEUTRAL, 6, 22, 420);
       return;
     }
 
     if ((objective === "CITY_ATTACK" || objective === "BARBARIAN_ATTACK" || lastPhase === "staging") && reachedTarget) {
       this.spawnPulse(x, y, color, 28);
-      this.spawnShockwave(x, y, color, 34);
-      this.spawnSparkBurst(x, y, 0xf7edd9, objective === "CITY_ATTACK" ? 10 : 8, 30, 520);
+      if (this.currentDetailLevel !== "far") {
+        this.spawnShockwave(x, y, color, 34);
+      }
+      this.spawnSparkBurst(x, y, MAP_COLOR_REPORT, objective === "CITY_ATTACK" ? 10 : 8, 30, 520);
       this.spawnSparkBurst(x, y, color, objective === "CITY_ATTACK" ? 7 : 6, 38, 640);
       return;
     }
@@ -1481,18 +1587,23 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
 
-    for (let index = 0; index < count; index += 1) {
-      const angle = (Math.PI * 2 * index) / count + Phaser.Math.FloatBetween(-0.16, 0.16);
-      const spark = this.add.rectangle(x, y, 3, Phaser.Math.Between(8, 14), color, 0.92);
+    const densityScale = this.reducedMotion ? 0.45 : this.currentDetailLevel === "far" ? 0.4 : this.currentDetailLevel === "mid" ? 0.72 : 1;
+    const burstCount = Math.max(2, Math.round(count * densityScale));
+    const burstDistance = Math.max(12, Math.round(distance * densityScale));
+    const burstDuration = Math.max(240, Math.round(duration * (this.currentDetailLevel === "far" ? 0.72 : 1)));
+
+    for (let index = 0; index < burstCount; index += 1) {
+      const angle = (Math.PI * 2 * index) / burstCount + randomFloatBetween(-0.16, 0.16);
+      const spark = this.add.rectangle(x, y, 3, randomBetween(8, 14), color, 0.92);
       spark.setRotation(angle + Math.PI / 2);
       this.fxLayer.add(spark);
       this.tweens.add({
         targets: spark,
-        x: x + Math.cos(angle) * Phaser.Math.Between(Math.floor(distance * 0.55), distance),
-        y: y + Math.sin(angle) * Phaser.Math.Between(Math.floor(distance * 0.55), distance),
+        x: x + Math.cos(angle) * randomBetween(Math.floor(burstDistance * 0.55), burstDistance),
+        y: y + Math.sin(angle) * randomBetween(Math.floor(burstDistance * 0.55), burstDistance),
         scaleY: 0.4,
         alpha: 0,
-        duration: duration + Phaser.Math.Between(-80, 120),
+        duration: burstDuration + randomBetween(-80, 120),
         ease: "Sine.easeOut",
         onComplete: () => spark.destroy(),
       });
@@ -1500,18 +1611,18 @@ class FrontierMapScene extends Phaser.Scene {
   }
 
   private spawnTrailDust(x: number, y: number, color: number, angle: number, scale = 0.8) {
-    if (!this.fxLayer) {
+    if (!this.fxLayer || this.reducedMotion || scale <= 0) {
       return;
     }
 
-    const offsetX = Math.cos(angle) * Phaser.Math.Between(8, 18);
-    const offsetY = Math.sin(angle) * Phaser.Math.Between(8, 18);
-    const dust = this.add.circle(x + offsetX, y + offsetY, Phaser.Math.FloatBetween(3, 6) * scale, color, 0.3);
+    const offsetX = Math.cos(angle) * randomBetween(8, 18);
+    const offsetY = Math.sin(angle) * randomBetween(8, 18);
+    const dust = this.add.circle(x + offsetX, y + offsetY, randomFloatBetween(3, 6) * scale, color, 0.3);
     this.fxLayer.add(dust);
     this.tweens.add({
       targets: dust,
-      x: dust.x + Math.cos(angle) * Phaser.Math.Between(12, 22),
-      y: dust.y + Math.sin(angle) * Phaser.Math.Between(12, 22),
+      x: dust.x + Math.cos(angle) * randomBetween(12, 22),
+      y: dust.y + Math.sin(angle) * randomBetween(12, 22),
       scale: 1.8,
       alpha: 0,
       duration: 320,
@@ -1532,6 +1643,9 @@ class FrontierMapScene extends Phaser.Scene {
   ) {
     target.setScale(options.minScale);
     target.setAlpha(options.maxAlpha);
+    if (this.reducedMotion || this.currentDetailLevel === "far") {
+      return;
+    }
     this.tweens.add({
       targets: target,
       scale: { from: options.minScale, to: options.maxScale },
@@ -1544,6 +1658,9 @@ class FrontierMapScene extends Phaser.Scene {
   }
 
   private addLabelFloat(label: Phaser.GameObjects.Text, baseY: number, hash: number) {
+    if (this.reducedMotion) {
+      return;
+    }
     this.tweens.add({
       targets: label,
       y: { from: baseY, to: baseY - 4 },
@@ -1621,7 +1738,7 @@ class FrontierMapScene extends Phaser.Scene {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const poi = this.findNearestPoi(worldPoint.x, worldPoint.y);
     if (poi) {
-      this.spawnPulse(poi.worldX, poi.worldY, 0x72ced1, 14);
+      this.spawnPulse(poi.worldX, poi.worldY, MAP_COLOR_ALLIED, 14);
       this.onOpenFieldCommand({
         kind: "POI",
         label: poi.data.label,
@@ -1634,7 +1751,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     const city = this.findNearestCity(worldPoint.x, worldPoint.y);
     if (city) {
-      this.spawnPulse(city.worldX, city.worldY, city.data.isCurrentPlayer ? 0x72ced1 : 0xf4d79c, 14);
+      this.spawnPulse(city.worldX, city.worldY, city.data.isCurrentPlayer ? MAP_COLOR_ALLIED : MAP_COLOR_NEUTRAL, 14);
       this.onOpenFieldCommand({
         kind: "CITY",
         label: city.data.cityName,
@@ -1647,7 +1764,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     const tile = worldToTile(worldPoint.x, worldPoint.y, this.worldSize);
     const point = tileToWorld(tile.x, tile.y);
-    this.spawnPulse(point.x, point.y, 0xf4d79c, 12);
+    this.spawnPulse(point.x, point.y, MAP_COLOR_NEUTRAL, 12);
     this.onOpenFieldCommand({
       kind: "TILE",
       label: `Frontier ${tile.x},${tile.y}`,
@@ -1662,7 +1779,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     for (const entity of this.marchEntities.values()) {
       const threshold = this.currentDetailLevel === "far" ? 20 : 32;
-      const distance = Phaser.Math.Distance.Between(worldX, worldY, entity.container.x, entity.container.y);
+      const distance = distanceBetween(worldX, worldY, entity.container.x, entity.container.y);
       if (distance < threshold && distance < bestDistance) {
         bestId = entity.marchId;
         bestDistance = distance;
@@ -1676,7 +1793,7 @@ class FrontierMapScene extends Phaser.Scene {
     let best: PointLookup<PoiView> | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
     for (const poi of this.poiLookup.values()) {
-      const distance = Phaser.Math.Distance.Between(worldX, worldY, poi.worldX, poi.worldY);
+      const distance = distanceBetween(worldX, worldY, poi.worldX, poi.worldY);
       if (distance < 30 && distance < bestDistance) {
         best = poi;
         bestDistance = distance;
@@ -1689,7 +1806,7 @@ class FrontierMapScene extends Phaser.Scene {
     let best: PointLookup<MapReportMarkerView> | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
     for (const report of this.reportLookup.values()) {
-      const distance = Phaser.Math.Distance.Between(worldX, worldY, report.worldX, report.worldY - 18);
+      const distance = distanceBetween(worldX, worldY, report.worldX, report.worldY - 18);
       if (distance < 24 && distance < bestDistance) {
         best = report;
         bestDistance = distance;
@@ -1702,7 +1819,7 @@ class FrontierMapScene extends Phaser.Scene {
     let best: PointLookup<MapCity> | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
     for (const city of this.cityLookup.values()) {
-      const distance = Phaser.Math.Distance.Between(worldX, worldY, city.worldX, city.worldY);
+      const distance = distanceBetween(worldX, worldY, city.worldX, city.worldY);
       if (distance < 34 && distance < bestDistance) {
         best = city;
         bestDistance = distance;

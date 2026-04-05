@@ -124,6 +124,69 @@
     radial-gradient(circle at 18% 0%, rgba(184, 201, 211, 0.12), transparent 24%),
     linear-gradient(180deg, rgba(40, 42, 45, 0.94), rgba(26, 28, 31, 0.98));
   --surface-accent-rail: linear-gradient(180deg, rgba(253, 212, 136, 0.88), rgba(233, 193, 118, 0.24));
+  --surface-shell-bg:
+    radial-gradient(circle at 12% 8%, rgba(233, 193, 118, 0.07), transparent 24%),
+    radial-gradient(circle at 88% 12%, rgba(184, 201, 211, 0.06), transparent 26%),
+    linear-gradient(180deg, rgba(17, 19, 22, 0.98), rgba(12, 14, 17, 1));
+  --surface-shell-sidebar:
+    linear-gradient(180deg, rgba(26, 28, 31, 0.98), rgba(12, 14, 17, 1)),
+    linear-gradient(90deg, rgba(233, 193, 118, 0.05), transparent 34%);
+  --surface-shell-topbar:
+    linear-gradient(180deg, rgba(17, 19, 22, 0.98), rgba(12, 14, 17, 0.98)),
+    linear-gradient(90deg, rgba(233, 193, 118, 0.05), transparent 32%);
+  --surface-shell-card:
+    radial-gradient(circle at 18% 0%, rgba(253, 212, 136, 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(40, 42, 45, 0.94), rgba(26, 28, 31, 0.98));
+  --surface-shell-card-strong:
+    radial-gradient(circle at 82% 16%, rgba(184, 201, 211, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(51, 53, 56, 0.96), rgba(30, 32, 35, 0.98));
+  --surface-shell-nav:
+    linear-gradient(180deg, rgba(40, 42, 45, 0.86), rgba(17, 19, 22, 0.96)),
+    linear-gradient(90deg, rgba(253, 212, 136, 0.04), transparent 70%);
+  --surface-shell-nav-active:
+    linear-gradient(180deg, rgba(51, 53, 56, 0.96), rgba(26, 28, 31, 0.98)),
+    linear-gradient(90deg, rgba(253, 212, 136, 0.16), transparent 72%);
+  --surface-shell-icon:
+    linear-gradient(180deg, rgba(51, 53, 56, 0.92), rgba(26, 28, 31, 0.98)),
+    radial-gradient(circle at top, rgba(253, 212, 136, 0.12), transparent 64%);
+  --surface-rail-panel:
+    radial-gradient(circle at 14% 0%, rgba(253, 212, 136, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(40, 42, 45, 0.92), rgba(26, 28, 31, 0.98));
+  --surface-rail-panel-strong:
+    radial-gradient(circle at 82% 16%, rgba(184, 201, 211, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(51, 53, 56, 0.96), rgba(26, 28, 31, 0.98));
+  --surface-sheet-panel:
+    radial-gradient(circle at 16% 0%, rgba(253, 212, 136, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(40, 42, 45, 0.9), rgba(17, 19, 22, 0.98));
+  --surface-sheet-footer: linear-gradient(180deg, transparent, rgba(12, 14, 17, 0.32));
+  --surface-card-selected-warning:
+    linear-gradient(180deg, rgba(51, 53, 56, 0.98), rgba(30, 32, 35, 0.98)),
+    linear-gradient(90deg, rgba(253, 212, 136, 0.16), transparent 76%);
+  --surface-card-selected-info:
+    radial-gradient(circle at 16% 0%, rgba(184, 201, 211, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(51, 53, 56, 0.96), rgba(30, 32, 35, 0.98));
+  --surface-card-selected-success:
+    radial-gradient(circle at 16% 0%, rgba(84, 169, 120, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(51, 53, 56, 0.96), rgba(30, 32, 35, 0.98));
+  --surface-state-hostile:
+    linear-gradient(180deg, rgba(51, 38, 35, 0.96), rgba(26, 20, 18, 0.98)),
+    linear-gradient(90deg, rgba(255, 180, 171, 0.14), transparent 76%);
+  --surface-state-allied:
+    linear-gradient(180deg, rgba(43, 56, 60, 0.96), rgba(21, 30, 33, 0.98)),
+    linear-gradient(90deg, rgba(184, 201, 211, 0.14), transparent 76%);
+  --surface-state-neutral: var(--surface-rail-panel);
+  --surface-map-frame:
+    radial-gradient(circle at 24% 18%, rgba(240, 207, 134, 0.26), transparent 18%),
+    radial-gradient(circle at 82% 82%, rgba(46, 115, 116, 0.18), transparent 20%),
+    linear-gradient(180deg, rgba(109, 83, 49, 0.94), rgba(53, 35, 23, 0.98));
+  --surface-map-frame-inner:
+    linear-gradient(90deg, transparent, rgba(255, 243, 219, 0.06), transparent),
+    radial-gradient(circle at 15% 16%, rgba(255, 243, 219, 0.08), transparent 20%),
+    radial-gradient(circle at 84% 76%, rgba(0, 0, 0, 0.16), transparent 24%);
+  --surface-chip-info: rgba(184, 201, 211, 0.15);
+  --surface-chip-success: rgba(84, 169, 120, 0.15);
+  --surface-chip-warning: rgba(233, 193, 118, 0.15);
+  --surface-chip-danger: rgba(255, 180, 171, 0.15);
   
   /* Glass Effect */
   --surface-glass: rgba(40, 42, 45, 0.70);
@@ -173,6 +236,13 @@
   --glow-teal: 0 0 24px rgba(184, 201, 211, 0.35), 0 0 64px rgba(184, 201, 211, 0.15);
   --glow-danger: 0 0 24px rgba(255, 180, 171, 0.45), 0 0 64px rgba(255, 180, 171, 0.18);
   --glow-success: 0 0 24px rgba(84, 169, 120, 0.45), 0 0 64px rgba(84, 169, 120, 0.18);
+  --color-map-allied: #72ced1;
+  --color-map-hostile: #d47b5a;
+  --color-map-neutral: #f4d79c;
+  --color-map-scout: #7dd3fc;
+  --color-map-gather: #63b5b2;
+  --color-map-report: #f7edd9;
+  --color-map-home: #e2c275;
 }
 
 :root[data-theme="day"] {
@@ -195,6 +265,47 @@
   --shadow-soft: 0 16px 36px rgba(96, 74, 48, 0.18);
   --shadow-heavy: 0 28px 72px rgba(96, 74, 48, 0.22);
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --surface-shell-bg:
+    radial-gradient(circle at 16% 10%, rgba(139, 81, 0, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(247, 239, 225, 0.98), rgba(234, 215, 188, 1));
+  --surface-shell-sidebar:
+    linear-gradient(180deg, rgba(250, 243, 232, 0.98), rgba(233, 216, 185, 0.96)),
+    linear-gradient(90deg, rgba(139, 81, 0, 0.05), transparent 36%);
+  --surface-shell-topbar:
+    linear-gradient(180deg, rgba(250, 243, 232, 0.98), rgba(243, 232, 211, 0.98)),
+    linear-gradient(90deg, rgba(139, 81, 0, 0.05), transparent 36%);
+  --surface-shell-card: linear-gradient(180deg, rgba(250, 243, 232, 0.98), rgba(243, 232, 211, 0.94));
+  --surface-shell-card-strong:
+    radial-gradient(circle at 84% 18%, rgba(75, 143, 203, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(243, 232, 211, 0.98), rgba(233, 216, 185, 0.94));
+  --surface-shell-nav:
+    linear-gradient(180deg, rgba(243, 232, 211, 0.92), rgba(233, 216, 185, 0.92)),
+    linear-gradient(90deg, rgba(139, 81, 0, 0.04), transparent 70%);
+  --surface-shell-nav-active:
+    linear-gradient(180deg, rgba(250, 243, 232, 0.98), rgba(233, 216, 185, 0.94)),
+    linear-gradient(90deg, rgba(139, 81, 0, 0.12), transparent 72%);
+  --surface-shell-icon:
+    linear-gradient(180deg, rgba(243, 232, 211, 0.94), rgba(223, 200, 164, 0.94)),
+    radial-gradient(circle at top, rgba(139, 81, 0, 0.12), transparent 62%);
+  --surface-rail-panel:
+    radial-gradient(circle at 14% 0%, rgba(139, 81, 0, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(250, 243, 232, 0.96), rgba(243, 232, 211, 0.94));
+  --surface-rail-panel-strong:
+    radial-gradient(circle at 82% 16%, rgba(75, 143, 203, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(243, 232, 211, 0.98), rgba(233, 216, 185, 0.94));
+  --surface-sheet-panel:
+    radial-gradient(circle at 16% 0%, rgba(139, 81, 0, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(250, 243, 232, 0.96), rgba(234, 215, 188, 0.98));
+  --surface-sheet-footer: linear-gradient(180deg, transparent, rgba(54, 36, 28, 0.08));
+  --surface-card-selected-warning:
+    linear-gradient(180deg, rgba(250, 243, 232, 0.98), rgba(233, 216, 185, 0.94)),
+    linear-gradient(90deg, rgba(139, 81, 0, 0.12), transparent 76%);
+  --surface-card-selected-info:
+    radial-gradient(circle at 16% 0%, rgba(75, 143, 203, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(243, 232, 211, 0.98), rgba(233, 216, 185, 0.94));
+  --surface-card-selected-success:
+    radial-gradient(circle at 16% 0%, rgba(84, 169, 120, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(243, 232, 211, 0.98), rgba(233, 216, 185, 0.94));
 }
 
 :root[data-theme="high-contrast"] {
@@ -227,4 +338,27 @@
   --color-overlay: rgba(0, 0, 0, 0.72);
   --glow-gold: 0 0 18px rgba(255, 209, 102, 0.4), 0 0 52px rgba(255, 209, 102, 0.14);
   --glow-teal: 0 0 18px rgba(125, 211, 252, 0.4), 0 0 52px rgba(125, 211, 252, 0.14);
+  --surface-shell-bg: linear-gradient(180deg, rgba(2, 2, 2, 0.98), rgba(8, 8, 8, 1));
+  --surface-shell-sidebar: linear-gradient(180deg, rgba(8, 8, 8, 0.98), rgba(2, 2, 2, 1));
+  --surface-shell-topbar: linear-gradient(180deg, rgba(8, 8, 8, 0.98), rgba(2, 2, 2, 0.98));
+  --surface-shell-card: linear-gradient(180deg, rgba(14, 14, 14, 0.98), rgba(6, 6, 6, 0.98));
+  --surface-shell-card-strong: linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(8, 8, 8, 0.98));
+  --surface-shell-nav: linear-gradient(180deg, rgba(14, 14, 14, 0.98), rgba(6, 6, 6, 0.96));
+  --surface-shell-nav-active:
+    linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(8, 8, 8, 0.98)),
+    linear-gradient(90deg, rgba(255, 209, 102, 0.16), transparent 72%);
+  --surface-shell-icon: linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(8, 8, 8, 0.98));
+  --surface-rail-panel: linear-gradient(180deg, rgba(14, 14, 14, 0.98), rgba(6, 6, 6, 0.98));
+  --surface-rail-panel-strong: linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(8, 8, 8, 0.98));
+  --surface-sheet-panel: linear-gradient(180deg, rgba(14, 14, 14, 0.98), rgba(2, 2, 2, 0.98));
+  --surface-sheet-footer: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.48));
+  --surface-card-selected-warning:
+    linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(8, 8, 8, 0.98)),
+    linear-gradient(90deg, rgba(255, 209, 102, 0.16), transparent 76%);
+  --surface-card-selected-info:
+    linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(8, 8, 8, 0.98)),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.16), transparent 76%);
+  --surface-card-selected-success:
+    linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(8, 8, 8, 0.98)),
+    linear-gradient(90deg, rgba(88, 214, 141, 0.16), transparent 76%);
 }

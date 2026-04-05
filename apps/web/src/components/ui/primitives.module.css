@@ -6,7 +6,7 @@
 .timerChip,
 .emptyState {
   /* No borders - use tonal shifts instead (Sovereign Archive rule) */
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--color-panel-line);
 }
 
 .button,
@@ -86,36 +86,38 @@
 }
 
 .primary {
-  background: var(--color-primary-fixed-dim);
-  color: var(--color-on-primary);
+  background: linear-gradient(180deg, var(--color-primary-fixed), var(--color-primary-fixed-dim));
+  color: var(--color-on-primary-fixed);
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--color-primary-fixed);
+  background: linear-gradient(180deg, #ffe6ba, var(--color-primary-fixed));
   box-shadow: var(--shadow-gold-soft);
 }
 
 .secondary {
-  background: var(--color-surface-container-high);
+  background: var(--surface-shell-card);
   color: var(--color-on-surface);
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card-strong);
+  box-shadow: var(--shadow-teal-soft);
 }
 
 .ghost {
-  background: transparent;
+  background: rgba(233, 193, 118, 0.04);
   color: var(--color-on-surface);
+  box-shadow: inset 0 0 0 1px var(--color-panel-line);
 }
 
 .ghost:hover:not(:disabled) {
-  background: var(--color-surface-container-high);
+  background: var(--surface-shell-nav);
 }
 
 .danger {
-  background: var(--color-error);
-  color: var(--color-on-error);
+  background: var(--surface-state-hostile);
+  color: var(--color-error);
 }
 
 .danger:hover:not(:disabled) {
@@ -139,14 +141,14 @@
   min-height: var(--touch-target);
   padding: 0;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-high);
+  background: var(--surface-shell-icon);
   color: var(--color-on-surface);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .iconButton:hover:not(:disabled) {
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card-strong);
   box-shadow: var(--shadow-gold-soft);
 }
 
@@ -174,27 +176,27 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-on-surface);
-  background: var(--color-surface-container-high);
+  background: var(--surface-shell-card);
   border: none;
 }
 
 .badgeInfo {
-  background: rgba(184, 201, 211, 0.15);
+  background: var(--surface-chip-info);
   color: var(--color-secondary);
 }
 
 .badgeSuccess {
-  background: rgba(84, 169, 120, 0.15);
+  background: var(--surface-chip-success);
   color: var(--color-success-300);
 }
 
 .badgeWarning {
-  background: rgba(233, 193, 118, 0.15);
+  background: var(--surface-chip-warning);
   color: var(--color-primary-fixed);
 }
 
 .badgeDanger {
-  background: rgba(255, 180, 171, 0.15);
+  background: var(--surface-chip-danger);
   color: var(--color-error);
 }
 
@@ -202,7 +204,7 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   animation: pulseGold 2.8s ease-in-out infinite;
-  background: rgba(233, 193, 118, 0.15);
+  background: var(--surface-chip-warning);
   color: var(--color-primary-fixed);
 }
 
@@ -211,7 +213,7 @@
 .emptyState {
   position: relative;
   overflow: hidden;
-  background: var(--surface-glass);
+  background: var(--surface-card-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
 }
@@ -227,6 +229,7 @@
 }
 
 .sectionCard:hover {
+  background: var(--surface-card-panel-active);
   box-shadow: var(--shadow-gold-soft);
   transform: translateY(-2px);
 }
@@ -293,7 +296,8 @@
   padding: 0.75rem 1rem;
   border-radius: var(--radius-xs);
   border: none;
-  border-left: 2px solid var(--color-primary-fixed-dim);
+  background: var(--surface-shell-card);
+  border-left: 2px solid var(--surface-panel-border-strong);
   transition:
     box-shadow var(--motion-base),
     transform var(--motion-fast);
@@ -301,6 +305,7 @@
 }
 
 .resourcePill:hover {
+  background: var(--surface-shell-card-strong);
   box-shadow: var(--shadow-gold-soft);
   transform: translateY(-1px);
 }
@@ -324,6 +329,7 @@
   border-radius: var(--radius-sm);
   color: var(--color-on-surface-variant);
   border: none;
+  background: var(--surface-card-panel);
 }
 
 .emptyTitle {

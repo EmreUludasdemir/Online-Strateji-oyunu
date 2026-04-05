@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type BuildingType, type ResearchType, type TroopType } from "@frontier/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
 import { ResourcePill } from "../components/ui/ResourcePill";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
@@ -15,6 +16,25 @@ import { copy } from "../lib/i18n";
 import { formatNumber } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
 import styles from "./DashboardPage.module.css";
+
+type DistrictStageTone = "core" | "war" | "economy" | "support";
+
+interface DistrictStageLayoutEntry {
+  x: number;
+  y: number;
+  tone: DistrictStageTone;
+}
+
+const districtStageLayout: Record<BuildingType, DistrictStageLayoutEntry> = {
+  TOWN_HALL: { x: 50, y: 40, tone: "core" },
+  BARRACKS: { x: 69, y: 32, tone: "war" },
+  ACADEMY: { x: 31, y: 30, tone: "support" },
+  WATCHTOWER: { x: 77, y: 16, tone: "war" },
+  FARM: { x: 26, y: 67, tone: "economy" },
+  LUMBER_MILL: { x: 59, y: 68, tone: "economy" },
+  QUARRY: { x: 73, y: 56, tone: "economy" },
+  GOLD_MINE: { x: 44, y: 72, tone: "economy" },
+};
 
 export function DashboardPage() {
   const now = useNow();
@@ -85,6 +105,9 @@ export function DashboardPage() {
     state.city.troops.find((troop) => troop.type === activeTraining?.troopType)?.label ?? "Open";
   const activeResearchLabel =
     state.city.research.find((entry) => entry.type === activeResearch?.researchType)?.label ?? "Ready";
+  const [selectedDistrictType, setSelectedDistrictType] = useState<BuildingType>(
+    state.city.activeUpgrade?.buildingType ?? townHall?.type ?? state.city.buildings[0]?.type ?? "TOWN_HALL",
+  );
   const suggestedResearch = useMemo(
     () => state.city.research.find((entry) => entry.level < entry.maxLevel) ?? null,
     [state.city.research],
@@ -113,6 +136,103 @@ export function DashboardPage() {
       detail: activeResearch ? "Doctrine scribes are processing the active study." : "No doctrine is currently consuming the queue.",
     },
   ];
+  const selectedDistrict =
+    state.city.buildings.find((building) => building.type === selectedDistrictType) ?? state.city.buildings[0] ?? null;
+  const cityStageNodes = useMemo(
+    () =>
+      state.city.buildings
+        .map((building) => {
+          const layout = districtStageLayout[building.type] ?? districtStageLayout.TOWN_HALL;
+          const status = building.isUpgradeActive
+            ? "active"
+            : selectedDistrictType === building.type
+              ? "selected"
+              : "ready";
+          const hint = building.isUpgradeActive
+            ? `Upgrade lane to L${building.nextLevel} is active.`
+            : building.type === "BARRACKS"
+              ? "Troop throughput and drill cadence."
+              : building.type === "ACADEMY"
+                ? "Doctrine depth and logistics research."
+                : building.type === "WATCHTOWER"
+                  ? "Threat readout and frontier awareness."
+                  : building.type === "TOWN_HALL"
+                    ? "City cap, district ceiling, and command level."
+                    : "Resource flow and empire upkeep.";
+
+          return {
+            ...layout,
+            type: building.type,
+            label: building.label,
+            level: building.level,
+            nextLevel: building.nextLevel,
+            status,
+            hint,
+          };
+        })
+        .sort((left, right) => (left.type === selectedDistrictType ? -1 : right.type === selectedDistrictType ? 1 : left.y - right.y)),
+    [selectedDistrictType, state.city.buildings],
+  );
+  const stageQueueCards = [
+    {
+      id: "construction",
+      label: "Construction",
+      value: activeUpgrade ? activeUpgrade.buildingType.replaceAll("_", " ") : "Idle",
+      detail: activeUpgrade ? `L${activeUpgrade.toLevel} in progress` : "District crews are standing by",
+      tone: activeUpgrade ? "warning" : "success",
+    },
+    {
+      id: "dispatch",
+      label: "Dispatch",
+      value: mailboxEntries[0]?.title ?? "Archive quiet",
+      detail:
+        mailboxEntries[0]?.canClaim ?? false
+          ? "Claimable warrant waiting in the archive"
+          : `${mailboxQuery.data?.unreadCount ?? 0} unread messages on the rail`,
+      tone: mailboxQuery.data?.unreadCount ? "info" : "success",
+    },
+    {
+      id: "doctrine",
+      label: "Doctrine",
+      value: activeResearchLabel,
+      detail: activeResearch ? "Academy lane is consuming the queue" : "Open a lane to accelerate the city curve",
+      tone: activeResearch ? "info" : "warning",
+    },
+  ] as const;
+  const cityAdvisorBrief = activeUpgrade
+    ? `${activeUpgrade.buildingType.replaceAll("_", " ")} is consuming the master build queue. Keep the war board synchronized before opening another district order.`
+    : activeResearch
+      ? `${activeResearchLabel} is active inside the academy. Pair it with a field march so the city deck keeps compounding in the background.`
+      : `${state.city.cityName} is stable. Use the district atlas to pick the next upgrade lane without losing sight of marches, research, or dispatches.`;
+  const selectedDistrictStats = selectedDistrict
+    ? [
+        {
+          id: "level",
+          label: "Current level",
+          value: `L${selectedDistrict.level}`,
+          note: "Current district rank",
+        },
+        {
+          id: "next",
+          label: "Next level",
+          value: `L${selectedDistrict.nextLevel}`,
+          note: "Queued target tier",
+        },
+        {
+          id: "queue",
+          label: "Queue state",
+          value: selectedDistrict.isUpgradeActive ? "Running" : activeUpgrade ? "Queued elsewhere" : "Ready",
+          note: selectedDistrict.isUpgradeActive ? "Master queue is live" : activeUpgrade ? "Another district holds the line" : "Open for a fresh order",
+          tone: selectedDistrict.isUpgradeActive ? ("warning" as const) : activeUpgrade ? ("info" as const) : ("success" as const),
+        },
+      ]
+    : [];
+
+  useEffect(() => {
+    if (!selectedDistrict && state.city.buildings[0]) {
+      setSelectedDistrictType(state.city.buildings[0].type as BuildingType);
+    }
+  }, [selectedDistrict, state.city.buildings]);
 
   useEffect(() => {
     trackAnalyticsOnce(`tutorial_started:${state.player.id}`, "tutorial_started", { cityId: state.city.cityId });
@@ -263,6 +383,111 @@ export function DashboardPage() {
 
       <div className={styles.columns}>
         <div className={styles.mainColumn}>
+          <SectionCard
+            kicker="City Command Deck"
+            title="Atlas district view"
+            aside={<Badge tone={activeUpgrade ? "warning" : "success"}>{activeUpgrade ? "Construction live" : "Districts stable"}</Badge>}
+            className={styles.cityStageCard}
+          >
+            <div className={styles.cityStageLayout} data-dashboard-stage="true">
+              <div className={styles.cityStageCanvas}>
+                <div className={styles.cityStageAtmosphere}>
+                  <span className={styles.cityStageLabel}>Frontier city atlas</span>
+                  <strong className={styles.cityStageFocus}>{selectedDistrict?.label ?? "District focus"}</strong>
+                  <p className={styles.cityStageCopy}>
+                    Read city growth like a command board: core districts in the center, military lanes above, resource districts below.
+                  </p>
+                </div>
+                <div className={styles.cityStageCompass}>
+                  <span>North Watch</span>
+                  <strong>
+                    {state.city.coordinates.x}, {state.city.coordinates.y}
+                  </strong>
+                </div>
+                {cityStageNodes.map((node) => (
+                  <button
+                    key={node.type}
+                    type="button"
+                    data-city-node={node.type}
+                    className={[
+                      styles.cityNode,
+                      node.status === "active" ? styles.cityNodeActive : "",
+                      node.status === "selected" ? styles.cityNodeSelected : "",
+                      styles[`cityNodeTone${node.tone[0].toUpperCase()}${node.tone.slice(1)}` as keyof typeof styles],
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    style={
+                      {
+                        "--node-x": `${node.x}%`,
+                        "--node-y": `${node.y}%`,
+                      } as CSSProperties
+                    }
+                    onClick={() => setSelectedDistrictType(node.type)}
+                  >
+                    <span className={styles.cityNodeLevel}>L{node.level}</span>
+                    <strong className={styles.cityNodeTitle}>{node.label}</strong>
+                    <span className={styles.cityNodeHint}>{node.hint}</span>
+                  </button>
+                ))}
+                <div className={styles.cityStageFooter}>
+                  <article className={styles.cityFooterCard}>
+                    <span className={styles.statLabel}>Advisor</span>
+                    <strong className={styles.cityFooterTitle}>Logistics Marshal</strong>
+                    <p className={styles.stackHint}>{cityAdvisorBrief}</p>
+                  </article>
+                  <article className={styles.cityFooterCard}>
+                    <span className={styles.statLabel}>Season</span>
+                    <strong className={styles.cityFooterTitle}>Summer campaign</strong>
+                    <p className={styles.stackHint}>
+                      Dispatch tempo stays high when queues, doctrine, and field orders remain aligned inside the same deck.
+                    </p>
+                  </article>
+                </div>
+              </div>
+
+              <aside className={styles.cityStageSidebar}>
+                <SectionHeaderBlock
+                  kicker="District Readout"
+                  title={selectedDistrict?.label ?? "No district selected"}
+                  lead={selectedDistrict?.description ?? "Select a district node to inspect queue state, cost, and next command."}
+                  aside={selectedDistrict ? <Badge tone={selectedDistrict.isUpgradeActive ? "warning" : "info"}>L{selectedDistrict.level}</Badge> : null}
+                  className={styles.cityStageSidebarHeader}
+                />
+                {selectedDistrict ? (
+                  <>
+                    <PanelStatGrid items={selectedDistrictStats} columns={3} className={styles.cityStageStats} />
+                    <div className={styles.cityStageCosts}>
+                      {Object.entries(selectedDistrict.upgradeCost).map(([resource, amount]) => (
+                        <div key={resource} className={styles.cityStageCostRow}>
+                          <span className={styles.operationsLabel}>{resource}</span>
+                          <strong>{formatNumber(amount)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles.cityStageActions}>
+                      <Button
+                        type="button"
+                        disabled={
+                          !selectedDistrict ||
+                          isUpgrading ||
+                          (Boolean(activeUpgrade) && !selectedDistrict.isUpgradeActive) ||
+                          selectedDistrict.isUpgradeActive
+                        }
+                        onClick={() => selectedDistrict && upgrade(selectedDistrict.type as BuildingType)}
+                      >
+                        {selectedDistrict.isUpgradeActive ? "Construction live" : activeUpgrade ? "Queue locked" : "Upgrade district"}
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => navigate("/app/map")}>
+                        Open Strategic Map
+                      </Button>
+                    </div>
+                  </>
+                ) : null}
+              </aside>
+            </div>
+          </SectionCard>
+
           <SectionCard kicker={copy.dashboard.tasks} title="First 5-minute flow" aside={<Badge tone={tasksQuery.data?.tutorialCompleted ? "success" : "warning"}>{tasksQuery.data?.tutorialCompleted ? "Complete" : "Open"}</Badge>}>
             <div className={styles.taskList}>
               {[...tutorialTasks.slice(0, 4), ...dailyTasks.slice(0, 2)].map((task) => (
@@ -369,6 +594,10 @@ export function DashboardPage() {
         </div>
 
         <aside className={styles.sideColumn}>
+          <SectionCard kicker="Aegis Command" title="Queue and dispatch rail" aside={<Badge tone={activeUpgrade || activeResearch ? "warning" : "success"}>{activeUpgrade || activeResearch ? "Live" : "Stable"}</Badge>}>
+            <PanelStatGrid items={stageQueueCards} columns={1} className={styles.cityRailList} />
+          </SectionCard>
+
           <SectionCard kicker={copy.dashboard.commanders} title={primaryCommander?.name ?? "No commander"} aside={<Badge tone="info">L{primaryCommander?.level ?? 0}</Badge>}>
             <p className={styles.stackHint}>XP {formatNumber(primaryCommander?.xp ?? 0)}/{formatNumber(primaryCommander?.xpToNextLevel ?? 0)} | Stars {formatNumber(primaryCommander?.starLevel ?? 0)}</p>
             <div className={styles.actionRow}><Button type="button" onClick={() => openCommanderPanel(primaryCommander?.id)}>Open Commander Panel</Button></div>

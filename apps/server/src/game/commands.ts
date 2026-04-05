@@ -83,11 +83,14 @@ import {
 } from "./constants";
 import { reconcileWorld, refreshFogOfWar, syncCityStateTx } from "./reconcile";
 import {
+  canAssignSkill,
+  canUnassignSkill,
   claimMailboxEntryTx,
   claimTaskTx,
   createMailboxEntryTx,
   ensureCommanderCollectionTx,
   ensureRetentionStateTx,
+  getCommanderStatsWithSkills,
   getCommanderProgressViewTx,
   grantRewardBundleTx,
   getEntitlementsViewTx,
@@ -1539,7 +1542,7 @@ export async function assignCommanderSkill(userId: string, commanderId: string, 
   });
 
   writeAuditEntry("game.commander.skill.assign", { userId, commanderId, skillId });
-  emitCommanderUpdated(userId);
+  emitCommanderUpdated([userId]);
   return { commanders: response };
 }
 
@@ -1589,7 +1592,7 @@ export async function unassignCommanderSkill(userId: string, commanderId: string
   });
 
   writeAuditEntry("game.commander.skill.unassign", { userId, commanderId, skillId });
-  emitCommanderUpdated(userId);
+  emitCommanderUpdated([userId]);
   return { commanders: response };
 }
 

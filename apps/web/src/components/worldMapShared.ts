@@ -35,10 +35,10 @@ export interface ScoutTrailView {
 }
 
 export function getMapDetailLevel(zoom: number): MapDetailLevel {
-  if (zoom <= 0.72) {
+  if (zoom <= 0.84) {
     return "far";
   }
-  if (zoom <= 1.22) {
+  if (zoom <= 1.26) {
     return "mid";
   }
   return "near";

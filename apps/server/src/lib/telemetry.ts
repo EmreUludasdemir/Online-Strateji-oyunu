@@ -9,7 +9,7 @@ import { Resource } from "@opentelemetry/resources";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
-  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
+  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from "@opentelemetry/semantic-conventions";
 
 // Parse OTEL config from environment (before env.ts is loaded)
@@ -36,7 +36,7 @@ export function initTelemetry(): void {
   const resource = new Resource({
     [ATTR_SERVICE_NAME]: serviceName,
     [ATTR_SERVICE_VERSION]: process.env.npm_package_version || "0.0.1",
-    [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: nodeEnv,
+    [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: nodeEnv,
   });
 
   const traceExporter = new OTLPTraceExporter({
@@ -50,10 +50,6 @@ export function initTelemetry(): void {
       getNodeAutoInstrumentations({
         // Disable fs instrumentation (too noisy)
         "@opentelemetry/instrumentation-fs": { enabled: false },
-        // Configure Express instrumentation
-        "@opentelemetry/instrumentation-express": {
-          ignoreLayersType: ["middleware"],
-        },
         // Configure HTTP instrumentation
         "@opentelemetry/instrumentation-http": {
           ignoreIncomingRequestHook: (req) => {

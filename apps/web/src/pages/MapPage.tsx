@@ -21,6 +21,8 @@ import type { MapFieldCommand, MapReportMarkerView, WorldMapHandle } from "../co
 import { Badge } from "../components/ui/Badge";
 import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
+import { SummaryMetricGrid } from "../components/ui/PageHero";
+import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { buildChunkPrefetchRequests, mergeWorldChunks } from "../components/worldMapData";
 import { getWorldRegions } from "../components/worldRegions";
@@ -825,10 +827,12 @@ export function MapPage() {
       ? selectedPoi.label
       : null;
   const selectedTargetSubtitle = selectedCity
-    ? `${selectedCity.ownerName} | ${selectedCity.x}, ${selectedCity.y}`
+    ? selectedCity.isCurrentPlayer
+      ? `Home city • ${selectedCity.x}, ${selectedCity.y}`
+      : `${selectedCity.ownerName} • hostile city • ${selectedCity.x}, ${selectedCity.y}`
     : selectedPoi
-      ? `${selectedPoi.kind.toLowerCase().replaceAll("_", " ")} | ${selectedPoi.x}, ${selectedPoi.y}`
-      : "Drag to pan, wheel to zoom, and right-click on the frontier to open field commands.";
+      ? `${selectedPoi.kind === "BARBARIAN_CAMP" ? "Barbarian camp" : "Resource node"} • ${selectedPoi.x}, ${selectedPoi.y}`
+      : "Drag to pan • Wheel to zoom • Right-click for field command";
   const selectedTargetDistance = getTargetDistance(state.city.coordinates, selectedCity, selectedPoi);
   const estimatedMarchEtaMs =
     composerMode && composerMode !== "SCOUT" && selectedTargetDistance != null && selectedCommander
@@ -899,15 +903,28 @@ export function MapPage() {
       : selectedMarch.cargo.amount > 0
         ? formatNumber(selectedMarch.cargo.amount)
         : "Empty hold";
-  const overlaySelectionTone = selectedMarch ? "info" : selectedTargetName ? "warning" : "info";
+  const selectedMarchPower = selectedMarch ? estimateTroopPower(selectedMarch.troops, state.city.troops) : 0;
+  const overlaySelectionTone = selectedMarch
+    ? "info"
+    : selectedCity
+      ? selectedCity.isCurrentPlayer
+        ? "success"
+        : "warning"
+      : selectedPoi
+        ? selectedPoi.kind === "RESOURCE_NODE"
+          ? "success"
+          : "warning"
+        : "info";
   const overlaySelectionLabel = selectedMarch
     ? "March tracked"
     : selectedCity
-      ? "City target"
+      ? selectedCity.isCurrentPlayer
+        ? "Home city"
+        : "Hostile city"
       : selectedPoi
         ? selectedPoi.kind === "BARBARIAN_CAMP"
           ? "Camp target"
-          : "Resource target"
+          : "Resource node"
         : "Free camera";
   const targetSheetVisible = targetSheetOpen && !composerMode && !fieldCommand && !selectedMarch;
   const fieldCommandVisible = Boolean(fieldCommand) && !composerMode && !selectedMarch;
@@ -1035,6 +1052,115 @@ export function MapPage() {
           ? "Selection lock keeps the target readable while zoom layering strips away the noise the map does not need yet."
           : "Drag to pan, wheel to zoom, and right-click the world to open fast field commands without leaving the map stage.";
   const interactionTone = composerMode ? "warning" : selectedMarch ? "info" : fieldCommand ? "success" : "info";
+  const tacticalObjectiveLabel = selectedMarch
+    ? getMarchObjectiveLabel(selectedMarch.objective)
+    : composerMode
+      ? composerTitle
+      : selectedCity
+        ? "City assault"
+        : selectedPoi
+          ? selectedPoi.kind === "BARBARIAN_CAMP"
+            ? "Camp assault"
+            : "Resource gathering"
+          : "Free sweep";
+  const tacticalEtaLabel = selectedMarch
+    ? getMarchTimingLabel(selectedMarch, now)
+    : previewMarchEtaMs != null
+      ? formatTimeRemaining(new Date(now + previewMarchEtaMs).toISOString(), now)
+      : "Awaiting route";
+  const tacticalPowerLabel = selectedMarch
+    ? formatNumber(selectedMarchPower)
+    : composerMode === "SCOUT"
+      ? "No troop cost"
+      : formatNumber(previewPower);
+  const tacticalCarryLabel = selectedMarch ? selectedMarchCargoLabel : formatNumber(previewCarry);
+  const tacticalThreatValue = activeBattleWindow
+    ? activeBattleWindow.label
+    : selectedCity
+      ? selectedCity.projectedOutcome === "ATTACKER_WIN"
+        ? "Weak outer wall"
+        : "Defender hold likely"
+      : selectedPoi
+        ? selectedPoi.kind === "BARBARIAN_CAMP"
+          ? "Hostile camp"
+          : "Open harvest lane"
+        : "Clear sector";
+  const tacticalThreatNote = latestAllianceMarker
+    ? `Signal ${latestAllianceMarker.label}`
+    : latestVisibleReport
+      ? `Report ${latestVisibleReport.label}`
+      : "No nearby beacons in the current lens";
+  const tacticalReadouts = [
+    {
+      id: "objective",
+      label: "Objective",
+      value: tacticalObjectiveLabel,
+      note: selectedTargetName ?? "Select any frontier objective",
+      tone: overlaySelectionTone,
+    },
+    {
+      id: "eta",
+      label: "March ETA",
+      value: tacticalEtaLabel,
+      note: selectedTargetDistance != null ? `${formatNumber(selectedTargetDistance)} tiles from home` : "No route locked",
+      tone: previewMarchEtaMs != null || selectedMarch ? "warning" : "info",
+    },
+    {
+      id: "power",
+      label: "Power",
+      value: tacticalPowerLabel,
+      note: selectedMarch ? `${formatNumber(selectedMarchTroopTotal)} troops marching` : `${formatNumber(totalAssignedTroops)} troops staged`,
+      tone: selectedMarch || totalAssignedTroops > 0 ? "success" : "info",
+    },
+    {
+      id: "carry",
+      label: selectedMarch ? "Cargo" : "Carry",
+      value: tacticalCarryLabel,
+      note: selectedPoi?.kind === "RESOURCE_NODE" ? "Higher carry favors node runs" : "Cargo stays visible in flight",
+      tone: selectedPoi?.kind === "RESOURCE_NODE" || selectedMarch?.objective === "RESOURCE_GATHER" ? "success" : "info",
+    },
+    {
+      id: "threat",
+      label: "Threat",
+      value: tacticalThreatValue,
+      note: tacticalThreatNote,
+      tone: activeBattleWindow || selectedCity ? "warning" : latestAllianceMarker ? "success" : "info",
+    },
+  ] as const;
+  const targetCommandCues =
+    selectedCity || selectedPoi
+      ? [
+          {
+            id: "commander",
+            label: "Commander",
+            value: selectedCommander?.name ?? "Unassigned",
+            note: selectedCommander
+              ? `Spd +${selectedCommander.marchSpeedBonusPct}% • Carry +${selectedCommander.carryBonusPct}%`
+              : "Assign a commander before launch",
+            tone: selectedCommander ? ("success" as const) : ("warning" as const),
+          },
+          {
+            id: "window",
+            label: "Window",
+            value: targetWindowLabel,
+            note: activeBattleWindow
+              ? `${formatNumber(alliedBattleParticipants)} allied banners in sector`
+              : selectedTargetDistance != null
+                ? `${formatNumber(selectedTargetDistance)} tiles from the home column`
+                : "No active window on target",
+            tone: activeBattleWindow || (selectedCity && !selectedCity.isCurrentPlayer) ? ("warning" as const) : ("info" as const),
+          },
+          {
+            id: "signals",
+            label: "Signals",
+            value: latestAllianceMarker ? latestAllianceMarker.label : "Post a new beacon",
+            note: latestVisibleReport
+              ? `Latest report • ${latestVisibleReport.label}`
+              : "Markers and reports keep the tray readable after camera drift",
+            tone: latestAllianceMarker ? ("success" as const) : ("info" as const),
+          },
+        ]
+      : [];
   const minimapViewport = useMemo(() => {
     const halfSpan = Math.max(3, chunkRequest.radius);
     return {
@@ -1507,11 +1633,23 @@ export function MapPage() {
   ]);
 
   if (worldChunkQuery.isPending && !worldChunk) {
-    return <div className={styles.hero}>Loading map...</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice title="Loading map" body="Camera rails, visible chunks, and command overlays are still assembling." />
+      </section>
+    );
   }
 
   if (worldChunkQuery.isError && !worldChunk) {
-    return <div className={styles.hero}>Unable to load this world chunk.</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice
+          title="Unable to load this world chunk"
+          body="The strategic map could not pull the active frontier chunk. Retry once world state and network reachability settle."
+          tone="danger"
+        />
+      </section>
+    );
   }
 
   if (!worldChunk) {
@@ -1671,18 +1809,27 @@ export function MapPage() {
           <article className={styles.mapFrame}>
             <div className={styles.tacticalHud}>
               <section className={styles.intelPanel}>
-                <div>
-                  <p className={styles.hudEyebrow}>Active Selection</p>
-                  <h3 className={styles.hudTitle}>{selectedTargetName ?? "Sweep the frontier"}</h3>
-                  <p className={styles.hudSubtitle}>{selectedTargetSubtitle}</p>
-                </div>
-                <div className={styles.statusCluster}>
-                  <Badge tone={overlaySelectionTone}>{overlaySelectionLabel}</Badge>
-                  <p className={styles.hudMeta}>
-                    {selectedTargetDistance != null
-                      ? `Distance ${formatNumber(selectedTargetDistance)} tiles`
-                      : "Drag to pan / Mousewheel to zoom"}
-                  </p>
+                <div className={styles.intelPanelBody}>
+                  <div className={styles.intelPanelHeader}>
+                    <div>
+                      <p className={styles.hudEyebrow}>Active Selection</p>
+                      <h3 className={styles.hudTitle}>{selectedTargetName ?? "Sweep the frontier"}</h3>
+                      <p className={styles.hudSubtitle}>{selectedTargetSubtitle}</p>
+                    </div>
+                    <div className={styles.statusCluster}>
+                      <Badge tone={overlaySelectionTone}>{overlaySelectionLabel}</Badge>
+                      <p className={styles.hudMeta}>
+                        {selectedTargetDistance != null
+                          ? `Distance ${formatNumber(selectedTargetDistance)} tiles`
+                          : "Drag to pan / Mousewheel to zoom"}
+                      </p>
+                    </div>
+                  </div>
+                  <SummaryMetricGrid
+                    items={tacticalReadouts}
+                    containerDataAttribute="data-map-readouts"
+                    itemDataAttribute="data-map-readout"
+                  />
                 </div>
               </section>
               <div className={styles.controlsDeck}>
@@ -2580,13 +2727,14 @@ export function MapPage() {
                   <strong className={styles.commandPreviewValue}>{formatNumber(previewPower)}</strong>
                 </article>
               </section>
+              <SummaryMetricGrid items={targetCommandCues} compact containerDataAttribute="data-command-cues" />
               <SectionCard kicker="Operational Readout" title="Field intel">
                 <div className={styles.detailList}>
                   <p className={styles.muted}>
-                    Projected defense window reacts to your selected commander and current march weight.
+                    Window strength reacts to commander bonuses and current march weight.
                   </p>
                   <p className={styles.muted}>
-                    Scout first if you want fresher garrison information before committing troops.
+                    Scout first if the garrison readout looks stale.
                   </p>
                 </div>
               </SectionCard>
@@ -2608,7 +2756,7 @@ export function MapPage() {
                   <p className={styles.commandActionEyebrow}>Recon Sweep</p>
                   <strong className={styles.commandActionTitle}>Read the objective</strong>
                   <p className={styles.commandActionCopy}>
-                    Scout reports land in the message archive and keep camp or resource details fresh before committing.
+                    Scout first to refresh camp or node intel before commit.
                   </p>
                   <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
                     {copy.map.scout}
@@ -2619,7 +2767,7 @@ export function MapPage() {
                     <p className={styles.commandActionEyebrow}>Alliance Lead</p>
                     <strong className={styles.commandActionTitle}>Open a rally channel</strong>
                     <p className={styles.commandActionCopy}>
-                      Use the camp window as a focal point for allied timing when the frontier turns busy.
+                      Use the camp window as the allied timing anchor.
                     </p>
                     <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
                       {copy.map.rally}
@@ -2633,8 +2781,8 @@ export function MapPage() {
                   </strong>
                   <p className={styles.commandActionCopy}>
                     {selectedPoi.kind === "BARBARIAN_CAMP"
-                      ? "Front-load stronger formations for camps so the opening pulse resolves with less drag."
-                      : "Carry and route speed matter more than raw damage when this tray points at a resource node."}
+                      ? "Lead camps with stronger opening power."
+                      : "For nodes, carry and route speed matter more than raw damage."}
                   </p>
                   <Button type="button" variant="primary" onClick={() => openComposer(targetPrimaryMode)}>
                     {targetPrimaryActionLabel}
@@ -2685,12 +2833,13 @@ export function MapPage() {
                   </strong>
                 </article>
               </section>
+              <SummaryMetricGrid items={targetCommandCues} compact containerDataAttribute="data-command-cues" />
               <SectionCard kicker="Operational Readout" title="Field intel">
                 <div className={styles.detailList}>
                   <p className={styles.muted}>
                     {selectedPoi.kind === "BARBARIAN_CAMP"
-                      ? "Barbarian camps pay out best when opened with a stronger commander frame."
-                      : "Resource nodes reward higher carry capacity and faster return routes."}
+                      ? "Camps pay best when opened with a stronger commander frame."
+                      : "Nodes reward higher carry and faster return routes."}
                   </p>
                 </div>
               </SectionCard>

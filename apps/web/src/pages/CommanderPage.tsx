@@ -7,6 +7,7 @@ import { CommanderSkillTree } from "../components/commanders/CommanderSkillTree"
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { formatNumber } from "../lib/formatters";
@@ -63,11 +64,23 @@ export function CommanderPage() {
   }, [commanders]);
 
   if (commandersQuery.isPending) {
-    return <div className={styles.feedback}>Loading commander progression...</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice title="Loading commander progression" body="The war cabinet is assembling roster, doctrines, and promotion records." />
+      </section>
+    );
   }
 
   if (commandersQuery.isError) {
-    return <div className={styles.feedback}>Commander progression could not be loaded.</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice
+          title="Commander progression could not be loaded"
+          body="Commander records are unavailable right now. Retry once the player state and route data stabilize."
+          tone="danger"
+        />
+      </section>
+    );
   }
 
   if (!selectedCommander) {

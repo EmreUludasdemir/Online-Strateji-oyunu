@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -14,6 +15,11 @@ export default defineConfig(({ mode }) => {
       __APP_VERSION__: JSON.stringify(releaseVersion),
     },
     plugins: [react()],
+    resolve: {
+      alias: {
+        phaser3spectorjs: path.resolve(__dirname, "src/lib/emptyModule.ts"),
+      },
+    },
     build: {
       target: "es2020",
       sourcemap: isProduction ? "hidden" : true,
@@ -28,9 +34,27 @@ export default defineConfig(({ mode }) => {
         : undefined,
       rollupOptions: {
         output: {
-          manualChunks: {
-            phaser: ["phaser"],
-            react: ["react", "react-dom", "react-router-dom", "@tanstack/react-query"],
+          manualChunks(id) {
+            if (
+              id.includes("/node_modules/.pnpm/phaser@") ||
+              id.includes("\\node_modules\\.pnpm\\phaser@") ||
+              id.includes("/node_modules/phaser/") ||
+              id.includes("\\node_modules\\phaser\\")
+            ) {
+              return "phaser";
+            }
+
+            if (
+              id.includes("react-router-dom") ||
+              id.includes("react-dom") ||
+              id.includes("react/") ||
+              id.includes("\\react\\") ||
+              id.includes("@tanstack/react-query")
+            ) {
+              return "react";
+            }
+
+            return undefined;
           },
         },
       },

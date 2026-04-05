@@ -27,10 +27,22 @@ export async function waitFor(check, timeoutMs, label, intervalMs = 500) {
   throw new Error(`Timed out while waiting for ${label}.`);
 }
 
-export function prepareSmokeFixture(username, rootDir = process.cwd()) {
+export function getDefaultSmokeDatabaseUrl() {
+  return process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5433/frontier_dominion?schema=public";
+}
+
+export async function prepareSmokeFixture(username, rootDir = process.cwd()) {
   if (username !== "demo_smoke") {
     return;
   }
+
+  const databaseUrl = getDefaultSmokeDatabaseUrl();
+  await ensurePostgres({
+    rootDir,
+    databaseUrl,
+    purpose: "the deterministic smoke fixture reset",
+    autoStart: true,
+  });
 
   const serverDir = path.join(rootDir, "apps", "server");
   const tsxCli = path.join(serverDir, "node_modules", "tsx", "dist", "cli.mjs");
@@ -40,10 +52,22 @@ export function prepareSmokeFixture(username, rootDir = process.cwd()) {
     );
   }
 
-  execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
-    cwd: serverDir,
-    stdio: "inherit",
-  });
+  try {
+    execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
+      cwd: serverDir,
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        DATABASE_URL: databaseUrl,
+      },
+    });
+  } catch (error) {
+    throw new Error(
+      `Smoke fixture reset failed for ${username}. Verify DATABASE_URL (${databaseUrl}) and local Postgres health before retrying. Root cause: ${
+        error instanceof Error ? error.message : String(error)
+      }.`,
+    );
+  }
 }
 
 export async function isPortOpen(port, host = "127.0.0.1") {
@@ -98,7 +122,13 @@ function isDockerDesktopUnavailable(error) {
   );
 }
 
-export async function ensurePostgres({ rootDir, databaseUrl, service = "postgres" }) {
+export async function ensurePostgres({
+  rootDir,
+  databaseUrl,
+  service = "postgres",
+  purpose = "the smoke suite",
+  autoStart = false,
+}) {
   const endpoint = resolveDatabaseEndpoint(databaseUrl);
   if (await isPortOpen(endpoint.port, endpoint.host)) {
     return {
@@ -110,13 +140,13 @@ export async function ensurePostgres({ rootDir, databaseUrl, service = "postgres
 
   if (!isLocalHost(endpoint.host)) {
     throw new Error(
-      `DATABASE_URL points to ${endpoint.host}:${endpoint.port}, but that database is unreachable. Start that Postgres instance before running smoke:alpha.`,
+      `DATABASE_URL points to ${endpoint.host}:${endpoint.port}, but that database is unreachable. Start that Postgres instance before running ${purpose}.`,
     );
   }
 
-  if (endpoint.port !== 5433) {
+  if (!autoStart || endpoint.port !== 5433) {
     throw new Error(
-      `DATABASE_URL points to localhost:${endpoint.port}, but smoke:alpha can only auto-start the bundled Postgres service on localhost:5433. Start your custom Postgres manually or use the default alpha DATABASE_URL.`,
+      `DATABASE_URL points to localhost:${endpoint.port}, but the repo can only auto-start the bundled Postgres service on localhost:5433. Start your custom Postgres manually or use the default local DATABASE_URL before running ${purpose}.`,
     );
   }
 
@@ -127,7 +157,7 @@ export async function ensurePostgres({ rootDir, databaseUrl, service = "postgres
       ? "Docker Desktop is not running."
       : "Docker is not available from this shell.";
     throw new Error(
-      `Postgres is not reachable on localhost:5433 and ${guidance} Start Docker Desktop or set DATABASE_URL to a running Postgres instance before retrying smoke:alpha.`,
+      `Postgres is not reachable on localhost:5433 and ${guidance} Start Docker Desktop or set DATABASE_URL to a running Postgres instance before retrying ${purpose}.`,
     );
   }
 
@@ -154,6 +184,23 @@ export async function ensurePostgres({ rootDir, databaseUrl, service = "postgres
     port: endpoint.port,
     source: "docker-compose",
   };
+}
+
+export async function ensureBaseUrlReachable(baseUrl, label, timeoutMs = 15_000) {
+  let loginUrl;
+  try {
+    loginUrl = new URL("/login", baseUrl).toString();
+  } catch {
+    throw new Error(`Invalid base URL provided to ${label}: ${baseUrl}`);
+  }
+
+  try {
+    await waitForHttp(loginUrl, label, timeoutMs);
+  } catch {
+    throw new Error(
+      `${label} is not reachable at ${loginUrl}. Start the repo web shell/server for that base URL or pass --base-url to an active instance before retrying.`,
+    );
+  }
 }
 
 export function startLoggedProcess({ rootDir, outputDir, name, command, env = {} }) {
@@ -208,11 +255,11 @@ export async function waitForPort(port, label, timeoutMs, host = "127.0.0.1") {
   await waitFor(() => isPortOpen(port, host), timeoutMs, label, 1_000);
 }
 
-export function runNodeScript(rootDir, relativePath, args) {
+export function runNodeScript(rootDir, relativePath, args, envOverrides = {}) {
   execFileSync(process.execPath, [path.join(rootDir, relativePath), ...args], {
     cwd: rootDir,
     stdio: "inherit",
-    env: process.env,
+    env: { ...process.env, ...envOverrides },
   });
 }
 
@@ -224,4 +271,104 @@ export async function readLogTail(logFile, lineCount = 40) {
   } catch {
     return null;
   }
+}
+
+export async function runRepoOwnedSmokeScenario({
+  rootDir,
+  outputDir,
+  suiteName,
+  scenarioScript,
+  scenarioSteps = null,
+  serverPort,
+  webPort,
+  databaseUrl = getDefaultSmokeDatabaseUrl(),
+  serverEnv = {},
+  webEnv = {},
+  scenarioArgs = [],
+  releaseVersion = suiteName.replace(/[^a-z0-9-]+/gi, "-").toLowerCase(),
+}) {
+  await fsPromises.mkdir(outputDir, { recursive: true });
+
+  const baseUrl = `http://localhost:${webPort}`;
+  await ensurePortAvailable(serverPort, `The ${suiteName} server`);
+  await ensurePortAvailable(webPort, `The ${suiteName} web shell`);
+  await ensurePostgres({ rootDir, databaseUrl, purpose: suiteName, autoStart: true });
+
+  const server = startLoggedProcess({
+    rootDir,
+    outputDir,
+    name: `${releaseVersion}-server`,
+    command: "corepack pnpm --filter @frontier/server dev",
+    env: {
+      PORT: String(serverPort),
+      DATABASE_URL: databaseUrl,
+      JWT_SECRET: process.env.JWT_SECRET || "repo-owned-smoke-secret-0123456789abcdef",
+      COOKIE_SECURE: "false",
+      AUTH_RATE_LIMIT_MAX: "999",
+      COMMAND_RATE_LIMIT_MAX: "999",
+      ...serverEnv,
+    },
+  });
+
+  const web = startLoggedProcess({
+    rootDir,
+    outputDir,
+    name: `${releaseVersion}-web`,
+    command: "corepack pnpm --filter @frontier/web dev -- --host 127.0.0.1",
+    env: {
+      FRONTIER_WEB_PORT: String(webPort),
+      FRONTIER_API_PROXY_TARGET: `http://127.0.0.1:${serverPort}`,
+      FRONTIER_WS_PROXY_TARGET: `ws://127.0.0.1:${serverPort}`,
+      FRONTIER_RELEASE_VERSION: process.env.FRONTIER_RELEASE_VERSION || releaseVersion,
+      ...webEnv,
+    },
+  });
+
+  try {
+    await waitForHttp(`http://127.0.0.1:${serverPort}/api/health`, `the ${suiteName} server`, 60_000);
+    await waitForPort(webPort, `the ${suiteName} web shell`, 60_000);
+    await ensureBaseUrlReachable(baseUrl, `the ${suiteName} web shell`, 60_000);
+
+    const steps =
+      scenarioSteps ??
+      (scenarioScript
+        ? [
+            {
+              script: scenarioScript,
+              args: scenarioArgs,
+            },
+          ]
+        : []);
+
+    assert(steps.length > 0, `${suiteName} requires at least one smoke scenario script.`);
+
+    for (const step of steps) {
+      runNodeScript(rootDir, step.script, ["--base-url", baseUrl, ...(step.args ?? [])], {
+        DATABASE_URL: databaseUrl,
+      });
+    }
+  } catch (error) {
+    const [serverTail, webTail] = await Promise.all([readLogTail(server.logFile), readLogTail(web.logFile)]);
+    if (serverTail) {
+      console.error(`\n[${suiteName} server tail]\n${serverTail}`);
+    }
+    if (webTail) {
+      console.error(`\n[${suiteName} web tail]\n${webTail}`);
+    }
+    throw error;
+  } finally {
+    await stopProcess(web.child);
+    await stopProcess(server.child);
+  }
+
+  return {
+    ok: true,
+    baseUrl,
+    serverPort,
+    webPort,
+    logs: {
+      server: server.logFile,
+      web: web.logFile,
+    },
+  };
 }

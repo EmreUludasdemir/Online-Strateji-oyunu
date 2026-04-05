@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
-import { assert, prepareSmokeFixture } from "./smoke_support.mjs";
+import { assert, ensureBaseUrlReachable, prepareSmokeFixture } from "./smoke_support.mjs";
 
 function parseArgs(argv) {
   const args = {
@@ -36,7 +36,8 @@ function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv);
   await fs.mkdir(path.dirname(args.screenshotPath), { recursive: true });
-  prepareSmokeFixture(args.username);
+  await ensureBaseUrlReachable(args.baseUrl, "The closed-alpha smoke web shell");
+  await prepareSmokeFixture(args.username);
 
   const bootstrapResponse = await fetch(`${args.baseUrl}/api/public/bootstrap`);
   assert(bootstrapResponse.ok, `Bootstrap request failed with ${bootstrapResponse.status}.`);

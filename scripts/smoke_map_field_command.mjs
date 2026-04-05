@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
-import { prepareSmokeFixture, waitFor } from "./smoke_support.mjs";
+import { ensureBaseUrlReachable, prepareSmokeFixture, waitFor } from "./smoke_support.mjs";
 
 const MAP_TILE_WORLD_SIZE = 128;
 
@@ -157,7 +157,8 @@ async function openFieldCommandWithHook(page, target) {
 async function main() {
   const args = parseArgs(process.argv);
   await fs.mkdir(path.dirname(args.screenshotPath), { recursive: true });
-  prepareSmokeFixture(args.username);
+  await ensureBaseUrlReachable(args.baseUrl, "The field-command smoke web shell");
+  await prepareSmokeFixture(args.username);
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });

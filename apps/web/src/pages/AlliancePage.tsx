@@ -8,6 +8,7 @@ import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { formatDateTime, formatNumber, formatTimeRemaining } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
@@ -205,11 +206,23 @@ export function AlliancePage() {
   }, [state.city.coordinates.x, state.city.coordinates.y]);
 
   if (allianceQuery.isPending) {
-    return <div className={styles.feedback}>Loading alliance chamber...</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice title="Loading alliance chamber" body="Roster, directives, support queue, and marker ledgers are still being assembled." />
+      </section>
+    );
   }
 
   if (allianceQuery.isError) {
-    return <div className={styles.feedback}>Alliance chamber could not be loaded.</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice
+          title="Alliance chamber could not be loaded"
+          body="Alliance state is unavailable right now. Retry once membership and realtime state settle."
+          tone="danger"
+        />
+      </section>
+    );
   }
 
   return (

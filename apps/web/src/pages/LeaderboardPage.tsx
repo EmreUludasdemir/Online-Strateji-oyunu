@@ -8,6 +8,7 @@ import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageHero, SummaryMetricGrid } from "../components/ui/PageHero";
 import { SectionCard } from "../components/ui/SectionCard";
 import { formatNumber } from "../lib/formatters";
 import styles from "./LeaderboardPage.module.css";
@@ -132,45 +133,46 @@ export function LeaderboardPage() {
   const podium = [entries[1], entries[0], entries[2]].filter(Boolean) as LeaderboardEntryView[];
   const tableEntries = entries.slice(3);
   const currentPlayerEntry = entries.find((entry) => entry.userId === state.player.id) ?? null;
+  const heroMetrics = [
+    {
+      id: "board",
+      label: "Board",
+      value: selectedTab?.label ?? "Unavailable",
+      note: "Current ranking surface.",
+      tone: "info" as const,
+    },
+    {
+      id: "top",
+      label: "Top score",
+      value: formatNumber(entries[0]?.value ?? 0),
+      note: "Highest mark on the active board.",
+      tone: entries.length > 0 ? ("success" as const) : ("default" as const),
+    },
+    {
+      id: "rank",
+      label: "Your rank",
+      value: currentPlayerEntry ? `#${currentPlayerEntry.rank}` : "Unranked",
+      note: "Pulled from the live leaderboard response.",
+      tone: currentPlayerEntry ? ("warning" as const) : ("default" as const),
+    },
+    {
+      id: "competitors",
+      label: "Competitors",
+      value: formatNumber(entries.length),
+      note: "Visible entries on this board.",
+    },
+  ];
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.kicker}>Imperial Leaderboards</p>
-            <h2 className={styles.heroTitle}>Sovereign ranking ledger</h2>
-            <p className={styles.heroLead}>
-              Live boards now read like a premium imperial record: top seats, event tabs, and a clear personal standing
-              layer instead of a flat score list.
-            </p>
-          </div>
-          <Badge tone="warning">{selectedTab?.eyebrow ?? "Ranking board"}</Badge>
-        </div>
-
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Board</span>
-            <strong className={styles.summaryValue}>{selectedTab?.label ?? "Unavailable"}</strong>
-            <span className={styles.summaryMeta}>Current ranking surface.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Top score</span>
-            <strong className={styles.summaryValue}>{formatNumber(entries[0]?.value ?? 0)}</strong>
-            <span className={styles.summaryMeta}>Highest mark on the active board.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Your rank</span>
-            <strong className={styles.summaryValue}>{currentPlayerEntry ? `#${currentPlayerEntry.rank}` : "Unranked"}</strong>
-            <span className={styles.summaryMeta}>Pulled from the live leaderboard response.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Competitors</span>
-            <strong className={styles.summaryValue}>{formatNumber(entries.length)}</strong>
-            <span className={styles.summaryMeta}>Visible entries on this board.</span>
-          </article>
-        </div>
-      </header>
+      <PageHero
+        kicker="Imperial Leaderboards"
+        title="Sovereign ranking ledger"
+        lead="Live boards now read like a premium imperial record: top seats, event tabs, and a clear personal standing layer instead of a flat score list."
+        aside={<Badge tone="warning">{selectedTab?.eyebrow ?? "Ranking board"}</Badge>}
+      >
+        <SummaryMetricGrid items={heroMetrics} />
+      </PageHero>
 
       <div className={styles.layout}>
         <div className={styles.mainColumn}>

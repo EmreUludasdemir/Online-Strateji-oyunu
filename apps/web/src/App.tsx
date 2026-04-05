@@ -112,13 +112,37 @@ function LoadingFallback() {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background: "var(--color-bg-primary, #0f0f0f)",
-        color: "var(--color-text-secondary, #a0a0a0)",
+        padding: "1.5rem",
+        background:
+          "radial-gradient(circle at 14% 10%, rgba(233, 193, 118, 0.08), transparent 20%), var(--surface-shell-bg)",
+        color: "var(--color-on-surface-variant)",
       }}
     >
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>⏳</div>
-        <p>Loading...</p>
+      <div
+        style={{
+          minWidth: "min(420px, 100%)",
+          padding: "1.5rem",
+          borderRadius: "var(--radius-sm)",
+          background: "var(--surface-hero-panel)",
+          boxShadow: "var(--shadow-heavy), inset 0 0 0 1px var(--color-panel-line)",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: "1.75rem", marginBottom: "0.65rem", color: "var(--color-primary-fixed)" }}>⏳</div>
+        <p
+          style={{
+            margin: 0,
+            fontFamily: "var(--font-display)",
+            fontSize: "1.2rem",
+            fontStyle: "italic",
+            color: "var(--color-primary-fixed)",
+          }}
+        >
+          Preparing the command hall
+        </p>
+        <p style={{ margin: "0.45rem 0 0", lineHeight: 1.6 }}>
+          Loading routes, reports, and frontier state.
+        </p>
       </div>
     </div>
   );

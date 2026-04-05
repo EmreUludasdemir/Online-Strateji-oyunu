@@ -8,9 +8,7 @@
     "topbar topbar"
     "sidebar main";
   color: var(--color-ink-100);
-  background:
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.06), transparent 28%),
-    linear-gradient(180deg, rgba(18, 13, 11, 0.98), rgba(10, 8, 7, 1));
+  background: var(--surface-shell-bg);
 }
 
 .sidebar {
@@ -21,10 +19,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  border-right: 1px solid rgba(244, 220, 166, 0.08);
-  background:
-    linear-gradient(180deg, rgba(27, 20, 16, 0.98), rgba(14, 10, 8, 1)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.04), transparent 30%);
+  border-right: 1px solid var(--color-panel-line);
+  background: var(--surface-shell-sidebar);
   animation: fadeSlideDown 420ms var(--motion-smooth) both;
 }
 
@@ -47,11 +43,9 @@
   height: 46px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(244, 220, 166, 0.24);
+  border: 1px solid var(--surface-panel-border-strong);
   border-radius: 12px;
-  background:
-    linear-gradient(180deg, rgba(78, 56, 40, 0.88), rgba(24, 17, 13, 0.96)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.14), transparent 68%);
+  background: var(--surface-shell-icon);
   color: var(--color-gold-200);
   font-family: var(--font-mono);
   font-size: 0.9rem;
@@ -105,12 +99,9 @@
 .queueCard {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(244, 220, 166, 0.12);
-  background:
-    linear-gradient(180deg, rgba(68, 49, 37, 0.88), rgba(21, 16, 12, 0.96)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.08), transparent 62%),
-    radial-gradient(circle at top, rgba(81, 163, 161, 0.12), transparent 44%);
-  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--color-panel-line);
+  background: var(--surface-shell-card);
+  box-shadow: var(--shadow-soft), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .summaryCard {
@@ -205,17 +196,13 @@
 }
 
 .navLink {
-  background:
-    linear-gradient(180deg, rgba(53, 39, 30, 0.56), rgba(18, 14, 11, 0.9)),
-    linear-gradient(90deg, rgba(253, 246, 234, 0.02), transparent 68%);
+  background: var(--surface-shell-nav);
 }
 
 .navLinkActive,
 .navLink:hover {
-  background:
-    linear-gradient(180deg, rgba(79, 58, 44, 0.92), rgba(24, 18, 14, 0.98)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.16), transparent 70%);
-  border-color: rgba(244, 215, 156, 0.26);
+  background: var(--surface-shell-nav-active);
+  border-color: var(--surface-panel-border-strong);
   transform: translateX(4px);
   box-shadow: var(--shadow-soft), inset 3px 0 0 rgba(244, 220, 166, 0.48);
 }
@@ -272,16 +259,14 @@
 .utilityLinkActive {
   padding: 0.75rem 0.85rem;
   border-radius: 12px;
-  border: 1px solid rgba(244, 220, 166, 0.08);
+  border: 1px solid var(--color-panel-line);
   text-decoration: none;
   color: var(--color-ink-100);
   display: grid;
   grid-template-columns: 60px minmax(0, 1fr);
   gap: 0.75rem;
   align-items: center;
-  background:
-    linear-gradient(180deg, rgba(46, 34, 26, 0.72), rgba(18, 14, 11, 0.94)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.03), transparent 72%);
+  background: var(--surface-shell-nav);
   transition:
     transform var(--motion-fast),
     border-color var(--motion-fast),
@@ -291,12 +276,10 @@
 
 .utilityLinkActive,
 .utilityLink:hover {
-  border-color: rgba(244, 215, 156, 0.22);
+  border-color: var(--surface-panel-border-strong);
   transform: translateX(4px);
   box-shadow: var(--shadow-soft), inset 3px 0 0 rgba(244, 220, 166, 0.4);
-  background:
-    linear-gradient(180deg, rgba(67, 49, 38, 0.9), rgba(22, 17, 13, 0.98)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.12), transparent 72%);
+  background: var(--surface-shell-nav-active);
 }
 
 .utilityCode {
@@ -304,10 +287,8 @@
   display: grid;
   place-items: center;
   border-radius: 10px;
-  border: 1px solid rgba(244, 220, 166, 0.12);
-  background:
-    linear-gradient(180deg, rgba(81, 57, 41, 0.6), rgba(23, 17, 13, 0.92)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.12), transparent 62%);
+  border: 1px solid var(--color-panel-line);
+  background: var(--surface-shell-icon);
   color: var(--color-gold-200);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -372,10 +353,8 @@
   align-items: center;
   gap: 1rem;
   padding: 0 1.4rem;
-  background:
-    linear-gradient(180deg, rgba(13, 10, 8, 0.98), rgba(9, 8, 7, 0.98)),
-    linear-gradient(90deg, rgba(244, 220, 166, 0.04), transparent 30%);
-  border-bottom: 1px solid rgba(244, 220, 166, 0.08);
+  background: var(--surface-shell-topbar);
+  border-bottom: 1px solid var(--color-panel-line);
   z-index: var(--z-sticky);
 }
 
@@ -416,7 +395,7 @@
 }
 
 .queueCard:hover {
-  border-color: rgba(244, 220, 166, 0.24);
+  border-color: var(--surface-panel-border-strong);
   box-shadow: var(--shadow-soft), 0 0 18px rgba(81, 163, 161, 0.12);
   transform: translateY(-2px);
 }
@@ -454,7 +433,7 @@
 
 .sidebar::-webkit-scrollbar-thumb,
 .content::-webkit-scrollbar-thumb {
-  background: rgba(244, 220, 166, 0.14);
+  background: var(--surface-chip-warning);
   border-radius: 999px;
 }
 
@@ -499,11 +478,8 @@
   overflow: hidden;
   padding: 0.9rem;
   border-radius: 14px;
-  border: 1px solid rgba(244, 220, 166, 0.12);
-  background:
-    linear-gradient(180deg, rgba(55, 39, 29, 0.9), rgba(18, 14, 11, 0.96)),
-    radial-gradient(circle at top, rgba(244, 220, 166, 0.08), transparent 30%),
-    linear-gradient(90deg, rgba(81, 163, 161, 0.1), transparent 72%);
+  border: 1px solid var(--color-panel-line);
+  background: var(--surface-shell-card);
 }
 
 .marketTicker {
@@ -626,10 +602,8 @@
     gap: 0.5rem;
     padding: 0.45rem;
     border-radius: 18px;
-    border: 1px solid rgba(244, 220, 166, 0.1);
-    background:
-      linear-gradient(180deg, rgba(40, 29, 22, 0.98), rgba(15, 11, 9, 0.99)),
-      linear-gradient(90deg, rgba(244, 220, 166, 0.06), transparent 68%);
+    border: 1px solid var(--color-panel-line);
+    background: var(--surface-shell-topbar);
     box-shadow: var(--shadow-heavy);
     animation: slideUp 380ms var(--motion-smooth) both;
   }
@@ -647,8 +621,8 @@
   }
 
   .mobileLinkActive {
-    background: rgba(244, 220, 166, 0.12);
-    border-color: rgba(244, 220, 166, 0.24);
+    background: var(--surface-chip-warning);
+    border-color: var(--surface-panel-border-strong);
     animation: pulseGold 2.8s ease-in-out infinite;
   }
 }
@@ -681,7 +655,7 @@
 .releaseBadge {
   padding: 0.2rem 0.45rem;
   border-radius: 999px;
-  border: 1px solid rgba(244, 220, 166, 0.14);
-  background: rgba(244, 220, 166, 0.08);
+  border: 1px solid var(--surface-panel-border-strong);
+  background: var(--surface-chip-warning);
   color: var(--color-gold-200);
 }

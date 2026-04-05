@@ -6,6 +6,8 @@ import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageHero, SummaryMetricGrid } from "../components/ui/PageHero";
+import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
 import { formatNumber } from "../lib/formatters";
@@ -112,12 +114,12 @@ export function ResearchPage() {
   if (!selectedResearch) {
     return (
       <section className={styles.page}>
-        <SectionCard kicker="Imperial Research" title="Doctrine archive unavailable">
-          <EmptyState
-            title="No academy records"
-            body="Research lanes appear once the city state exposes academy doctrine progress."
-          />
-        </SectionCard>
+        <PageNotice
+          kicker="Imperial Research"
+          title="Doctrine archive unavailable"
+          body="Research lanes appear once the city state exposes academy doctrine progress."
+          tone="warning"
+        />
       </section>
     );
   }
@@ -128,53 +130,52 @@ export function ResearchPage() {
     selectedResearch.level < selectedResearch.maxLevel &&
     !Boolean(state.city.activeResearch) &&
     !isResearching;
+  const heroMetrics = [
+    {
+      id: "academy",
+      label: "Academy Tier",
+      value: `L${academy?.level ?? 0}`,
+      note: "Capacity for deeper doctrine.",
+      tone: "info" as const,
+    },
+    {
+      id: "depth",
+      label: "Archive Depth",
+      value: `${formatNumber(totalDoctrineLevels)}/${formatNumber(availableDoctrineTiers)}`,
+      note: "Total doctrine ranks recorded.",
+    },
+    {
+      id: "completed",
+      label: "Completed Lanes",
+      value: formatNumber(completedDoctrines),
+      note: "Doctrines already capped.",
+      tone: completedDoctrines > 0 ? ("success" as const) : ("default" as const),
+    },
+    {
+      id: "active",
+      label: "Active Project",
+      value: activeResearchLabel,
+      note: state.city.activeResearch ? `Tier ${state.city.activeResearch.toLevel} in progress.` : "Queue currently open.",
+      tone: state.city.activeResearch ? ("warning" as const) : ("info" as const),
+    },
+  ];
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.kicker}>Imperial Research</p>
-            <h2 className={styles.heroTitle}>Sovereign archive of doctrine</h2>
-            <p className={styles.heroLead}>
-              The academy is now framed as a strategic archive instead of a flat checklist. Every lane exposes field
-              leverage, city pressure, and the next tier worth funding.
-            </p>
-          </div>
-          {state.city.activeResearch ? (
+      <PageHero
+        kicker="Imperial Research"
+        title="Sovereign archive of doctrine"
+        lead="The academy is now framed as a strategic archive instead of a flat checklist. Every lane exposes field leverage, city pressure, and the next tier worth funding."
+        aside={
+          state.city.activeResearch ? (
             <TimerChip endsAt={state.city.activeResearch.completesAt} now={now} />
           ) : (
             <Badge tone="info">Academy ready</Badge>
-          )}
-        </div>
-
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Academy Tier</span>
-            <strong className={styles.summaryValue}>L{academy?.level ?? 0}</strong>
-            <span className={styles.summaryMeta}>Capacity for deeper doctrine.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Archive Depth</span>
-            <strong className={styles.summaryValue}>
-              {formatNumber(totalDoctrineLevels)}/{formatNumber(availableDoctrineTiers)}
-            </strong>
-            <span className={styles.summaryMeta}>Total doctrine ranks recorded.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Completed Lanes</span>
-            <strong className={styles.summaryValue}>{formatNumber(completedDoctrines)}</strong>
-            <span className={styles.summaryMeta}>Doctrines already capped.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Active Project</span>
-            <strong className={styles.summaryValue}>{activeResearchLabel}</strong>
-            <span className={styles.summaryMeta}>
-              {state.city.activeResearch ? `Tier ${state.city.activeResearch.toLevel} in progress.` : "Queue currently open."}
-            </span>
-          </article>
-        </div>
-      </header>
+          )
+        }
+      >
+        <SummaryMetricGrid items={heroMetrics} />
+      </PageHero>
 
       <div className={styles.layout}>
         <div className={styles.boardColumn}>

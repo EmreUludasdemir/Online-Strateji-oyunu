@@ -22,7 +22,7 @@
   overflow: hidden;
   padding: 1.5rem;
   border-radius: var(--radius-sm);
-  background: var(--surface-glass);
+  background: var(--surface-hero-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
@@ -81,7 +81,7 @@
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
 }
 
 .summaryCard,
@@ -128,7 +128,7 @@
   padding: 1rem;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
   color: var(--color-on-surface);
   text-align: left;
   cursor: pointer;
@@ -140,11 +140,11 @@
 
 .tabButton:hover {
   transform: translateY(-1px);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-card-panel-active);
 }
 
 .tabButtonActive {
-  background: linear-gradient(90deg, rgba(233, 193, 118, 0.1), transparent);
+  background: var(--surface-card-selected-warning);
   box-shadow: var(--shadow-gold-soft);
   border-left: 3px solid var(--color-primary-fixed-dim);
 }
@@ -168,7 +168,7 @@
 
 .podiumFirst {
   min-height: 220px;
-  background: linear-gradient(180deg, rgba(233, 193, 118, 0.15), var(--color-surface-container-high));
+  background: var(--surface-card-selected-warning);
   border-top: 3px solid var(--color-primary-fixed-dim);
 }
 
@@ -196,7 +196,7 @@
 }
 
 .rankRowActive {
-  background: linear-gradient(90deg, rgba(184, 201, 211, 0.1), transparent);
+  background: var(--surface-card-selected-info);
   border-left: 3px solid var(--color-secondary);
 }
 
@@ -212,7 +212,7 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-xs);
-  background: rgba(233, 193, 118, 0.1);
+  background: var(--surface-chip-warning);
   color: var(--color-primary-fixed);
   font-family: var(--font-mono);
   font-weight: 600;

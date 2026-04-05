@@ -7,7 +7,10 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageHero, SummaryMetricGrid } from "../components/ui/PageHero";
+import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { trackAnalyticsOnce } from "../lib/analytics";
 import { formatDateTime, formatNumber } from "../lib/formatters";
@@ -182,6 +185,48 @@ export function ReportsPage() {
     (entry) => entry.kind === "BATTLE_REPORT" || entry.kind === "RALLY_REPORT",
   ).length;
   const scoutDispatches = mailboxEntries.filter((entry) => entry.kind === "SCOUT_REPORT").length;
+  const heroMetrics = [
+    {
+      id: "victories",
+      label: "Victories",
+      value: formatNumber(summary.victories),
+      note: "Resolved offensive pushes currently visible in the council stack.",
+    },
+    {
+      id: "holds",
+      label: "Defenses Held",
+      value: formatNumber(summary.holds),
+      note: "Frontline holds and repelled incursions across the current filter set.",
+    },
+    {
+      id: "gather",
+      label: "Gather Returns",
+      value: formatNumber(summary.gatherReturns),
+      note: "Logistics marches that completed their corridor and filed back to court.",
+      tone: "info" as const,
+    },
+    {
+      id: "throughput",
+      label: "Total Throughput",
+      value: formatNumber(summary.movedTotal),
+      note: "Combined loot and cargo moved through the current filter stack.",
+      tone: "success" as const,
+    },
+    {
+      id: "handoffs",
+      label: "Dispatch Handoffs",
+      value: formatNumber(notifications.unreadMailboxCount),
+      note: "Council items still waiting inside the message center archive.",
+      tone: notifications.unreadMailboxCount > 0 ? ("warning" as const) : ("default" as const),
+    },
+    {
+      id: "claimable",
+      label: "Claimable Warrants",
+      value: formatNumber(claimableDispatches),
+      note: "Reward bundles ready to process without leaving the command loop.",
+      tone: claimableDispatches > 0 ? ("warning" as const) : ("info" as const),
+    },
+  ];
 
   const activeReport = useMemo(
     () => reports.find((report) => report.id === focusedReportId) ?? filteredReports[0] ?? null,
@@ -198,29 +243,81 @@ export function ReportsPage() {
       ...filteredReports.filter((report) => report.id !== activeReport.id && report.kind !== activeReport.kind),
     ].slice(0, 3);
   }, [activeReport, filteredReports]);
+  const activeDossierStats = activeReport
+    ? [
+        {
+          id: "theater",
+          label: "Theater",
+          value: getReportTheater(activeReport),
+          note: `${formatNumber(activeReport.location.distance)} tiles from launch to resolution.`,
+        },
+        {
+          id: "resolution",
+          label: "Resolution",
+          value: getReportResolution(activeReport),
+          note: `${getReportRibbon(activeReport)} logged by the council ledger.`,
+          tone: getReportTone(activeReport),
+        },
+        {
+          id: "bridge",
+          label: "Dispatch Bridge",
+          value: formatNumber(notifications.unreadMailboxCount),
+          note: `${formatNumber(claimableDispatches)} warrants and follow-up dispatches waiting in archive.`,
+          tone: notifications.unreadMailboxCount > 0 ? ("warning" as const) : ("info" as const),
+        },
+      ]
+    : [];
+  const activeBridgeStats = [
+    {
+      id: "unread",
+      label: "Unread dispatches",
+      value: formatNumber(notifications.unreadMailboxCount),
+      note: "Current archive backlog",
+      tone: notifications.unreadMailboxCount > 0 ? ("warning" as const) : ("info" as const),
+    },
+    {
+      id: "battle",
+      label: "Battle dispatches",
+      value: formatNumber(battleDispatches),
+      note: "Combat records on file",
+    },
+    {
+      id: "scout",
+      label: "Scout dispatches",
+      value: formatNumber(scoutDispatches),
+      note: "Recon packets preserved",
+      tone: "info" as const,
+    },
+  ];
 
   if (reportsQuery.isPending) {
-    return <div className={styles.feedback}>Loading reports...</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice title="Loading reports" body="Battle dossiers, attrition ledgers, and reward relays are still being assembled." />
+      </section>
+    );
   }
 
   if (reportsQuery.isError || !reportsQuery.data) {
-    return <div className={styles.feedback}>Unable to load reports.</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice
+          title="Unable to load reports"
+          body="The War Council could not retrieve the latest dossiers. Retry once the route and server state stabilize."
+          tone="danger"
+        />
+      </section>
+    );
   }
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.kicker}>{copy.reports.title}</p>
-            <h2 className={styles.heroTitle}>War Council</h2>
-            <p className={styles.heroLead}>
-              Battle dossiers, resource returns, and attrition ledgers stay in one council rail. Follow-up warrants and scout packets now feed a tighter bridge into the message center.
-            </p>
-          </div>
-          <Badge tone="info">{reports.length} entries</Badge>
-        </div>
-
+      <PageHero
+        kicker={copy.reports.title}
+        title="War Council"
+        lead="Battle dossiers, resource returns, and attrition ledgers stay in one council rail. Follow-up warrants and scout packets now feed a tighter bridge into the message center."
+        aside={<Badge tone="info">{reports.length} entries</Badge>}
+      >
         <div className={styles.filterRow}>
           <select aria-label="Filter by category" value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)}>
             <option value="ALL">All categories</option>
@@ -241,47 +338,17 @@ export function ReportsPage() {
             <option value="30D">Last 30d</option>
           </select>
         </div>
-
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Victories</span>
-            <strong className={styles.summaryValue}>{formatNumber(summary.victories)}</strong>
-            <span className={styles.summaryMeta}>Resolved offensive pushes currently visible in the council stack.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Defenses Held</span>
-            <strong className={styles.summaryValue}>{formatNumber(summary.holds)}</strong>
-            <span className={styles.summaryMeta}>Frontline holds and repelled incursions across the current filter set.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Gather Returns</span>
-            <strong className={styles.summaryValue}>{formatNumber(summary.gatherReturns)}</strong>
-            <span className={styles.summaryMeta}>Logistics marches that completed their corridor and filed back to court.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Total Throughput</span>
-            <strong className={styles.summaryValue}>{formatNumber(summary.movedTotal)}</strong>
-            <span className={styles.summaryMeta}>Combined loot and cargo moved through the current filter stack.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Dispatch Handoffs</span>
-            <strong className={styles.summaryValue}>{formatNumber(notifications.unreadMailboxCount)}</strong>
-            <span className={styles.summaryMeta}>Council items still waiting inside the message center archive.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Claimable Warrants</span>
-            <strong className={styles.summaryValue}>{formatNumber(claimableDispatches)}</strong>
-            <span className={styles.summaryMeta}>Reward bundles ready to process without leaving the command loop.</span>
-          </article>
-        </div>
-      </header>
+        <SummaryMetricGrid items={heroMetrics} />
+      </PageHero>
 
       <div className={styles.layout}>
         <aside className={styles.reportRail}>
-          <div className={styles.railHeader}>
-            <h3 className={styles.railTitle}>Battle Reports</h3>
-            <span>{formatNumber(filteredReports.length)} active logs</span>
-          </div>
+          <SectionHeaderBlock
+            kicker="Council Rail"
+            title="Battle Reports"
+            lead={`${formatNumber(filteredReports.length)} active logs`}
+            className={styles.railHeader}
+          />
           {filteredReports.length === 0 ? (
             <SectionCard kicker="Empty Log" title="No entries yet">
               <EmptyState
@@ -340,21 +407,7 @@ export function ReportsPage() {
                 <h2 className={styles.detailTitle}>{getReportTitle(activeReport)}</h2>
                 <p className={styles.detailSubtitle}>{getReportSubtitle(activeReport)}</p>
                 <div className={styles.dossierStrip}>
-                  <article className={styles.dossierCell}>
-                    <span className={styles.detailMetaText}>Theater</span>
-                    <strong>{getReportTheater(activeReport)}</strong>
-                    <span>{formatNumber(activeReport.location.distance)} tiles of travel from launch to resolution.</span>
-                  </article>
-                  <article className={styles.dossierCell}>
-                    <span className={styles.detailMetaText}>Resolution</span>
-                    <strong>{getReportResolution(activeReport)}</strong>
-                    <span>{getReportRibbon(activeReport)} logged by the council ledger.</span>
-                  </article>
-                  <article className={styles.dossierCell}>
-                    <span className={styles.detailMetaText}>Dispatch Bridge</span>
-                    <strong>{formatNumber(notifications.unreadMailboxCount)} pending</strong>
-                    <span>{formatNumber(claimableDispatches)} warrants and follow-up dispatches waiting in archive.</span>
-                  </article>
+                  <PanelStatGrid items={activeDossierStats} columns={3} />
                 </div>
               </header>
 
@@ -377,20 +430,7 @@ export function ReportsPage() {
                 </SectionCard>
 
                 <SectionCard kicker="Council Bridge" title="Redeploy and archive">
-                  <div className={styles.bridgeGrid}>
-                    <article className={styles.statCard}>
-                      <span className={styles.statLabel}>Unread dispatches</span>
-                      <strong>{formatNumber(notifications.unreadMailboxCount)}</strong>
-                    </article>
-                    <article className={styles.statCard}>
-                      <span className={styles.statLabel}>Battle dispatches</span>
-                      <strong>{formatNumber(battleDispatches)}</strong>
-                    </article>
-                    <article className={styles.statCard}>
-                      <span className={styles.statLabel}>Scout dispatches</span>
-                      <strong>{formatNumber(scoutDispatches)}</strong>
-                    </article>
-                  </div>
+                  <PanelStatGrid items={activeBridgeStats} columns={3} className={styles.bridgeGrid} />
                   <p className={styles.sideText}>{getReportRouteCopy(activeReport).note}</p>
                   <div className={styles.detailActions}>
                     <Button type="button" variant="secondary" onClick={() => navigate("/app/map")}>

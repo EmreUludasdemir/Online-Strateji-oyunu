@@ -12,7 +12,7 @@
   gap: 1rem;
   padding: 1.5rem;
   border-radius: var(--radius-sm);
-  background: var(--surface-glass);
+  background: var(--surface-hero-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
@@ -77,7 +77,7 @@
   min-height: 32px;
   padding: 0 0.75rem;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-high);
+  background: var(--surface-shell-card);
   color: var(--color-on-surface-variant);
   font-size: 0.75rem;
   font-family: var(--font-mono);
@@ -98,7 +98,7 @@
   overflow: hidden;
   padding: 1rem;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
 }
 
 .summaryValue,
@@ -136,11 +136,11 @@
 
 .rosterCard:hover {
   transform: translateY(-2px);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-card-panel-active);
 }
 
 .rosterCardActive {
-  background: linear-gradient(90deg, rgba(233, 193, 118, 0.1), transparent);
+  background: var(--surface-card-selected-warning);
   border-left: 3px solid var(--color-primary-fixed-dim);
   box-shadow: var(--shadow-gold-soft);
 }
@@ -160,7 +160,7 @@
   margin-top: 0.75rem;
   height: 6px;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card);
   overflow: hidden;
 }
 
@@ -182,7 +182,7 @@
   min-height: 400px;
   display: grid;
   align-content: space-between;
-  background: linear-gradient(180deg, var(--color-surface-container-high), var(--color-surface-container));
+  background: var(--surface-hero-panel-alt);
 }
 
 .portraitCard::before {
@@ -210,7 +210,7 @@
   width: clamp(140px, 20vw, 200px);
   aspect-ratio: 1;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card-strong);
   color: var(--color-primary-fixed);
   font-family: var(--font-display);
   font-size: clamp(2.5rem, 8vw, 4.5rem);

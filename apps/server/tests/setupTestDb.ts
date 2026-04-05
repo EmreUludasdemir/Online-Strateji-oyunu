@@ -2,6 +2,8 @@ import "dotenv/config";
 
 import { execSync } from "node:child_process";
 import net from "node:net";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const databaseUrl =
   process.env.TEST_DATABASE_URL ??
@@ -29,6 +31,15 @@ function isLocalHost(host: string) {
   return host === "localhost" || host === "127.0.0.1";
 }
 
+function isDockerDesktopUnavailable(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("dockerDesktopLinuxEngine") ||
+    message.includes("Cannot connect to the Docker daemon") ||
+    message.includes("The system cannot find the file specified")
+  );
+}
+
 async function isPortOpen(port: number, host: string) {
   return new Promise<boolean>((resolve) => {
     const socket = net.createConnection({ port, host });
@@ -44,12 +55,42 @@ async function isPortOpen(port: number, host: string) {
   });
 }
 
+async function waitForPort(port: number, host: string, timeoutMs: number) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (await isPortOpen(port, host)) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+
+  throw new Error(`Timed out while waiting for Postgres on ${host}:${port}.`);
+}
+
 async function main() {
   const endpoint = resolveDatabaseEndpoint(databaseUrl);
   if (isLocalHost(endpoint.host) && !(await isPortOpen(endpoint.port, endpoint.host))) {
-    throw new Error(
-      `Test database is not reachable on ${endpoint.host}:${endpoint.port}. Start the local Postgres service (for example \`docker compose up -d postgres\`) or point TEST_DATABASE_URL to a running test database before executing pnpm test.`,
-    );
+    if (endpoint.port !== 5433) {
+      throw new Error(
+        `Test database is not reachable on ${endpoint.host}:${endpoint.port}. The repo can only auto-start the bundled Postgres service on localhost:5433, so start your custom test database manually or point TEST_DATABASE_URL back to the default local service before executing pnpm test.`,
+      );
+    }
+
+    const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+
+    try {
+      execSync("docker info", { cwd: rootDir, stdio: "ignore" });
+      execSync("cmd.exe /d /s /c \"docker compose up -d postgres\"", { cwd: rootDir, stdio: "inherit" });
+      await waitForPort(endpoint.port, endpoint.host, 60_000);
+    } catch (error) {
+      const guidance = isDockerDesktopUnavailable(error)
+        ? "Docker Desktop is not running."
+        : "Docker is not available from this shell.";
+      throw new Error(
+        `Test database is not reachable on ${endpoint.host}:${endpoint.port} and ${guidance} Start Docker Desktop, run \`corepack pnpm db:up\`, or point TEST_DATABASE_URL to a running Postgres instance before executing pnpm test.`,
+      );
+    }
   }
 
   try {

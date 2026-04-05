@@ -37,7 +37,7 @@
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
   transition:
     background var(--motion-base),
     box-shadow var(--motion-base),
@@ -51,7 +51,7 @@
 }
 
 .hero {
-  background: var(--surface-glass);
+  background: var(--surface-hero-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
@@ -130,11 +130,11 @@
 
 .campaignCard {
   padding: 1rem;
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
 }
 
 .campaignCard:hover {
-  background: var(--color-surface-container-highest);
+  background: var(--surface-card-panel-active);
   box-shadow: var(--shadow-gold-soft);
 }
 
@@ -181,7 +181,7 @@
 .campaignMetaCard {
   padding: 0.75rem;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card);
 }
 
 .campaignMetaValue {
@@ -195,7 +195,6 @@
   font-family: var(--font-mono);
   font-size: 1.25rem;
   color: var(--color-primary-fixed);
-}
 }
 
 .battlefieldLayout {
@@ -213,7 +212,7 @@
   position: sticky;
   top: 6.35rem;
   overflow: hidden;
-  background: var(--color-surface-container-high);
+  background: var(--surface-rail-panel-strong);
 }
 
 .tacticalHud,
@@ -253,19 +252,29 @@
 .chipRow,
 .minimapCard,
 .dockCard {
-  background: var(--surface-glass);
+  background: var(--surface-rail-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
 }
 
 .intelPanel {
+  display: grid;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+}
+
+.intelPanelBody {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.intelPanelHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem;
-  border-radius: var(--radius-sm);
 }
 
 .hudEyebrow,
@@ -292,6 +301,56 @@
   align-items: flex-end;
   justify-content: flex-end;
   text-align: right;
+}
+
+.selectionReadoutGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+}
+
+.readoutCard {
+  display: grid;
+  gap: 0.3rem;
+  min-height: 86px;
+  padding: 0.75rem;
+  border-radius: var(--radius-xs);
+  box-shadow: inset 0 0 0 1px var(--color-panel-line);
+}
+
+.readoutCardInfo {
+  background: var(--surface-card-selected-info);
+}
+
+.readoutCardWarning {
+  background: var(--surface-card-selected-warning);
+}
+
+.readoutCardSuccess {
+  background: var(--surface-card-selected-success);
+}
+
+.readoutLabel,
+.commandCueLabel {
+  color: var(--color-outline);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.readoutValue,
+.commandCueValue {
+  font-family: var(--font-mono);
+  font-size: 0.98rem;
+  color: var(--color-on-surface);
+}
+
+.readoutNote,
+.commandCueNote {
+  color: var(--color-on-surface-variant);
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .controlsDeck {
@@ -322,7 +381,7 @@
 .cameraGuideCard,
 .cameraMetricCard,
 .detailScaleItem {
-  background: var(--surface-glass);
+  background: var(--surface-rail-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
@@ -391,7 +450,7 @@
 }
 
 .detailScaleItemActive {
-  background: var(--color-surface-container-highest);
+  background: var(--surface-card-selected-warning);
   box-shadow: var(--shadow-gold-soft);
   transform: translateY(-1px);
 }
@@ -457,7 +516,7 @@
   aspect-ratio: 1;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: var(--color-surface);
+  background: var(--surface-shell-card);
   cursor: pointer;
 }
 
@@ -494,7 +553,7 @@
   padding: 0.35rem 0.7rem;
   border-radius: var(--radius-xs);
   border: none;
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card);
   color: var(--color-on-surface);
   font-size: 0.7rem;
   cursor: pointer;
@@ -506,7 +565,7 @@
 
 .minimapMarkerButton:hover,
 .minimapMarkerButton:focus-visible {
-  background: var(--color-secondary-container);
+  background: var(--surface-card-selected-info);
   box-shadow: var(--shadow-gold-soft);
   transform: translateY(-1px);
 }
@@ -533,7 +592,7 @@
 }
 
 .sideRail::-webkit-scrollbar-thumb {
-  background: var(--color-outline-variant);
+  background: var(--surface-chip-warning);
   border-radius: var(--radius-xs);
 }
 
@@ -561,7 +620,7 @@
   padding: 0.75rem 1rem;
   border: none;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card);
   color: var(--color-on-surface);
 }
 
@@ -599,7 +658,7 @@
 .commandStepCard,
 .intelCard {
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
 }
 
 .searchButton {
@@ -621,7 +680,7 @@
 .intelCard:hover,
 .intelCard:focus-visible {
   transform: translateY(-2px);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-card-panel-active);
   box-shadow: var(--shadow-gold-soft);
 }
 
@@ -734,7 +793,7 @@
   min-width: 2.4rem;
   padding: 0.2rem 0.55rem;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card);
   color: var(--color-on-surface-variant);
   font-family: var(--font-mono);
   font-size: 0.7rem;
@@ -747,7 +806,7 @@
 }
 
 .marchCardActive {
-  background: linear-gradient(90deg, rgba(233, 193, 118, 0.1), transparent);
+  background: var(--surface-card-selected-warning);
   border-left: 3px solid var(--color-primary-fixed-dim);
   box-shadow: var(--shadow-gold-soft);
 }
@@ -762,7 +821,7 @@
 .marchObjectivePill {
   padding: 0.2rem 0.6rem;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card);
   color: var(--color-outline);
   font-size: 0.625rem;
   font-weight: 700;
@@ -783,7 +842,7 @@
   margin-bottom: 0.5rem;
   overflow: hidden;
   border-radius: var(--radius-xs);
-  background: var(--color-surface-container-highest);
+  background: var(--surface-shell-card);
 }
 
 .progressRail span {
@@ -826,6 +885,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.commandCueGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .commandStepGrid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -863,7 +928,8 @@
 
 .commandActionCard,
 .commandPreviewCard,
-.commandStepCard {
+.commandStepCard,
+.commandCueCard {
   display: grid;
   gap: 0.5rem;
 }
@@ -885,7 +951,8 @@
 }
 
 .commandActionTitle,
-.commandPreviewValue {
+.commandPreviewValue,
+.commandCueValue {
   font-size: 1rem;
   color: var(--color-on-surface);
 }
@@ -907,9 +974,17 @@
 }
 
 .commandStepActive {
-  background: linear-gradient(90deg, rgba(233, 193, 118, 0.1), transparent);
+  background: var(--surface-card-selected-warning);
   border-left: 3px solid var(--color-primary-fixed-dim);
   box-shadow: var(--shadow-gold-soft);
+}
+
+.commandCueCard {
+  min-height: 104px;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-rail-panel);
+  box-shadow: inset 0 0 0 1px var(--color-panel-line);
 }
 
 .commanderCard,
@@ -966,7 +1041,7 @@
 .operationCard,
 .intelCard {
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
 }
 
 .operationCard {
@@ -974,7 +1049,7 @@
 }
 
 .operationCard:hover {
-  background: var(--color-surface-container-highest);
+  background: var(--surface-card-panel-active);
 }
 
 .operationHead {
@@ -1010,7 +1085,7 @@
   overflow: hidden;
   padding: 0.75rem;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
   transition:
     background var(--motion-base),
     box-shadow var(--motion-base),
@@ -1018,7 +1093,7 @@
 }
 
 .queueCard:hover {
-  background: var(--color-surface-container-highest);
+  background: var(--surface-card-panel-active);
 }
 
 .queueMeta {
@@ -1091,7 +1166,9 @@
 
   .composerStats,
   .commandPreviewGrid,
-  .commandStepGrid {
+  .commandStepGrid,
+  .commandCueGrid,
+  .selectionReadoutGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1106,6 +1183,8 @@
   .commandActionGrid,
   .commandPreviewGrid,
   .commandStepGrid,
+  .commandCueGrid,
+  .selectionReadoutGrid,
   .cameraGuideMetrics,
   .detailScale,
   .operationsGrid,
@@ -1114,7 +1193,7 @@
   }
 
   .heroTop,
-  .intelPanel,
+  .intelPanelHeader,
   .composerHero,
   .statusCluster {
     flex-direction: column;

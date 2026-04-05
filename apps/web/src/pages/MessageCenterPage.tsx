@@ -6,7 +6,10 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
+import { PageHero, SummaryMetricGrid } from "../components/ui/PageHero";
+import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { formatDateTime, formatNumber } from "../lib/formatters";
 import { getMailboxEntryTone, getMailboxSectionLabel, groupMailboxEntries } from "../lib/mailbox";
@@ -137,50 +140,116 @@ export function MessageCenterPage() {
       }),
     [groupedEntries],
   );
+  const heroMetrics = [
+    {
+      id: "unread",
+      label: "Unread dispatches",
+      value: formatNumber(unreadCount),
+      note: "Priority records still waiting for review.",
+      tone: unreadCount > 0 ? ("warning" as const) : ("info" as const),
+    },
+    {
+      id: "claimable",
+      label: "Claimable warrants",
+      value: formatNumber(claimableCount),
+      note: "Rewards and system grants ready to process.",
+      tone: claimableCount > 0 ? ("success" as const) : ("default" as const),
+    },
+    {
+      id: "scout",
+      label: "Scout dispatches",
+      value: formatNumber(scoutCount),
+      note: "Recon intel and node reports on file.",
+      tone: "info" as const,
+    },
+    {
+      id: "battle",
+      label: "Battle alerts",
+      value: formatNumber(battleCount),
+      note: "Combat and rally reports preserved in the archive.",
+      tone: battleCount > 0 ? ("warning" as const) : ("default" as const),
+    },
+  ];
+  const dispatchBoardItems = selectedEntry
+    ? [
+        {
+          id: "primary",
+          label: "Primary route",
+          value: getDispatchRoute(selectedEntry, bootstrap.storeEnabled).label,
+          note: getDispatchRoute(selectedEntry, bootstrap.storeEnabled).note,
+          tone: "info" as const,
+        },
+        {
+          id: "reward",
+          label: "Reward state",
+          value: selectedEntry.canClaim ? "Ready to claim" : selectedRewards.length > 0 ? "Filed with parcel" : "No parcel attached",
+          note: selectedRewards.length > 0 ? `${selectedRewards.length} reward lines attached to this dispatch.` : "This dispatch is informational only.",
+          tone: selectedEntry.canClaim ? ("success" as const) : ("default" as const),
+        },
+        {
+          id: "archive",
+          label: "Archive posture",
+          value: formatNumber(unreadCount),
+          note: `${formatNumber(claimableCount)} claimable and ${formatNumber(entries.length)} total records in the hall.`,
+          tone: unreadCount > 0 ? ("warning" as const) : ("default" as const),
+        },
+      ]
+    : [];
+  const routeBridgeItems = selectedEntry
+    ? [
+        {
+          id: "open",
+          label: "Open records",
+          value: formatNumber(unreadCount),
+          note: "Unread dispatches on file",
+          tone: unreadCount > 0 ? ("warning" as const) : ("default" as const),
+        },
+        {
+          id: "claimable",
+          label: "Claimable",
+          value: formatNumber(claimableCount),
+          note: "Rewards ready to process",
+          tone: claimableCount > 0 ? ("success" as const) : ("default" as const),
+        },
+        {
+          id: "lane",
+          label: "Archive lane",
+          value: getMailboxSectionLabel(selectedEntry),
+          note: "Current dispatch category",
+          tone: "info" as const,
+        },
+      ]
+    : [];
 
   if (mailboxQuery.isPending) {
-    return <div className={styles.feedback}>Loading dispatch archive...</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice title="Loading dispatch archive" body="Message Center is indexing reports, scout returns, and claimable warrants." />
+      </section>
+    );
   }
 
   if (mailboxQuery.isError) {
-    return <div className={styles.feedback}>Message center could not be loaded.</div>;
+    return (
+      <section className={styles.page}>
+        <PageNotice
+          title="Message Center could not be loaded"
+          body="The dispatch archive is unavailable right now. Retry once mailbox and session state are healthy again."
+          tone="danger"
+        />
+      </section>
+    );
   }
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.kicker}>Imperial Message Center</p>
-            <h2 className={styles.heroTitle}>Dispatch archive and reward manifest</h2>
-            <p className={styles.heroLead}>
-              Reports, scout returns, and claimable warrants now live in a full archive surface with a clearer bridge back into War Council, Market, and the Strategic Map.
-            </p>
-          </div>
-          <Badge tone="warning">{formatNumber(unreadCount)} unread</Badge>
-        </div>
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Unread dispatches</span>
-            <strong className={styles.summaryValue}>{formatNumber(unreadCount)}</strong>
-            <span className={styles.summaryMeta}>Priority records still waiting for review.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Claimable warrants</span>
-            <strong className={styles.summaryValue}>{formatNumber(claimableCount)}</strong>
-            <span className={styles.summaryMeta}>Rewards and system grants ready to process.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Scout dispatches</span>
-            <strong className={styles.summaryValue}>{formatNumber(scoutCount)}</strong>
-            <span className={styles.summaryMeta}>Recon intel and node reports on file.</span>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Battle alerts</span>
-            <strong className={styles.summaryValue}>{formatNumber(battleCount)}</strong>
-            <span className={styles.summaryMeta}>Combat and rally reports preserved in the archive.</span>
-          </article>
-        </div>
+      <PageHero
+        kicker="Imperial Message Center"
+        title="Dispatch archive and reward manifest"
+        lead="Reports, scout returns, and claimable warrants now live in a full archive surface with a clearer bridge back into War Council, Market, and the Strategic Map."
+        aside={<Badge tone="warning">{formatNumber(unreadCount)} unread</Badge>}
+      >
+        <SummaryMetricGrid items={heroMetrics} />
         {groupSummaries.length > 0 ? (
           <div className={styles.boardGrid}>
             {groupSummaries.map((group) => (
@@ -195,7 +264,7 @@ export function MessageCenterPage() {
             ))}
           </div>
         ) : null}
-      </header>
+      </PageHero>
 
       {entries.length === 0 || !selectedEntry ? (
         <SectionCard kicker="Archive" title="No dispatches on file">
@@ -204,13 +273,13 @@ export function MessageCenterPage() {
       ) : (
         <div className={styles.layout}>
           <section className={styles.archiveRail}>
-            <div className={styles.archiveHeader}>
-              <div>
-                <p className={styles.groupLabel}>Dispatch archive</p>
-                <h3 className={styles.archiveTitle}>{state.city.cityName} records</h3>
-              </div>
-              <Badge tone="info">{formatNumber(entries.length)} entries</Badge>
-            </div>
+            <SectionHeaderBlock
+              kicker="Dispatch Archive"
+              title={`${state.city.cityName} records`}
+              lead={`${formatNumber(entries.length)} entries staged on the rail`}
+              aside={<Badge tone="info">{formatNumber(entries.length)} entries</Badge>}
+              className={styles.archiveHeader}
+            />
 
             <div className={styles.archiveGroups}>
               {groupedEntries.map(([groupLabel, groupEntries]) => {
@@ -272,21 +341,7 @@ export function MessageCenterPage() {
                 </div>
               </div>
               <div className={styles.dispatchBoard}>
-                <article className={styles.dispatchCell}>
-                  <span className={styles.detailLabel}>Primary route</span>
-                  <strong>{getDispatchRoute(selectedEntry, bootstrap.storeEnabled).label}</strong>
-                  <span>{getDispatchRoute(selectedEntry, bootstrap.storeEnabled).note}</span>
-                </article>
-                <article className={styles.dispatchCell}>
-                  <span className={styles.detailLabel}>Reward state</span>
-                  <strong>{selectedEntry.canClaim ? "Ready to claim" : selectedRewards.length > 0 ? "Filed with parcel" : "No parcel attached"}</strong>
-                  <span>{selectedRewards.length > 0 ? `${selectedRewards.length} reward lines attached to this dispatch.` : "This dispatch is informational only."}</span>
-                </article>
-                <article className={styles.dispatchCell}>
-                  <span className={styles.detailLabel}>Archive posture</span>
-                  <strong>{formatNumber(unreadCount)} pending</strong>
-                  <span>{formatNumber(claimableCount)} claimable and {formatNumber(entries.length)} total records in the hall.</span>
-                </article>
+                <PanelStatGrid items={dispatchBoardItems} columns={3} />
               </div>
             </header>
 
@@ -331,20 +386,7 @@ export function MessageCenterPage() {
             ) : null}
 
             <SectionCard kicker="Operations Bridge" title="Route this dispatch">
-              <div className={styles.routeGrid}>
-                <article className={styles.routeCard}>
-                  <span className={styles.detailLabel}>Open records</span>
-                  <strong>{formatNumber(unreadCount)}</strong>
-                </article>
-                <article className={styles.routeCard}>
-                  <span className={styles.detailLabel}>Claimable</span>
-                  <strong>{formatNumber(claimableCount)}</strong>
-                </article>
-                <article className={styles.routeCard}>
-                  <span className={styles.detailLabel}>Archive lane</span>
-                  <strong>{getMailboxSectionLabel(selectedEntry)}</strong>
-                </article>
-              </div>
+              <PanelStatGrid items={routeBridgeItems} columns={3} className={styles.routeGrid} />
               <p className={styles.routeNote}>{getDispatchRoute(selectedEntry, bootstrap.storeEnabled).note}</p>
               <div className={styles.actionRow}>
                 <Button type="button" variant="secondary" onClick={() => navigate(getDispatchRoute(selectedEntry, bootstrap.storeEnabled).to)}>
