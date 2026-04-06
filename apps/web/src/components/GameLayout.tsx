@@ -81,6 +81,8 @@ declare global {
       cityId?: string;
       poiId?: string;
     }) => void;
+    confirm_map_command_composer?: () => Promise<void> | void;
+    prime_map_chunk?: () => Promise<void> | void;
     frontierMapCamera?: MapCameraState | null;
     frontierActiveChunk?: ActiveMapChunkMeta | null;
     frontierMapFieldCommand?: {
@@ -92,8 +94,11 @@ declare global {
     frontierMapUi?: {
       targetSheetOpen: boolean;
       composerMode: string | null;
+      composerActionLabel: string | null;
       selectedMarchId: string | null;
       selectedTargetName: string | null;
+      selectedTargetKind: "CITY" | "POI" | null;
+      availableActions: string[];
       fieldCommandKind: string | null;
     } | null;
     focus_map_target?: (command: {

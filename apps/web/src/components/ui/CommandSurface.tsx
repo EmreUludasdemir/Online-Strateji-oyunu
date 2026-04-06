@@ -28,6 +28,27 @@ interface PanelStatGridProps {
   containerDataAttribute?: string;
 }
 
+export interface DetailListItem {
+  id: string;
+  label: ReactNode;
+  value: ReactNode;
+  note?: ReactNode;
+}
+
+interface DetailListProps {
+  items: readonly DetailListItem[];
+  className?: string;
+}
+
+interface FeedCardShellProps {
+  title: ReactNode;
+  meta?: ReactNode;
+  body?: ReactNode;
+  footer?: ReactNode;
+  tone?: PanelStatTone;
+  className?: string;
+}
+
 export function SectionHeaderBlock({ kicker, title, lead, aside, className }: SectionHeaderBlockProps) {
   return (
     <div className={[styles.sectionHeaderBlock, className].filter(Boolean).join(" ")}>
@@ -72,5 +93,42 @@ export function PanelStatGrid({
         </article>
       ))}
     </div>
+  );
+}
+
+export function DetailList({ items, className }: DetailListProps) {
+  return (
+    <div className={[styles.detailList, className].filter(Boolean).join(" ")}>
+      {items.map((item) => (
+        <div key={item.id} className={styles.detailRow}>
+          <div className={styles.detailCopy}>
+            <span className={styles.detailLabel}>{item.label}</span>
+            {item.note ? <p className={styles.detailNote}>{item.note}</p> : null}
+          </div>
+          <strong className={styles.detailValue}>{item.value}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function FeedCardShell({ title, meta, body, footer, tone = "default", className }: FeedCardShellProps) {
+  return (
+    <article
+      className={[
+        styles.feedCardShell,
+        tone ? styles[`feedCardShell${tone[0].toUpperCase()}${tone.slice(1)}` as keyof typeof styles] : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className={styles.feedCardHead}>
+        <strong className={styles.feedCardTitle}>{title}</strong>
+        {meta ? <div className={styles.feedCardMeta}>{meta}</div> : null}
+      </div>
+      {body ? <div className={styles.feedCardBody}>{body}</div> : null}
+      {footer ? <div className={styles.feedCardFooter}>{footer}</div> : null}
+    </article>
   );
 }

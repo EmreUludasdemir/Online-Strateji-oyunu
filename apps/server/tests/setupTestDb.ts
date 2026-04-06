@@ -84,7 +84,7 @@ function isDatabaseBootError(error: unknown) {
 
 async function resetTestDatabase(endpoint: { host: string; port: number }) {
   const resetCommand = "corepack pnpm exec prisma db push --force-reset --skip-generate";
-  const maxAttempts = 3;
+  const maxAttempts = 5;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -101,7 +101,7 @@ async function resetTestDatabase(endpoint: { host: string; port: number }) {
       console.warn(
         `Test database on ${endpoint.host}:${endpoint.port} is still warming up. Retrying Prisma reset (${attempt + 1}/${maxAttempts})...`,
       );
-      await sleep(2_000);
+      await sleep(2_000 + attempt * 500);
     }
   }
 }
@@ -121,6 +121,7 @@ async function main() {
       execSync("docker info", { cwd: rootDir, stdio: "ignore" });
       execSync("cmd.exe /d /s /c \"docker compose up -d postgres\"", { cwd: rootDir, stdio: "inherit" });
       await waitForPort(endpoint.port, endpoint.host, 60_000);
+      await sleep(1_000);
     } catch (error) {
       const guidance = isDockerDesktopUnavailable(error)
         ? "Docker Desktop is not running."

@@ -64,7 +64,6 @@
 
 .heroLead,
 .noticeBody,
-.feedCard p,
 .mutedText {
   color: var(--color-outline);
   line-height: 1.6;
@@ -92,7 +91,6 @@
 
 .noticeCard,
 .summaryCard,
-.feedCard,
 .rosterRow {
   position: relative;
   overflow: hidden;
@@ -254,19 +252,6 @@
   border-top: 1px solid var(--color-outline-variant);
 }
 
-.feedCard {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.feedMeta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
 .treasuryTotal {
   display: flex;
   align-items: end;
@@ -325,7 +310,6 @@
 @media (max-width: 760px) {
   .heroMeta,
   .actions,
-  .feedMeta,
   .treasuryTotal,
   .rosterActions {
     flex-direction: column;

@@ -14,6 +14,14 @@ export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getLocalHostCandidates(host) {
+  if (!isLocalHost(host)) {
+    return [host];
+  }
+
+  return Array.from(new Set([host, "127.0.0.1", "localhost", "::1"]));
+}
+
 export async function waitFor(check, timeoutMs, label, intervalMs = 500) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -36,6 +44,7 @@ export async function prepareSmokeFixture(username, rootDir = process.cwd()) {
     return;
   }
 
+  const lockFile = path.join(rootDir, "output", ".smoke-fixture-reset.lock");
   const databaseUrl = getDefaultSmokeDatabaseUrl();
   await ensurePostgres({
     rootDir,
@@ -52,37 +61,72 @@ export async function prepareSmokeFixture(username, rootDir = process.cwd()) {
     );
   }
 
+  await fsPromises.mkdir(path.dirname(lockFile), { recursive: true });
+
+  let lockHandle = null;
   try {
-    execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
-      cwd: serverDir,
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        DATABASE_URL: databaseUrl,
+    lockHandle = await waitFor(
+      async () => {
+        try {
+          return await fsPromises.open(lockFile, "wx");
+        } catch (error) {
+          const code = error && typeof error === "object" && "code" in error ? error.code : null;
+          if (code === "EEXIST") {
+            return null;
+          }
+          throw error;
+        }
       },
-    });
-  } catch (error) {
-    throw new Error(
-      `Smoke fixture reset failed for ${username}. Verify DATABASE_URL (${databaseUrl}) and local Postgres health before retrying. Root cause: ${
-        error instanceof Error ? error.message : String(error)
-      }.`,
+      20_000,
+      "the smoke fixture reset lock",
+      250,
     );
+
+    try {
+      execFileSync(process.execPath, [tsxCli, "prisma/resetSmokeFixture.ts", "--username", username], {
+        cwd: serverDir,
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          DATABASE_URL: databaseUrl,
+        },
+      });
+    } catch (error) {
+      throw new Error(
+        `Smoke fixture reset failed for ${username}. Verify DATABASE_URL (${databaseUrl}) and local Postgres health before retrying. Root cause: ${
+          error instanceof Error ? error.message : String(error)
+        }.`,
+      );
+    }
+  } finally {
+    if (lockHandle) {
+      await lockHandle.close().catch(() => undefined);
+      await fsPromises.unlink(lockFile).catch(() => undefined);
+    }
   }
 }
 
 export async function isPortOpen(port, host = "127.0.0.1") {
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ port, host });
-    socket.once("connect", () => {
-      socket.end();
-      resolve(true);
+  for (const candidateHost of getLocalHostCandidates(host)) {
+    const isOpen = await new Promise((resolve) => {
+      const socket = net.createConnection({ port, host: candidateHost });
+      socket.once("connect", () => {
+        socket.end();
+        resolve(true);
+      });
+      socket.once("error", () => resolve(false));
+      socket.setTimeout(1_000, () => {
+        socket.destroy();
+        resolve(false);
+      });
     });
-    socket.once("error", () => resolve(false));
-    socket.setTimeout(1_000, () => {
-      socket.destroy();
-      resolve(false);
-    });
-  });
+
+    if (isOpen) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export async function ensurePortAvailable(port, label, host = "127.0.0.1") {
@@ -255,17 +299,53 @@ export async function waitForPort(port, label, timeoutMs, host = "127.0.0.1") {
   await waitFor(() => isPortOpen(port, host), timeoutMs, label, 1_000);
 }
 
-function getProcessFailureMessage(label, processHandle) {
-  if (!processHandle || processHandle.exitCode === null) {
-    return null;
+function normalizeManagedProcesses(processHandle, processHandles = []) {
+  const normalized = [...processHandles];
+  if (processHandle) {
+    normalized.push({ label: "managed process", handle: processHandle });
   }
-
-  return `${label} exited during startup with code ${processHandle.exitCode}. Inspect the smoke log tail for the failing process and verify the repo-owned stack configuration before retrying.`;
+  return normalized;
 }
 
-export async function waitForManagedPort({ port, host = "127.0.0.1", label, timeoutMs, processHandle }) {
+function getProcessFailureMessage(label, processHandle, processHandles = []) {
+  for (const managedProcess of normalizeManagedProcesses(processHandle, processHandles)) {
+    if (managedProcess.handle && managedProcess.handle.exitCode !== null) {
+      return `${label} could not finish startup because ${managedProcess.label} exited with code ${managedProcess.handle.exitCode}. Inspect the smoke log tail for the failing process and verify the repo-owned stack configuration before retrying.`;
+    }
+  }
+
+  return null;
+}
+
+function classifySmokeFailure(error) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("Docker Desktop is not running")) {
+    return "Docker unavailable";
+  }
+  if (message.includes("Docker is not available from this shell")) {
+    return "Docker unavailable";
+  }
+  if (message.includes("DATABASE_URL points to") && message.includes("unreachable")) {
+    return "Custom DATABASE_URL unreachable";
+  }
+  if (message.includes("TEST_DATABASE_URL") && message.includes("not reachable")) {
+    return "Custom TEST_DATABASE_URL unreachable";
+  }
+  if (message.includes("Postgres is not reachable") || message.includes("Test database is not reachable")) {
+    return "Database unavailable";
+  }
+  if (message.includes("exited during startup") || message.includes("could not finish startup") || message.includes("Timed out while waiting")) {
+    return "Startup failure";
+  }
+  if (message.includes("Smoke scenario")) {
+    return "Scenario failure";
+  }
+  return "Unknown failure";
+}
+
+export async function waitForManagedPort({ port, host = "127.0.0.1", label, timeoutMs, processHandle, processHandles }) {
   await waitFor(async () => {
-    const failureMessage = getProcessFailureMessage(label, processHandle);
+    const failureMessage = getProcessFailureMessage(label, processHandle, processHandles);
     if (failureMessage) {
       throw new Error(failureMessage);
     }
@@ -274,16 +354,22 @@ export async function waitForManagedPort({ port, host = "127.0.0.1", label, time
   }, timeoutMs, label, 1_000);
 }
 
-export async function waitForManagedHttp({ url, label, timeoutMs, processHandle }) {
+export async function waitForManagedHttp({ url, label, timeoutMs, processHandle, processHandles, validateResponse }) {
   await waitFor(async () => {
-    const failureMessage = getProcessFailureMessage(label, processHandle);
+    const failureMessage = getProcessFailureMessage(label, processHandle, processHandles);
     if (failureMessage) {
       throw new Error(failureMessage);
     }
 
     try {
       const response = await fetch(url);
-      return response.ok ? response : null;
+      if (!response.ok) {
+        return null;
+      }
+      if (validateResponse) {
+        return (await validateResponse(response.clone())) ? response : null;
+      }
+      return response;
     } catch {
       return null;
     }
@@ -325,6 +411,19 @@ export async function runRepoOwnedSmokeScenario({
   await fsPromises.mkdir(outputDir, { recursive: true });
 
   const baseUrl = `http://localhost:${webPort}`;
+  const allowedOrigins = Array.from(
+    new Set(
+      [
+        process.env.ALLOWED_ORIGINS,
+        serverEnv.ALLOWED_ORIGINS,
+        `http://localhost:${webPort}`,
+        `http://127.0.0.1:${webPort}`,
+      ]
+        .flatMap((value) => String(value ?? "").split(","))
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ).join(",");
   await ensurePortAvailable(serverPort, `The ${suiteName} server`);
   await ensurePortAvailable(webPort, `The ${suiteName} web shell`);
   await ensurePostgres({ rootDir, databaseUrl, purpose: suiteName, autoStart: true });
@@ -341,6 +440,7 @@ export async function runRepoOwnedSmokeScenario({
       COOKIE_SECURE: "false",
       AUTH_RATE_LIMIT_MAX: "999",
       COMMAND_RATE_LIMIT_MAX: "999",
+      ALLOWED_ORIGINS: allowedOrigins,
       ...serverEnv,
     },
   });
@@ -364,20 +464,39 @@ export async function runRepoOwnedSmokeScenario({
       url: `http://127.0.0.1:${serverPort}/api/health`,
       label: `the ${suiteName} server`,
       timeoutMs: 60_000,
-      processHandle: server.child,
+      processHandles: [{ label: `${suiteName} server`, handle: server.child }],
     });
     await waitForManagedPort({
       port: webPort,
       label: `the ${suiteName} web shell`,
       timeoutMs: 60_000,
-      processHandle: web.child,
+      processHandles: [{ label: `${suiteName} web shell`, handle: web.child }],
     });
     await waitForManagedHttp({
       url: new URL("/login", baseUrl).toString(),
       label: `the ${suiteName} web shell`,
       timeoutMs: 60_000,
-      processHandle: web.child,
+      processHandles: [{ label: `${suiteName} web shell`, handle: web.child }],
     });
+    await waitForManagedHttp({
+      url: new URL("/api/public/bootstrap", baseUrl).toString(),
+      label: `the ${suiteName} bootstrap api`,
+      timeoutMs: 60_000,
+      processHandles: [
+        { label: `${suiteName} server`, handle: server.child },
+        { label: `${suiteName} web shell`, handle: web.child },
+      ],
+      validateResponse: async (response) => {
+        const payload = await response.json().catch(() => null);
+        return Boolean(
+          payload &&
+            typeof payload.launchPhase === "string" &&
+            typeof payload.registrationMode === "string" &&
+            typeof payload.storeEnabled === "boolean",
+        );
+      },
+    });
+    await sleep(750);
 
     const steps =
       scenarioSteps ??
@@ -397,6 +516,7 @@ export async function runRepoOwnedSmokeScenario({
         runNodeScript(rootDir, step.script, ["--base-url", baseUrl, ...(step.args ?? [])], {
           DATABASE_URL: databaseUrl,
         });
+        await sleep(350);
       } catch (error) {
         throw new Error(
           `Smoke scenario ${step.script} failed inside ${suiteName}. Verify the repo-owned stack logs and scenario artifact output before retrying. Root cause: ${
@@ -407,6 +527,8 @@ export async function runRepoOwnedSmokeScenario({
     }
   } catch (error) {
     const [serverTail, webTail] = await Promise.all([readLogTail(server.logFile), readLogTail(web.logFile)]);
+    const failureClass = classifySmokeFailure(error);
+    console.error(`\n[${suiteName} failure class] ${failureClass}`);
     if (serverTail) {
       console.error(`\n[${suiteName} server tail]\n${serverTail}`);
     }

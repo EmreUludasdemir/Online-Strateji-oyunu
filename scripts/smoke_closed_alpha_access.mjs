@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
-import { assert, ensureBaseUrlReachable, prepareSmokeFixture } from "./smoke_support.mjs";
+import { assert, ensureBaseUrlReachable, prepareSmokeFixture, waitFor } from "./smoke_support.mjs";
 
 function parseArgs(argv) {
   const args = {
@@ -75,6 +75,8 @@ async function main() {
     await page.getByLabel("Password").fill(args.password);
     await page.locator("form").getByRole("button", { name: "Log in" }).click();
     await page.waitForURL("**/app/dashboard");
+    await waitFor(async () => ((await page.locator("[data-release-badge]").count()) > 0 ? true : null), 10_000, "the closed-alpha shell badge");
+    await waitFor(async () => ((await page.locator("[data-version-stamp]").count()) > 0 ? true : null), 10_000, "the shell version stamp");
 
     assert((await page.locator("[data-release-badge]").count()) > 0, "Closed-alpha release badge should be rendered in the shell.");
     assert((await page.locator("[data-version-stamp]").count()) > 0, "Version stamp should be rendered in the shell.");

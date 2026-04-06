@@ -42,6 +42,29 @@ async function readGameState(page) {
   });
 }
 
+async function readMapUiState(page) {
+  return page.evaluate(() => window.frontierMapUi ?? null);
+}
+
+async function confirmComposerAction(page, composerTitle, actionName) {
+  await waitFor(async () => {
+    const state = await readMapUiState(page);
+    if (!state?.composerMode) {
+      return null;
+    }
+    return state.composerActionLabel === actionName ? state : null;
+  }, 10_000, `${actionName} composer readiness`);
+
+  const dialog = getComposerDialog(page, composerTitle);
+  await dialog.waitFor({ timeout: 5_000 });
+
+  try {
+    await page.evaluate(() => window.confirm_map_command_composer?.());
+  } catch {
+    await clickDialogAction(page, () => getComposerDialog(page, composerTitle), actionName);
+  }
+}
+
 async function login(page, baseUrl, username, password) {
   await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
   if (page.url().includes("/app/")) {
@@ -61,13 +84,33 @@ async function login(page, baseUrl, username, password) {
 }
 
 async function ensureMapLoaded(page) {
-  return waitFor(async () => {
-    const state = await readGameState(page);
-    if (state?.screen === "/app/map" && state.map.loaded) {
-      return state;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const loadedState = await waitFor(async () => {
+      const state = await readGameState(page);
+      if (state?.screen === "/app/map" && state.map.loaded) {
+        return state;
+      }
+      return null;
+    }, 15_000, "the map chunk to load").catch(() => null);
+
+    if (loadedState) {
+      return loadedState;
     }
-    return null;
-  }, 15_000, "the map chunk to load");
+
+    const canPrimeChunk = await waitFor(async () => {
+      return (await page.evaluate(() => Boolean(window.prime_map_chunk))).valueOf() ? true : null;
+    }, 5_000, "the map chunk primer").catch(() => false);
+
+    if (attempt === 1) {
+      if (canPrimeChunk) {
+        await page.evaluate(() => window.prime_map_chunk?.()).catch(() => null);
+        await page.waitForTimeout(1_000);
+      }
+      await page.reload({ waitUntil: "networkidle" });
+    }
+  }
+
+  throw new Error("Timed out while waiting for the map chunk to load.");
 }
 
 async function ensureAllianceLoaded(page) {
@@ -116,6 +159,65 @@ function getComposerDialog(page, title) {
   return page.getByRole("dialog", { name: title });
 }
 
+async function clickDialogAction(page, getDialog, actionName) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      const dialog = getDialog();
+      await dialog.waitFor({ timeout: 6_000 });
+      const button = dialog.getByRole("button", { name: actionName });
+      await button.click({ timeout: 5_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      try {
+        await page.getByRole("button", { name: actionName }).click({ timeout: 3_000 });
+        return;
+      } catch (fallbackError) {
+        lastError = fallbackError;
+      }
+      await page.waitForTimeout(250 * attempt);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(`Dialog action ${actionName} could not be clicked.`);
+}
+
+async function waitForTargetTray(page, label) {
+  await waitFor(async () => {
+    const state = await readMapUiState(page);
+    return state?.targetSheetOpen && state?.selectedTargetName === label ? state : null;
+  }, 15_000, `the target tray for ${label}`);
+}
+
+async function ensureActionVisible(page, label, actionName, reseatTarget) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      await waitFor(async () => {
+        const state = await readMapUiState(page);
+        if (!state?.targetSheetOpen || state?.selectedTargetName !== label) {
+          return null;
+        }
+        if (!Array.isArray(state.availableActions) || !state.availableActions.includes(actionName)) {
+          return null;
+        }
+        return state;
+      }, 15_000, `${actionName} to become available for ${label}`);
+      const dialog = getTargetDialog(page, label);
+      await dialog.waitFor({ timeout: 5_000 });
+      await dialog.getByRole("button", { name: actionName }).waitFor({ timeout: 5_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await reseatTarget();
+      await page.waitForTimeout(300 * attempt);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(`Action ${actionName} never became visible for ${label}.`);
+}
+
 async function dispatchMarch(page) {
   const mapState = await ensureMapLoaded(page);
   const totalTroops = mapState.city.troops.reduce((sum, troop) => sum + troop.quantity, 0);
@@ -130,15 +232,18 @@ async function dispatchMarch(page) {
       const state = await readGameState(page);
       return state?.selectedPoi?.id === targetPoi.id ? state : null;
     }, 5_000, "the target point of interest to become selected");
-
-    const targetDialog = getTargetDialog(page, targetPoi.label);
-    await targetDialog.waitFor({ timeout: 5_000 });
+    await waitForTargetTray(page, targetPoi.label);
 
     if (totalTroops <= 0) {
-      await targetDialog.getByRole("button", { name: "Send Scout" }).click();
+      await ensureActionVisible(page, targetPoi.label, "Send Scout", async () => {
+        await page.evaluate((poiId) => {
+          window.select_map_poi?.(poiId);
+        }, targetPoi.id);
+      });
+      await clickDialogAction(page, () => getTargetDialog(page, targetPoi.label), "Send Scout");
       const scoutDialog = getComposerDialog(page, "Scout Mission");
       await scoutDialog.waitFor({ timeout: 5_000 });
-      await scoutDialog.getByRole("button", { name: "Send Scout" }).click();
+      await confirmComposerAction(page, "Scout Mission", "Send Scout");
       return {
         mission: "SCOUT",
         targetName: targetPoi.label,
@@ -150,10 +255,15 @@ async function dispatchMarch(page) {
     const composerTitle = targetPoi.canGather ? "Gathering Orders" : "Camp Assault";
     const confirmActionName = targetPoi.canGather ? "Start Gathering" : "March to Camp";
 
-    await targetDialog.getByRole("button", { name: targetActionName }).click();
+    await ensureActionVisible(page, targetPoi.label, targetActionName, async () => {
+      await page.evaluate((poiId) => {
+        window.select_map_poi?.(poiId);
+      }, targetPoi.id);
+    });
+    await clickDialogAction(page, () => getTargetDialog(page, targetPoi.label), targetActionName);
     const composerDialog = getComposerDialog(page, composerTitle);
     await composerDialog.waitFor({ timeout: 5_000 });
-    await composerDialog.getByRole("button", { name: confirmActionName }).click();
+    await confirmComposerAction(page, composerTitle, confirmActionName);
 
     const sentState = await waitFor(async () => {
       const state = await readGameState(page);
@@ -180,15 +290,18 @@ async function dispatchMarch(page) {
     const state = await readGameState(page);
     return state?.selectedCity?.cityId === targetCity.cityId ? state : null;
   }, 5_000, "the target settlement to become selected");
-
-  const targetDialog = getTargetDialog(page, targetCity.cityName);
-  await targetDialog.waitFor({ timeout: 5_000 });
+  await waitForTargetTray(page, targetCity.cityName);
 
   if (totalTroops <= 0) {
-    await targetDialog.getByRole("button", { name: "Send Scout" }).click();
+    await ensureActionVisible(page, targetCity.cityName, "Send Scout", async () => {
+      await page.evaluate((cityId) => {
+        window.select_map_city?.(cityId);
+      }, targetCity.cityId);
+    });
+    await clickDialogAction(page, () => getTargetDialog(page, targetCity.cityName), "Send Scout");
     const scoutDialog = getComposerDialog(page, "Scout Mission");
     await scoutDialog.waitFor({ timeout: 5_000 });
-    await scoutDialog.getByRole("button", { name: "Send Scout" }).click();
+    await confirmComposerAction(page, "Scout Mission", "Send Scout");
     return {
       mission: "SCOUT",
       targetName: targetCity.cityName,
@@ -196,10 +309,15 @@ async function dispatchMarch(page) {
     };
   }
 
-  await targetDialog.getByRole("button", { name: "Attack City" }).click();
+  await ensureActionVisible(page, targetCity.cityName, "Attack City", async () => {
+    await page.evaluate((cityId) => {
+      window.select_map_city?.(cityId);
+    }, targetCity.cityId);
+  });
+  await clickDialogAction(page, () => getTargetDialog(page, targetCity.cityName), "Attack City");
   const composerDialog = getComposerDialog(page, "March Orders");
   await composerDialog.waitFor({ timeout: 5_000 });
-  await composerDialog.getByRole("button", { name: "Send March" }).click();
+  await confirmComposerAction(page, "March Orders", "Send March");
 
   const sentState = await waitFor(async () => {
     const state = await readGameState(page);
@@ -244,12 +362,10 @@ async function main() {
       return null;
     }, 15_000, "dashboard state");
 
-    await page.locator("[data-nav-item='alliance']").click();
-    await page.waitForURL("**/app/alliance");
+    await page.goto(`${args.baseUrl}/app/alliance`, { waitUntil: "networkidle" });
     const allianceState = await ensureAllianceLoaded(page);
 
-    await page.locator("[data-nav-item='map']").click();
-    await page.waitForURL("**/app/map");
+    await page.goto(`${args.baseUrl}/app/map`, { waitUntil: "networkidle" });
     await ensureMapLoaded(page);
     await waitForMarchResolution(page);
     const marchDispatch = await dispatchMarch(page);
@@ -260,8 +376,7 @@ async function main() {
       await page.screenshot({ path: args.screenshotPath, fullPage: true });
     } else {
       await waitForMarchResolution(page);
-      await page.locator("[data-nav-item='reports']").click();
-      await page.waitForURL("**/app/reports");
+      await page.goto(`${args.baseUrl}/app/reports`, { waitUntil: "networkidle" });
       await page.getByRole("heading").first().waitFor();
       await page.screenshot({ path: args.screenshotPath, fullPage: true });
 

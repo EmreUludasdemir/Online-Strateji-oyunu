@@ -142,6 +142,58 @@ interface ScoutTrailEntity {
   lastTrailAt: number;
 }
 
+interface BaseStaticGraphicBundle {
+  kind: "alliance-marker" | "report" | "poi-camp" | "poi-node" | "city";
+  container: Phaser.GameObjects.Container;
+}
+
+interface AllianceMarkerGraphicBundle extends BaseStaticGraphicBundle {
+  kind: "alliance-marker";
+  beacon: Phaser.GameObjects.Arc;
+  pin: Phaser.GameObjects.Triangle;
+  core: Phaser.GameObjects.Arc;
+}
+
+interface ReportGraphicBundle extends BaseStaticGraphicBundle {
+  kind: "report";
+  ping: Phaser.GameObjects.Arc;
+  bubble: Phaser.GameObjects.Arc;
+}
+
+interface PoiCampGraphicBundle extends BaseStaticGraphicBundle {
+  kind: "poi-camp";
+  aura: Phaser.GameObjects.Arc;
+  fortOuter: Phaser.GameObjects.Rectangle;
+  fortInner: Phaser.GameObjects.Rectangle;
+}
+
+interface PoiNodeGraphicBundle extends BaseStaticGraphicBundle {
+  kind: "poi-node";
+  aura: Phaser.GameObjects.Arc;
+  marker: Phaser.GameObjects.Arc;
+  core: Phaser.GameObjects.Arc;
+}
+
+interface CityGraphicBundle extends BaseStaticGraphicBundle {
+  kind: "city";
+  territory: Phaser.GameObjects.Arc;
+  aura: Phaser.GameObjects.Arc;
+  marker: Phaser.GameObjects.Arc;
+  core: Phaser.GameObjects.Rectangle;
+}
+
+type StaticGraphicBundle =
+  | AllianceMarkerGraphicBundle
+  | ReportGraphicBundle
+  | PoiCampGraphicBundle
+  | PoiNodeGraphicBundle
+  | CityGraphicBundle;
+
+type ToggleableGameObject = Phaser.GameObjects.GameObject & {
+  setVisible: (visible: boolean) => Phaser.GameObjects.GameObject;
+  setActive: (active: boolean) => Phaser.GameObjects.GameObject;
+};
+
 interface DragState {
   active: boolean;
   dragging: boolean;
@@ -308,12 +360,16 @@ class FrontierMapScene extends Phaser.Scene {
   private cityLookup = new Map<string, PointLookup<MapCity>>();
   private poiLookup = new Map<string, PointLookup<PoiView>>();
   private reportLookup = new Map<string, PointLookup<MapReportMarkerView>>();
+  private staticLabelCache = new Map<string, Phaser.GameObjects.Text>();
+  private staticGraphicCache = new Map<string, StaticGraphicBundle>();
   private marchEntities = new Map<string, AnimatedMarchEntity>();
   private scoutEntities = new Map<string, ScoutTrailEntity>();
   private selectionObjects: Phaser.GameObjects.GameObject[] = [];
+  private selectionDetailObjects: Phaser.GameObjects.GameObject[] = [];
   private lastCameraState: MapCameraState | null = null;
   private lastObjectLayerSignature: string | null = null;
   private lastRouteSnapshot: RouteLayerSnapshot | null = null;
+  private lastSelectionDetailSignature: string | null = null;
   private lastSelectionSnapshot: SelectionFxSnapshot | null = null;
   private currentDetailLevel: MapDetailLevel = getMapDetailLevel(MAP_CAMERA_DEFAULT_ZOOM);
   private didInitialFocus = false;
@@ -359,6 +415,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.bindInput();
     this.syncTerrainLayer();
     this.syncObjectLayer();
+    this.syncSelectionDetails();
     this.syncSelectionFx();
     this.syncMarchEntities();
     this.syncScoutTrails();
@@ -375,6 +432,7 @@ class FrontierMapScene extends Phaser.Scene {
       this.currentDetailLevel = nextDetail;
       this.syncTerrainLayer();
       this.syncObjectLayer();
+      this.syncSelectionDetails();
       this.syncSelectionFx();
     }
 
@@ -430,6 +488,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     this.syncTerrainLayer();
     this.syncObjectLayer();
+    this.syncSelectionDetails();
     this.syncSelectionFx();
     this.syncMarchEntities();
     this.syncScoutTrails();
@@ -649,13 +708,6 @@ class FrontierMapScene extends Phaser.Scene {
     );
   }
 
-  private clearLayer(layer?: Phaser.GameObjects.Layer) {
-    if (!layer) {
-      return;
-    }
-    layer.removeAll(true);
-  }
-
   private syncTerrainLayer() {
     if (!this.terrainGraphics || !this.gridGraphics) {
       return;
@@ -702,8 +754,7 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
 
-    this.clearLayer(this.objectLayer);
-    this.clearLayer(this.uiLayer);
+    this.prepareStaticGraphics();
     this.cityLookup.clear();
     this.poiLookup.clear();
     this.reportLookup.clear();
@@ -713,39 +764,44 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     this.lastObjectLayerSignature = nextSignature;
+    this.prepareStaticLabels();
 
     const showLabels = this.currentDetailLevel !== "far";
     const showNearDetail = this.currentDetailLevel === "near";
 
     if (this.currentDetailLevel !== "near") {
       for (const region of getWorldRegions(this.worldSize)) {
-        const regionLabel = this.add
-          .text(
-            (region.anchorX + 0.5) * MAP_TILE_WORLD_SIZE,
-            (region.anchorY + 0.5) * MAP_TILE_WORLD_SIZE,
-            region.label,
-            {
-              color: region.color,
-              fontFamily: "'Cinzel', 'Palatino Linotype', serif",
-              fontSize: this.currentDetailLevel === "far" ? "22px" : "28px",
-              fontStyle: "italic",
-              stroke: "#130b08",
-              strokeThickness: 4,
-            },
-          )
-          .setOrigin(0.5)
-          .setAlpha(this.currentDetailLevel === "far" ? 0.18 : 0.24);
-        this.uiLayer.add(regionLabel);
+        const regionLabel = this.getOrCreateStaticLabel(
+          `region:${region.id}`,
+          (region.anchorX + 0.5) * MAP_TILE_WORLD_SIZE,
+          (region.anchorY + 0.5) * MAP_TILE_WORLD_SIZE,
+          region.label,
+          {
+            color: region.color,
+            fontFamily: "'Cinzel', 'Palatino Linotype', serif",
+            fontSize: this.currentDetailLevel === "far" ? "22px" : "28px",
+            fontStyle: "italic",
+            stroke: "#130b08",
+            strokeThickness: 4,
+          },
+          0.5,
+          0.5,
+        );
+        regionLabel.setAlpha(this.currentDetailLevel === "far" ? 0.18 : 0.24);
       }
     }
 
     for (const marker of this.allianceMarkers) {
       const point = tileToWorld(marker.x, marker.y);
-      const beacon = this.add.circle(point.x, point.y, this.currentDetailLevel === "far" ? 18 : 24, 0x53c8d2, 0.14);
-      const pin = this.add.triangle(point.x, point.y - 4, 0, 0, 18, 18, 9, 30, MAP_COLOR_ALLIED, 0.92);
-      const core = this.add.circle(point.x, point.y + 2, 4, MAP_COLOR_NEUTRAL, 0.94);
-      this.objectLayer.add([beacon, pin, core]);
-      this.addAmbientPulse(beacon, {
+      const markerBundle = this.activateStaticBundle(
+        this.getOrCreateAllianceMarkerGraphicBundle(`alliance-marker-graphics:${marker.id}`),
+        point.x,
+        point.y,
+      );
+      markerBundle.beacon.setRadius(this.currentDetailLevel === "far" ? 18 : 24);
+      markerBundle.pin.setY(-4);
+      markerBundle.core.setY(2);
+      this.addAmbientPulse(markerBundle.beacon, {
         minScale: 0.96,
         maxScale: this.currentDetailLevel === "far" ? 1.06 : 1.12,
         minAlpha: 0.05,
@@ -754,16 +810,21 @@ class FrontierMapScene extends Phaser.Scene {
       });
 
       if (showLabels) {
-        const label = this.add
-          .text(point.x, point.y + 20, marker.label, {
+        const label = this.getOrCreateStaticLabel(
+          `alliance-marker:${marker.id}`,
+          point.x,
+          point.y + 20,
+          marker.label,
+          {
             color: "#dff9fb",
             fontFamily: "'Inter', sans-serif",
             fontSize: showNearDetail ? "12px" : "10px",
             backgroundColor: "rgba(7, 22, 26, 0.72)",
             padding: { x: 6, y: 3 },
-          })
-          .setOrigin(0.5, 0);
-        this.uiLayer.add(label);
+          },
+          0.5,
+          0,
+        );
         this.addLabelFloat(label, point.y + 20, hashCoordinate(marker.x + 3, marker.y + 7));
       }
     }
@@ -774,19 +835,30 @@ class FrontierMapScene extends Phaser.Scene {
         this.reportLookup.set(report.id, { worldX: point.x, worldY: point.y, data: report });
         const bubbleColor =
           report.resultTone === "success" ? 0x4fb07d : report.resultTone === "warning" ? MAP_COLOR_HOSTILE : 0x5e9fcb;
-        const bubble = this.add.circle(point.x, point.y - 18, this.currentDetailLevel === "far" ? 10 : 12, bubbleColor, 0.92);
-        const ping = this.add.circle(point.x, point.y - 18, this.currentDetailLevel === "far" ? 14 : 18, bubbleColor, 0.08);
-        const glyph = this.add
-          .text(point.x, point.y - 18, report.kind === "RESOURCE_GATHER" ? "G" : report.kind === "BARBARIAN_BATTLE" ? "B" : "R", {
+        const reportBundle = this.activateStaticBundle(
+          this.getOrCreateReportGraphicBundle(`report-graphics:${report.id}`),
+          point.x,
+          point.y,
+        );
+        reportBundle.bubble.setRadius(this.currentDetailLevel === "far" ? 10 : 12);
+        reportBundle.bubble.setFillStyle(bubbleColor, 0.92);
+        reportBundle.ping.setRadius(this.currentDetailLevel === "far" ? 14 : 18);
+        reportBundle.ping.setFillStyle(bubbleColor, 0.08);
+        const glyph = this.getOrCreateStaticLabel(
+          `report-glyph:${report.id}`,
+          point.x,
+          point.y - 18,
+          report.kind === "RESOURCE_GATHER" ? "G" : report.kind === "BARBARIAN_BATTLE" ? "B" : "R",
+          {
             color: "#f8f0dd",
             fontFamily: "'Inter', sans-serif",
             fontSize: this.currentDetailLevel === "far" ? "10px" : "11px",
             fontStyle: "700",
-          })
-          .setOrigin(0.5);
-        this.objectLayer.add([ping, bubble]);
-        this.uiLayer.add(glyph);
-        this.addAmbientPulse(ping, {
+          },
+          0.5,
+          0.5,
+        );
+        this.addAmbientPulse(reportBundle.ping, {
           minScale: 0.96,
           maxScale: 1.12,
           minAlpha: 0.03,
@@ -795,16 +867,22 @@ class FrontierMapScene extends Phaser.Scene {
         });
 
         if (showLabels && this.currentDetailLevel !== "far") {
-          const label = this.add
-            .text(point.x, point.y - 40, report.label, {
+          const label = this.getOrCreateStaticLabel(
+            `report-label:${report.id}`,
+            point.x,
+            point.y - 40,
+            report.label,
+            {
               color: "#f8f0dd",
               fontFamily: "'Inter', sans-serif",
               fontSize: showNearDetail ? "11px" : "10px",
               backgroundColor: "rgba(20, 13, 11, 0.58)",
               padding: { x: 5, y: 3 },
-            })
-            .setOrigin(0.5, 1);
-          this.uiLayer.add(label);
+            },
+            0.5,
+            1,
+          );
+          label.setAlpha(0.98);
         }
       }
     }
@@ -825,7 +903,6 @@ class FrontierMapScene extends Phaser.Scene {
       const point = tileToWorld(poi.x, poi.y);
       this.poiLookup.set(poi.id, { worldX: point.x, worldY: point.y, data: poi });
 
-      const selected = poi.id === this.selectedPoiId;
       const baseColor =
         poi.kind === "BARBARIAN_CAMP"
           ? 0xc7643e
@@ -836,37 +913,48 @@ class FrontierMapScene extends Phaser.Scene {
               : poi.resourceType === "FOOD"
                 ? 0xc7ba72
                 : 0xe1b55c;
-
-      const aura = this.add.circle(point.x, point.y, 34, baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
-      this.objectLayer.add(aura);
-      this.addAmbientPulse(aura, {
-        minScale: 0.96,
-        maxScale: poi.kind === "BARBARIAN_CAMP" ? 1.18 : 1.1,
-        minAlpha: poi.state === "ACTIVE" ? 0.08 : 0.04,
-        maxAlpha: poi.state === "ACTIVE" ? 0.2 : 0.1,
-        duration: 1800 + (hashCoordinate(poi.x, poi.y) % 5) * 220,
-      });
-
       if (poi.kind === "BARBARIAN_CAMP") {
-        const fortOuter = this.add.rectangle(point.x, point.y, 44, 44, baseColor, poi.state === "ACTIVE" ? 0.95 : 0.55).setAngle(45);
-        const fortInner = this.add.rectangle(point.x, point.y, 18, 18, 0x2a130e, 0.78).setAngle(45);
-        fortOuter.setStrokeStyle(selected ? 4 : 2, selected ? MAP_COLOR_NEUTRAL : MAP_COLOR_REPORT, 0.95);
-        this.objectLayer.add([fortOuter, fortInner]);
-        this.addAmbientPulse(fortOuter, {
+        const poiBundle = this.activateStaticBundle(
+          this.getOrCreatePoiCampGraphicBundle(`poi-graphics:${poi.id}:${poi.kind}`),
+          point.x,
+          point.y,
+        );
+        poiBundle.aura.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
+        poiBundle.fortOuter.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.95 : 0.55);
+        poiBundle.fortOuter.setStrokeStyle(2, MAP_COLOR_REPORT, 0.95);
+        this.addAmbientPulse(poiBundle.aura, {
+          minScale: 0.96,
+          maxScale: 1.18,
+          minAlpha: poi.state === "ACTIVE" ? 0.08 : 0.04,
+          maxAlpha: poi.state === "ACTIVE" ? 0.2 : 0.1,
+          duration: 1800 + (hashCoordinate(poi.x, poi.y) % 5) * 220,
+        });
+        this.addAmbientPulse(poiBundle.fortOuter, {
           minScale: 0.98,
-          maxScale: selected ? 1.09 : 1.04,
+          maxScale: 1.04,
           minAlpha: poi.state === "ACTIVE" ? 0.74 : 0.42,
           maxAlpha: poi.state === "ACTIVE" ? 0.96 : 0.62,
           duration: 2000 + (hashCoordinate(poi.x + 7, poi.y) % 5) * 180,
         });
       } else {
-        const marker = this.add.circle(point.x, point.y, 18, baseColor, poi.state === "ACTIVE" ? 0.96 : 0.62);
-        const core = this.add.circle(point.x, point.y, 8, 0x1b100b, 0.65);
-        marker.setStrokeStyle(selected ? 4 : 2, selected ? MAP_COLOR_NEUTRAL : MAP_COLOR_REPORT, 0.95);
-        this.objectLayer.add([marker, core]);
-        this.addAmbientPulse(marker, {
+        const poiBundle = this.activateStaticBundle(
+          this.getOrCreatePoiNodeGraphicBundle(`poi-graphics:${poi.id}:${poi.kind}`),
+          point.x,
+          point.y,
+        );
+        poiBundle.aura.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
+        poiBundle.marker.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.96 : 0.62);
+        poiBundle.marker.setStrokeStyle(2, MAP_COLOR_REPORT, 0.95);
+        this.addAmbientPulse(poiBundle.aura, {
+          minScale: 0.96,
+          maxScale: 1.1,
+          minAlpha: poi.state === "ACTIVE" ? 0.08 : 0.04,
+          maxAlpha: poi.state === "ACTIVE" ? 0.2 : 0.1,
+          duration: 1800 + (hashCoordinate(poi.x, poi.y) % 5) * 220,
+        });
+        this.addAmbientPulse(poiBundle.marker, {
           minScale: 0.98,
-          maxScale: selected ? 1.08 : 1.04,
+          maxScale: 1.04,
           minAlpha: poi.state === "ACTIVE" ? 0.8 : 0.45,
           maxAlpha: poi.state === "ACTIVE" ? 0.98 : 0.66,
           duration: 1700 + (hashCoordinate(poi.x, poi.y + 9) % 5) * 200,
@@ -881,17 +969,22 @@ class FrontierMapScene extends Phaser.Scene {
               ? `Camp L${poi.level}`
               : `${poiResourceLabels[poi.resourceType ?? "WOOD"]} L${poi.level}`;
 
-        const label = this.add
-          .text(point.x, point.y + 26, `${poi.label}\n${lineTwo}`, {
+        const label = this.getOrCreateStaticLabel(
+          `poi:${poi.id}`,
+          point.x,
+          point.y + 26,
+          `${poi.label}\n${lineTwo}`,
+          {
             color: "#f8f0dd",
             fontFamily: "'Cinzel', 'Palatino Linotype', serif",
             fontSize: showNearDetail ? "13px" : "11px",
             align: "center",
             backgroundColor: "rgba(20, 13, 11, 0.5)",
             padding: { x: 6, y: 4 },
-          })
-          .setOrigin(0.5, 0);
-        this.uiLayer.add(label);
+          },
+          0.5,
+          0,
+        );
         this.addLabelFloat(label, point.y + 26, hashCoordinate(poi.x, poi.y));
       }
     }
@@ -905,15 +998,22 @@ class FrontierMapScene extends Phaser.Scene {
 
       const point = tileToWorld(city.x, city.y);
       this.cityLookup.set(city.cityId, { worldX: point.x, worldY: point.y, data: city });
-      const selected = city.cityId === this.selectedCityId;
       const allied = !city.isCurrentPlayer && this.alliedOwnerNames.has(city.ownerName);
       const auraColor = city.isCurrentPlayer ? MAP_COLOR_HOME : allied ? 0x5c8a99 : city.fogState === "VISIBLE" ? 0x8a2c2c : 0x555558;
       const cityColor = city.isCurrentPlayer ? 0xd4af37 : allied ? 0x4aa7b5 : city.fogState === "VISIBLE" ? 0xa54842 : 0x737376;
-
+      const cityBundle = this.activateStaticBundle(
+        this.getOrCreateCityGraphicBundle(`city-graphics:${city.cityId}`),
+        point.x,
+        point.y,
+      );
+      cityBundle.territory.setVisible(allied);
+      cityBundle.territory.setActive(allied);
+      cityBundle.territory.setRadius(this.currentDetailLevel === "near" ? 72 : 64);
+      cityBundle.aura.setFillStyle(auraColor, city.isCurrentPlayer ? 0.18 : 0.12);
+      cityBundle.marker.setFillStyle(cityColor, 0.98);
+      cityBundle.marker.setStrokeStyle(2, MAP_COLOR_REPORT, 0.95);
       if (allied) {
-        const territory = this.add.circle(point.x, point.y, this.currentDetailLevel === "near" ? 72 : 64, MAP_COLOR_ALLIED_TERRITORY, 0.08);
-        this.objectLayer.add(territory);
-        this.addAmbientPulse(territory, {
+        this.addAmbientPulse(cityBundle.territory, {
           minScale: 0.98,
           maxScale: 1.1,
           minAlpha: 0.03,
@@ -921,68 +1021,222 @@ class FrontierMapScene extends Phaser.Scene {
           duration: 2400 + (hashCoordinate(city.x, city.y + 13) % 5) * 180,
         });
       }
-      const aura = this.add.circle(point.x, point.y, 38, auraColor, city.isCurrentPlayer ? 0.18 : 0.12);
-      const marker = this.add.circle(point.x, point.y, 20, cityColor, 0.98);
-      const core = this.add.rectangle(point.x, point.y, 12, 12, 0x1b100b, 0.72).setAngle(45);
-      marker.setStrokeStyle(selected ? 4 : 2, selected ? MAP_COLOR_NEUTRAL : MAP_COLOR_REPORT, 0.95);
-
-      this.objectLayer.add([aura, marker, core]);
-      this.addAmbientPulse(aura, {
+      this.addAmbientPulse(cityBundle.aura, {
         minScale: 0.96,
         maxScale: city.isCurrentPlayer ? 1.2 : 1.12,
         minAlpha: city.isCurrentPlayer ? 0.1 : 0.06,
         maxAlpha: city.isCurrentPlayer ? 0.22 : 0.16,
         duration: 2100 + (hashCoordinate(city.x, city.y) % 5) * 180,
       });
-      this.addAmbientPulse(marker, {
+      this.addAmbientPulse(cityBundle.marker, {
         minScale: 0.99,
-        maxScale: selected ? 1.08 : 1.04,
+        maxScale: 1.04,
         minAlpha: 0.84,
         maxAlpha: 1,
         duration: 1700 + (hashCoordinate(city.x + 11, city.y) % 5) * 160,
       });
 
       if (showLabels) {
-        const label = this.add
-          .text(point.x, point.y - 30, city.isCurrentPlayer ? "You" : allied && this.allianceTag ? `[${this.allianceTag}] ${city.cityName}` : city.cityName, {
+        const label = this.getOrCreateStaticLabel(
+          `city:${city.cityId}`,
+          point.x,
+          point.y - 30,
+          city.isCurrentPlayer ? "You" : allied && this.allianceTag ? `[${this.allianceTag}] ${city.cityName}` : city.cityName,
+          {
             color: "#f8f0dd",
             fontFamily: "'Cinzel', 'Palatino Linotype', serif",
             fontSize: showNearDetail ? "14px" : "11px",
             align: "center",
             backgroundColor: "rgba(20, 13, 11, 0.5)",
             padding: { x: 6, y: 3 },
-          })
-          .setOrigin(0.5, 1);
-        this.uiLayer.add(label);
+          },
+          0.5,
+          1,
+        );
         this.addLabelFloat(label, point.y - 30, hashCoordinate(city.x, city.y));
-
-        if (showNearDetail && city.stagedMarchCount > 0) {
-          const staging = this.add
-            .text(point.x, point.y + 26, `${city.stagedMarchCount} staged`, {
-              color: "#f4d79c",
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "11px",
-              backgroundColor: "rgba(39, 19, 12, 0.65)",
-              padding: { x: 5, y: 3 },
-            })
-            .setOrigin(0.5, 0);
-          this.uiLayer.add(staging);
-        }
-
-        if (showNearDetail && selected && city.projectedOutcome) {
-          const outcome = this.add
-            .text(point.x, point.y + 48, city.projectedOutcome === "ATTACKER_WIN" ? "Projected win" : "Projected hold", {
-              color: city.projectedOutcome === "ATTACKER_WIN" ? "#85d0a1" : "#f0b19a",
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "11px",
-              backgroundColor: "rgba(24, 12, 9, 0.7)",
-              padding: { x: 5, y: 3 },
-            })
-            .setOrigin(0.5, 0);
-          this.uiLayer.add(outcome);
-        }
       }
     }
+  }
+
+  private prepareStaticGraphics() {
+    for (const bundle of this.staticGraphicCache.values()) {
+      this.tweens.killTweensOf(bundle.container);
+      bundle.container.setVisible(false);
+      bundle.container.setActive(false);
+      for (const child of bundle.container.list) {
+        this.tweens.killTweensOf(child);
+        const toggleableChild = child as ToggleableGameObject;
+        toggleableChild.setVisible(false);
+        toggleableChild.setActive(false);
+      }
+    }
+  }
+
+  private activateStaticBundle<T extends StaticGraphicBundle>(bundle: T, x: number, y: number) {
+    bundle.container.setPosition(x, y);
+    bundle.container.setVisible(true);
+    bundle.container.setActive(true);
+    for (const child of bundle.container.list) {
+      const toggleableChild = child as ToggleableGameObject;
+      toggleableChild.setVisible(true);
+      toggleableChild.setActive(true);
+    }
+    return bundle;
+  }
+
+  private getOrCreateAllianceMarkerGraphicBundle(key: string) {
+    const existing = this.staticGraphicCache.get(key);
+    if (existing?.kind === "alliance-marker") {
+      return existing;
+    }
+
+    const container = this.add.container(0, 0);
+    const beacon = this.add.circle(0, 0, 24, 0x53c8d2, 0.14);
+    const pin = this.add.triangle(0, -4, 0, 0, 18, 18, 9, 30, MAP_COLOR_ALLIED, 0.92);
+    const core = this.add.circle(0, 2, 4, MAP_COLOR_NEUTRAL, 0.94);
+    container.add([beacon, pin, core]);
+    this.objectLayer?.add(container);
+
+    const bundle: AllianceMarkerGraphicBundle = {
+      kind: "alliance-marker",
+      container,
+      beacon,
+      pin,
+      core,
+    };
+    this.staticGraphicCache.set(key, bundle);
+    return bundle;
+  }
+
+  private getOrCreateReportGraphicBundle(key: string) {
+    const existing = this.staticGraphicCache.get(key);
+    if (existing?.kind === "report") {
+      return existing;
+    }
+
+    const container = this.add.container(0, 0);
+    const ping = this.add.circle(0, -18, 18, MAP_COLOR_REPORT, 0.08);
+    const bubble = this.add.circle(0, -18, 12, MAP_COLOR_REPORT, 0.92);
+    container.add([ping, bubble]);
+    this.objectLayer?.add(container);
+
+    const bundle: ReportGraphicBundle = {
+      kind: "report",
+      container,
+      ping,
+      bubble,
+    };
+    this.staticGraphicCache.set(key, bundle);
+    return bundle;
+  }
+
+  private getOrCreatePoiCampGraphicBundle(key: string) {
+    const existing = this.staticGraphicCache.get(key);
+    if (existing?.kind === "poi-camp") {
+      return existing;
+    }
+
+    const container = this.add.container(0, 0);
+    const aura = this.add.circle(0, 0, 34, MAP_COLOR_HOSTILE, 0.14);
+    const fortOuter = this.add.rectangle(0, 0, 44, 44, MAP_COLOR_HOSTILE, 0.95).setAngle(45);
+    const fortInner = this.add.rectangle(0, 0, 18, 18, 0x2a130e, 0.78).setAngle(45);
+    container.add([aura, fortOuter, fortInner]);
+    this.objectLayer?.add(container);
+
+    const bundle: PoiCampGraphicBundle = {
+      kind: "poi-camp",
+      container,
+      aura,
+      fortOuter,
+      fortInner,
+    };
+    this.staticGraphicCache.set(key, bundle);
+    return bundle;
+  }
+
+  private getOrCreatePoiNodeGraphicBundle(key: string) {
+    const existing = this.staticGraphicCache.get(key);
+    if (existing?.kind === "poi-node") {
+      return existing;
+    }
+
+    const container = this.add.container(0, 0);
+    const aura = this.add.circle(0, 0, 34, MAP_COLOR_GATHER, 0.14);
+    const marker = this.add.circle(0, 0, 18, MAP_COLOR_GATHER, 0.96);
+    const core = this.add.circle(0, 0, 8, 0x1b100b, 0.65);
+    container.add([aura, marker, core]);
+    this.objectLayer?.add(container);
+
+    const bundle: PoiNodeGraphicBundle = {
+      kind: "poi-node",
+      container,
+      aura,
+      marker,
+      core,
+    };
+    this.staticGraphicCache.set(key, bundle);
+    return bundle;
+  }
+
+  private getOrCreateCityGraphicBundle(key: string) {
+    const existing = this.staticGraphicCache.get(key);
+    if (existing?.kind === "city") {
+      return existing;
+    }
+
+    const container = this.add.container(0, 0);
+    const territory = this.add.circle(0, 0, 64, MAP_COLOR_ALLIED_TERRITORY, 0.08);
+    const aura = this.add.circle(0, 0, 38, MAP_COLOR_HOME, 0.18);
+    const marker = this.add.circle(0, 0, 20, MAP_COLOR_HOME, 0.98);
+    const core = this.add.rectangle(0, 0, 12, 12, 0x1b100b, 0.72).setAngle(45);
+    container.add([territory, aura, marker, core]);
+    this.objectLayer?.add(container);
+
+    const bundle: CityGraphicBundle = {
+      kind: "city",
+      container,
+      territory,
+      aura,
+      marker,
+      core,
+    };
+    this.staticGraphicCache.set(key, bundle);
+    return bundle;
+  }
+
+  private prepareStaticLabels() {
+    for (const label of this.staticLabelCache.values()) {
+      this.tweens.killTweensOf(label);
+      label.setVisible(false);
+      label.setActive(false);
+    }
+  }
+
+  private getOrCreateStaticLabel(
+    key: string,
+    x: number,
+    y: number,
+    value: string,
+    style: Phaser.Types.GameObjects.Text.TextStyle,
+    originX: number,
+    originY: number,
+  ) {
+    let label = this.staticLabelCache.get(key);
+    if (!label) {
+      label = this.add.text(x, y, value, style).setOrigin(originX, originY);
+      this.uiLayer?.add(label);
+      this.staticLabelCache.set(key, label);
+    } else {
+      label.setText(value);
+      label.setStyle(style);
+      label.setPosition(x, y);
+      label.setOrigin(originX, originY);
+    }
+
+    label.setVisible(true);
+    label.setActive(true);
+    label.setAlpha(1);
+    return label;
   }
 
   private getObjectLayerSignature() {
@@ -997,8 +1251,6 @@ class FrontierMapScene extends Phaser.Scene {
           city.ownerName,
           city.fogState,
           city.isCurrentPlayer ? 1 : 0,
-          city.stagedMarchCount,
-          city.projectedOutcome ?? "",
         ].join(":"),
       )
       .join("|");
@@ -1019,8 +1271,6 @@ class FrontierMapScene extends Phaser.Scene {
       this.currentDetailLevel,
       this.filter,
       this.showReports ? "reports-on" : "reports-off",
-      this.selectedCityId ?? "",
-      this.selectedPoiId ?? "",
       this.allianceTag ?? "",
       alliedOwnerSignature,
       citySignature,
@@ -1028,6 +1278,96 @@ class FrontierMapScene extends Phaser.Scene {
       reportSignature,
       markerSignature,
     ].join(";");
+  }
+
+  private syncSelectionDetails() {
+    const signature = [
+      this.currentDetailLevel,
+      this.selectedCityId ?? "",
+      this.selectedPoiId ?? "",
+      this.cities
+        .filter((city) => city.cityId === this.selectedCityId)
+        .map((city) => [city.cityId, city.stagedMarchCount, city.projectedOutcome ?? ""].join(":"))
+        .join("|"),
+      this.pois
+        .filter((poi) => poi.id === this.selectedPoiId)
+        .map((poi) => [poi.id, poi.kind, poi.level, poi.resourceType ?? "", poi.remainingAmount ?? ""].join(":"))
+        .join("|"),
+    ].join(";");
+
+    if (signature === this.lastSelectionDetailSignature) {
+      return;
+    }
+
+    this.lastSelectionDetailSignature = signature;
+    for (const object of this.selectionDetailObjects) {
+      object.destroy();
+    }
+    this.selectionDetailObjects = [];
+
+    if (!this.uiLayer || this.currentDetailLevel !== "near") {
+      return;
+    }
+
+    if (this.selectedCityId) {
+      const selectedCity = this.cities.find((city) => city.cityId === this.selectedCityId);
+      const point = this.cityLookup.get(this.selectedCityId);
+      if (selectedCity && point) {
+        if (selectedCity.stagedMarchCount > 0) {
+          const staging = this.add
+            .text(point.worldX, point.worldY + 26, `${selectedCity.stagedMarchCount} staged`, {
+              color: "#f4d79c",
+              fontFamily: "'Inter', sans-serif",
+              fontSize: "11px",
+              backgroundColor: "rgba(39, 19, 12, 0.65)",
+              padding: { x: 5, y: 3 },
+            })
+            .setOrigin(0.5, 0);
+          this.uiLayer.add(staging);
+          this.selectionDetailObjects.push(staging);
+        }
+
+        if (selectedCity.projectedOutcome) {
+          const outcome = this.add
+            .text(point.worldX, point.worldY + 48, selectedCity.projectedOutcome === "ATTACKER_WIN" ? "Projected win" : "Projected hold", {
+              color: selectedCity.projectedOutcome === "ATTACKER_WIN" ? "#85d0a1" : "#f0b19a",
+              fontFamily: "'Inter', sans-serif",
+              fontSize: "11px",
+              backgroundColor: "rgba(24, 12, 9, 0.7)",
+              padding: { x: 5, y: 3 },
+            })
+            .setOrigin(0.5, 0);
+          this.uiLayer.add(outcome);
+          this.selectionDetailObjects.push(outcome);
+        }
+      }
+      return;
+    }
+
+    if (!this.selectedPoiId) {
+      return;
+    }
+
+    const selectedPoi = this.pois.find((poi) => poi.id === this.selectedPoiId);
+    const point = this.poiLookup.get(this.selectedPoiId);
+    if (!selectedPoi || !point || selectedPoi.kind !== "RESOURCE_NODE") {
+      return;
+    }
+
+    const reserveLabel = selectedPoi.remainingAmount != null
+      ? `${poiResourceLabels[selectedPoi.resourceType ?? "WOOD"]} reserve ${selectedPoi.remainingAmount}`
+      : `${poiResourceLabels[selectedPoi.resourceType ?? "WOOD"]} node L${selectedPoi.level}`;
+    const detail = this.add
+      .text(point.worldX, point.worldY + 48, reserveLabel, {
+        color: "#dcefd0",
+        fontFamily: "'Inter', sans-serif",
+        fontSize: "11px",
+        backgroundColor: "rgba(18, 29, 16, 0.68)",
+        padding: { x: 5, y: 3 },
+      })
+      .setOrigin(0.5, 0);
+    this.uiLayer.add(detail);
+    this.selectionDetailObjects.push(detail);
   }
 
   private syncSelectionFx() {

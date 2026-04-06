@@ -369,6 +369,7 @@ export function MapPage() {
   const minimapPingTimerRef = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const markerInputRef = useRef<HTMLInputElement | null>(null);
+  const handleComposerConfirmRef = useRef<(() => Promise<void>) | null>(null);
   const markerCycleIndexRef = useRef(0);
 
   const [filter, setFilter] = useState<MapFilter>("ALL");
@@ -826,12 +827,17 @@ export function MapPage() {
     : selectedPoi
       ? selectedPoi.label
       : null;
+  const selectedCityIsAllied = Boolean(
+    selectedCity &&
+      !selectedCity.isCurrentPlayer &&
+      alliedOwnerNames.includes(selectedCity.ownerName),
+  );
   const selectedTargetSubtitle = selectedCity
     ? selectedCity.isCurrentPlayer
       ? `Home city | ${selectedCity.x}, ${selectedCity.y}`
-      : `${selectedCity.ownerName} | hostile city | ${selectedCity.x}, ${selectedCity.y}`
+      : `${selectedCityIsAllied ? "Allied city" : "Hostile city"} | ${selectedCity.x}, ${selectedCity.y}`
     : selectedPoi
-      ? `${selectedPoi.kind === "BARBARIAN_CAMP" ? "Barbarian camp" : "Resource site"} | ${selectedPoi.x}, ${selectedPoi.y}`
+      ? `${selectedPoi.kind === "BARBARIAN_CAMP" ? "Camp objective" : "Resource lane"} | ${selectedPoi.x}, ${selectedPoi.y}`
       : "Drag to pan | Wheel to zoom | Right-click for field command";
   const selectedTargetDistance = getTargetDistance(state.city.coordinates, selectedCity, selectedPoi);
   const estimatedMarchEtaMs =
@@ -873,6 +879,13 @@ export function MapPage() {
     : selectedPoi?.kind === "BARBARIAN_CAMP"
       ? "Attack Camp"
       : "Gather Here";
+  const availableTargetActions = selectedCity
+    ? ["Send Scout", "Raise Rally", "Attack City"]
+    : selectedPoi?.kind === "BARBARIAN_CAMP"
+      ? ["Send Scout", "Raise Rally", "Attack Camp"]
+      : selectedPoi
+        ? ["Send Scout", "Gather Here"]
+        : [];
   const targetWindowLabel = selectedCity?.battleWindowClosesAt
     ? formatRelativeTimer(selectedCity.battleWindowClosesAt, now)
     : selectedPoi?.battleWindowClosesAt
@@ -909,7 +922,9 @@ export function MapPage() {
     : selectedCity
       ? selectedCity.isCurrentPlayer
         ? "success"
-        : "warning"
+        : selectedCityIsAllied
+          ? "info"
+          : "warning"
       : selectedPoi
         ? selectedPoi.kind === "RESOURCE_NODE"
           ? "success"
@@ -920,7 +935,9 @@ export function MapPage() {
     : selectedCity
       ? selectedCity.isCurrentPlayer
         ? "Home city"
-        : "Hostile city"
+        : selectedCityIsAllied
+          ? "Allied city"
+          : "Hostile city"
       : selectedPoi
         ? selectedPoi.kind === "BARBARIAN_CAMP"
           ? "Camp target"
@@ -1144,19 +1161,24 @@ export function MapPage() {
             label: "Window",
             value: targetWindowLabel,
             note: activeBattleWindow
-              ? `${formatNumber(alliedBattleParticipants)} allied banners in sector`
+              ? `${formatNumber(alliedBattleParticipants)} allied banners`
               : selectedTargetDistance != null
-                ? `${formatNumber(selectedTargetDistance)} tiles from the home column`
-                : "No active window on target",
-            tone: activeBattleWindow || (selectedCity && !selectedCity.isCurrentPlayer) ? ("warning" as const) : ("info" as const),
+                ? `${formatNumber(selectedTargetDistance)} tiles from home`
+                : "No live window",
+            tone:
+              activeBattleWindow || (selectedCity && !selectedCity.isCurrentPlayer && !selectedCityIsAllied)
+                ? ("warning" as const)
+                : selectedCityIsAllied
+                  ? ("success" as const)
+                  : ("info" as const),
           },
           {
             id: "signals",
             label: "Signals",
             value: latestAllianceMarker ? latestAllianceMarker.label : "Post a new beacon",
             note: latestVisibleReport
-              ? `Latest report | ${latestVisibleReport.label}`
-              : "Markers and reports keep the tray readable after camera drift",
+              ? `Report | ${latestVisibleReport.label}`
+              : "Post a marker or scout report",
             tone: latestAllianceMarker ? ("success" as const) : ("info" as const),
           },
         ]
@@ -1172,18 +1194,61 @@ export function MapPage() {
   }, [cameraView.centerTileX, cameraView.centerTileY, chunkRequest.radius, minimapWorldSize]);
 
   useEffect(() => {
+    window.confirm_map_command_composer = async () => {
+      await handleComposerConfirmRef.current?.();
+    };
+
+    return () => {
+      delete window.confirm_map_command_composer;
+    };
+  }, []);
+
+  useEffect(() => {
+    window.prime_map_chunk = async () => {
+      await queryClient.fetchQuery({
+        queryKey: ["world-chunk", chunkRequest.centerTileX, chunkRequest.centerTileY, chunkRequest.radius],
+        queryFn: () =>
+          api.worldChunk({
+            centerX: chunkRequest.centerTileX,
+            centerY: chunkRequest.centerTileY,
+            radius: chunkRequest.radius,
+          }),
+        staleTime: 5_000,
+      });
+      setChunkCacheVersion((current) => current + 1);
+    };
+
+    return () => {
+      delete window.prime_map_chunk;
+    };
+  }, [chunkRequest.centerTileX, chunkRequest.centerTileY, chunkRequest.radius, queryClient]);
+
+  useEffect(() => {
     window.frontierMapUi = {
       targetSheetOpen: targetSheetVisible,
       composerMode,
+      composerActionLabel: composerMode ? composerActionLabel : null,
       selectedMarchId,
       selectedTargetName,
+      selectedTargetKind: selectedCity ? "CITY" : selectedPoi ? "POI" : null,
+      availableActions: targetSheetVisible ? availableTargetActions : [],
       fieldCommandKind: fieldCommand?.kind ?? null,
     };
 
     return () => {
       window.frontierMapUi = null;
     };
-  }, [composerMode, fieldCommand?.kind, selectedMarchId, selectedTargetName, targetSheetVisible]);
+  }, [
+    availableTargetActions,
+    composerMode,
+    composerActionLabel,
+    fieldCommand?.kind,
+    selectedCity,
+    selectedMarchId,
+    selectedPoi,
+    selectedTargetName,
+    targetSheetVisible,
+  ]);
 
   const targetCards = useMemo(() => {
     if (!worldChunk) {
@@ -1694,6 +1759,7 @@ export function MapPage() {
       setTargetSheetOpen(false);
     }
   };
+  handleComposerConfirmRef.current = handleComposerConfirm;
 
   return (
     <section className={styles.page}>

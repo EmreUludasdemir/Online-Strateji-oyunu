@@ -6,7 +6,7 @@ import { api } from "../api";
 import { CommanderSkillTree } from "../components/commanders/CommanderSkillTree";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { PanelStatGrid, SectionHeaderBlock, type PanelStatItem } from "../components/ui/CommandSurface";
+import { DetailList, PanelStatGrid, SectionHeaderBlock, type DetailListItem, type PanelStatItem } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -95,17 +95,17 @@ export function CommanderPage() {
   }
 
   const commanderMonogram = getCommanderMonogram(selectedCommander.name);
-  const bonusCards = [
-    { label: "Attack Doctrine", value: `+${selectedCommander.attackBonusPct}%`, note: "frontline pressure" },
-    { label: "Defense Posture", value: `+${selectedCommander.defenseBonusPct}%`, note: "wall discipline" },
-    { label: "March Tempo", value: `+${selectedCommander.marchSpeedBonusPct}%`, note: "field movement" },
-    { label: "Carry Capacity", value: `+${selectedCommander.carryBonusPct}%`, note: "supply lift" },
+  const bonusCards: DetailListItem[] = [
+    { id: "attack", label: "Attack Doctrine", value: `+${selectedCommander.attackBonusPct}%`, note: "frontline pressure" },
+    { id: "defense", label: "Defense Posture", value: `+${selectedCommander.defenseBonusPct}%`, note: "wall discipline" },
+    { id: "speed", label: "March Tempo", value: `+${selectedCommander.marchSpeedBonusPct}%`, note: "field movement" },
+    { id: "carry", label: "Carry Capacity", value: `+${selectedCommander.carryBonusPct}%`, note: "supply lift" },
   ];
-  const serviceRows = [
-    { label: "Doctrine Track", value: selectedCommander.skillTree.trackLabel },
-    { label: "Preset", value: selectedCommander.assignedPreset ?? "Unassigned" },
-    { label: "Talent Reserve", value: `${selectedCommander.talentPointsAvailable} ready` },
-    { label: "Command Status", value: selectedCommander.isPrimary ? "Primary banner" : "Reserve wing" },
+  const serviceRows: DetailListItem[] = [
+    { id: "track", label: "Doctrine Track", value: selectedCommander.skillTree.trackLabel },
+    { id: "preset", label: "Preset", value: selectedCommander.assignedPreset ?? "Unassigned" },
+    { id: "reserve", label: "Talent Reserve", value: `${selectedCommander.talentPointsAvailable} ready` },
+    { id: "status", label: "Command Status", value: selectedCommander.isPrimary ? "Primary banner" : "Reserve wing" },
   ];
   const attributeCards = [
     { label: "Attack", value: selectedCommander.attackBonusPct },
@@ -113,6 +113,20 @@ export function CommanderPage() {
     { label: "Speed", value: selectedCommander.marchSpeedBonusPct },
     { label: "Carry", value: selectedCommander.carryBonusPct },
   ];
+  const attributeStats: PanelStatItem[] = attributeCards.map((card) => ({
+    id: card.label.toLowerCase(),
+    label: card.label,
+    value: `+${card.value}%`,
+    note:
+      card.label === "Attack"
+        ? "frontline pressure"
+        : card.label === "Defense"
+          ? "wall discipline"
+          : card.label === "Speed"
+            ? "field tempo"
+            : "supply lift",
+    tone: card.label === "Defense" ? "info" : card.label === "Carry" ? "success" : "warning",
+  }));
   const selectedCommanderRailStats: PanelStatItem[] = [
     {
       id: "level",
@@ -191,7 +205,7 @@ export function CommanderPage() {
             <SectionHeaderBlock
               kicker="Active Banner"
               title={selectedCommander.name}
-              lead={`${selectedCommander.skillTree.trackLabel} doctrine • ${
+              lead={`${selectedCommander.skillTree.trackLabel} doctrine | ${
                 selectedCommander.isPrimary ? "Primary banner" : "Reserve wing"
               }`}
               aside={<Badge tone={selectedCommander.isPrimary ? "success" : "info"}>{selectedCommander.isPrimary ? "Lead" : "Reserve"}</Badge>}
@@ -255,17 +269,7 @@ export function CommanderPage() {
                   lead="Frontline pressure, wall discipline, march tempo, and carry lift stay readable before promotion."
                   className={styles.surfaceHeader}
                 />
-                <div className={styles.loadoutList}>
-                  {bonusCards.map((card) => (
-                    <div key={card.label} className={styles.loadoutRow}>
-                      <div>
-                        <span className={styles.loadoutLabel}>{card.label}</span>
-                        <p className={styles.loadoutNote}>{card.note}</p>
-                      </div>
-                      <strong className={styles.loadoutValue}>{card.value}</strong>
-                    </div>
-                  ))}
-                </div>
+                <DetailList items={bonusCards} />
               </article>
 
               <article className={styles.stageCard}>
@@ -276,31 +280,12 @@ export function CommanderPage() {
                   aside={<Badge tone="warning">{selectedCommander.starLevel} stars</Badge>}
                   className={styles.surfaceHeader}
                 />
-                <dl className={styles.serviceGrid}>
-                  {serviceRows.map((row) => (
-                    <div key={row.label} className={styles.serviceRow}>
-                      <dt>{row.label}</dt>
-                      <dd>{row.value}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <DetailList items={serviceRows} />
               </article>
             </div>
           </section>
 
-          <section className={styles.attributeGrid}>
-            {attributeCards.map((card) => (
-              <article key={card.label} className={styles.attributeCard}>
-                <div className={styles.attributeHead}>
-                  <span className={styles.attributeLabel}>{card.label}</span>
-                  <strong className={styles.attributeValue}>+{card.value}%</strong>
-                </div>
-                <div className={styles.attributeRail}>
-                  <span style={{ width: `${Math.max(8, Math.min(100, card.value * 5))}%` }} />
-                </div>
-              </article>
-            ))}
-          </section>
+          <PanelStatGrid items={attributeStats} columns={4} className={styles.attributeStats} />
 
           <SectionCard
             kicker="Promotion Orders"

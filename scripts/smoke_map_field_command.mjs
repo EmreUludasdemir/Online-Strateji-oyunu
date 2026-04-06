@@ -48,6 +48,10 @@ async function readGameState(page) {
   });
 }
 
+async function readMapUiState(page) {
+  return page.evaluate(() => window.frontierMapUi ?? null);
+}
+
 async function login(page, baseUrl, username, password) {
   await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
   if (page.url().includes("/app/")) {
@@ -67,13 +71,53 @@ async function login(page, baseUrl, username, password) {
 }
 
 async function ensureMapLoaded(page) {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const loadedState = await waitFor(async () => {
+      const state = await readGameState(page);
+      if (state?.screen === "/app/map" && state.map.loaded) {
+        return state;
+      }
+      return null;
+    }, 15_000, "the field map to load").catch(() => null);
+
+    if (loadedState) {
+      return loadedState;
+    }
+
+    const canPrimeChunk = await waitFor(async () => {
+      return (await page.evaluate(() => Boolean(window.prime_map_chunk))).valueOf() ? true : null;
+    }, 5_000, "the field-map chunk primer").catch(() => false);
+
+    if (attempt === 1) {
+      if (canPrimeChunk) {
+        await page.evaluate(() => window.prime_map_chunk?.()).catch(() => null);
+        await page.waitForTimeout(1_000);
+      }
+      await page.reload({ waitUntil: "networkidle" });
+    }
+  }
+
+  throw new Error("Timed out while waiting for the field map to load.");
+}
+
+async function ensureAllianceReady(page) {
   return waitFor(async () => {
     const state = await readGameState(page);
-    if (state?.screen === "/app/map" && state.map.loaded && state.alliance?.loaded) {
+    if (state?.screen === "/app/map" && state.alliance?.loaded) {
       return state;
     }
     return null;
-  }, 20_000, "the field map and alliance state to load");
+  }, 30_000, "the alliance state to sync on the field map");
+}
+
+async function waitForTargetAction(page, label, actionName) {
+  await waitFor(async () => {
+    const state = await readMapUiState(page);
+    if (!state?.targetSheetOpen || state?.selectedTargetName !== label) {
+      return null;
+    }
+    return Array.isArray(state.availableActions) && state.availableActions.includes(actionName) ? state : null;
+  }, 15_000, `${actionName} to become available for ${label}`);
 }
 
 async function ensureFieldCommandHook(page) {
@@ -172,10 +216,10 @@ async function main() {
 
   try {
     await login(page, args.baseUrl, args.username, args.password);
-    await page.locator("[data-nav-item='map']").click();
-    await page.waitForURL("**/app/map");
+    await page.goto(`${args.baseUrl}/app/map`, { waitUntil: "networkidle" });
 
     const initialState = await ensureMapLoaded(page);
+    await ensureAllianceReady(page);
     await ensureFieldCommandHook(page);
     const target =
       initialState.map.pois.find((poi) => poi.kind === "BARBARIAN_CAMP") ??
@@ -227,6 +271,7 @@ async function main() {
 
       const targetPrimaryActionLabel =
         "id" in target ? (target.kind === "BARBARIAN_CAMP" ? "Attack Camp" : "Gather Here") : "Attack City";
+      await waitForTargetAction(page, targetPayload.label, targetPrimaryActionLabel);
       await targetDialog.getByRole("button", { name: targetPrimaryActionLabel }).waitFor({ timeout: 5_000 });
       targetTrayValidated = true;
 
@@ -235,6 +280,7 @@ async function main() {
 
       await page.reload({ waitUntil: "networkidle" });
       await ensureMapLoaded(page);
+      await ensureAllianceReady(page);
       await ensureFieldCommandHook(page);
       await openFieldCommandWithHook(page, targetPayload);
       await fieldCommandDialog.waitFor({ timeout: 5_000 });

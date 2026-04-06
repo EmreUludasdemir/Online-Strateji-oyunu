@@ -7,7 +7,7 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { PanelStatGrid, type PanelStatItem } from "../components/ui/CommandSurface";
+import { FeedCardShell, PanelStatGrid, type PanelStatItem } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -276,6 +276,24 @@ export function AlliancePage() {
         },
       ]
     : [];
+  const supportStats: PanelStatItem[] = alliance
+    ? [
+        {
+          id: "open-help",
+          label: "Open",
+          value: formatNumber(alliance.helpRequests.filter((request) => request.isOpen).length),
+          note: "requests awaiting aid",
+          tone: "warning",
+        },
+        {
+          id: "closed-help",
+          label: "Resolved",
+          value: formatNumber(alliance.helpRequests.filter((request) => !request.isOpen).length),
+          note: "support cycles closed",
+          tone: "success",
+        },
+      ]
+    : [];
 
   useEffect(() => {
     if (!alliance) {
@@ -504,6 +522,7 @@ export function AlliancePage() {
             </SectionCard>
 
             <SectionCard kicker="Support Queue" title="Acceleration and aid">
+              <PanelStatGrid items={supportStats} columns={2} compact className={styles.railStats} />
               <div className={styles.helpGrid}>
                 {requestableHelp.map((entry) => (
                   <Button
@@ -525,25 +544,25 @@ export function AlliancePage() {
                   />
                 ) : (
                   alliance.helpRequests.map((request) => (
-                    <article key={request.id} className={styles.feedCard}>
-                      <div className={styles.feedMeta}>
-                        <strong>{request.label}</strong>
-                        <Badge tone={request.isOpen ? "warning" : "success"}>{request.helpCount}/{request.maxHelps}</Badge>
-                      </div>
-                      <p>
-                        {request.requesterName} | {request.kind.replaceAll("_", " ").toLowerCase()}
-                      </p>
-                      <div className={styles.actions}>
-                        <Button
-                          type="button"
-                          size="small"
-                          disabled={respondHelpMutation.isPending || request.requesterUserId === state.player.id || !request.isOpen}
-                          onClick={() => respondHelpMutation.mutate(request.id)}
-                        >
-                          {request.requesterUserId === state.player.id ? "Your Request" : "Send Help"}
-                        </Button>
-                      </div>
-                    </article>
+                    <FeedCardShell
+                      key={request.id}
+                      title={request.label}
+                      meta={<Badge tone={request.isOpen ? "warning" : "success"}>{request.helpCount}/{request.maxHelps}</Badge>}
+                      body={`${request.requesterName} | ${request.kind.replaceAll("_", " ").toLowerCase()}`}
+                      footer={
+                        <div className={styles.actions}>
+                          <Button
+                            type="button"
+                            size="small"
+                            disabled={respondHelpMutation.isPending || request.requesterUserId === state.player.id || !request.isOpen}
+                            onClick={() => respondHelpMutation.mutate(request.id)}
+                          >
+                            {request.requesterUserId === state.player.id ? "Your Request" : "Send Help"}
+                          </Button>
+                        </div>
+                      }
+                      tone={request.isOpen ? "warning" : "success"}
+                    />
                   ))
                 )}
               </div>
@@ -571,13 +590,13 @@ export function AlliancePage() {
                   <EmptyState title="Quiet Channel" body="Write the first order and set the field rhythm from here." />
                 ) : (
                   alliance.chatMessages.map((message) => (
-                    <article key={message.id} className={styles.feedCard}>
-                      <div className={styles.feedMeta}>
-                        <strong>{message.username}</strong>
-                        <span>{formatDateTime(message.createdAt)}</span>
-                      </div>
-                      <p>{message.content}</p>
-                    </article>
+                    <FeedCardShell
+                      key={message.id}
+                      title={message.username}
+                      meta={formatDateTime(message.createdAt)}
+                      body={message.content}
+                      tone="info"
+                    />
                   ))
                 )}
               </div>
@@ -638,12 +657,12 @@ export function AlliancePage() {
                   <EmptyState title="No Score Yet" body="Donation and aid actions fill the contribution table." />
                 ) : (
                   alliance.contributions.slice(0, 6).map((entry, index) => (
-                    <article key={entry.userId} className={styles.feedCard}>
-                      <div className={styles.feedMeta}>
-                        <strong>#{index + 1} {entry.username}</strong>
-                        <span>{formatNumber(entry.points)} points</span>
-                      </div>
-                    </article>
+                    <FeedCardShell
+                      key={entry.userId}
+                      title={`#${index + 1} ${entry.username}`}
+                      meta={`${formatNumber(entry.points)} points`}
+                      tone={index === 0 ? "warning" : "info"}
+                    />
                   ))
                 )}
               </div>
@@ -656,30 +675,31 @@ export function AlliancePage() {
                   <EmptyState title="No Markers" body="Lock rally, defense, and target points here." />
                 ) : (
                   alliance.markers.slice(0, 6).map((marker) => (
-                    <article key={marker.id} className={styles.feedCard}>
-                      <div className={styles.feedMeta}>
-                        <strong>{marker.label}</strong>
-                        <span>{marker.x}, {marker.y}</span>
-                      </div>
-                      <p>
-                        {formatDateTime(marker.createdAt)}
-                        {marker.expiresAt ? ` | expires in ${formatTimeRemaining(marker.expiresAt, now)}` : ""}
-                      </p>
-                      {marker.canDelete ? (
-                        <div className={styles.actions}>
-                          <span>{marker.createdByUserId === state.player.id ? "Your marker" : "Officer action"}</span>
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="ghost"
-                            disabled={deleteMarkerMutation.isPending}
-                            onClick={() => deleteMarkerMutation.mutate(marker.id)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ) : null}
-                    </article>
+                    <FeedCardShell
+                      key={marker.id}
+                      title={marker.label}
+                      meta={`${marker.x}, ${marker.y}`}
+                      body={`${formatDateTime(marker.createdAt)}${
+                        marker.expiresAt ? ` | expires in ${formatTimeRemaining(marker.expiresAt, now)}` : ""
+                      }`}
+                      footer={
+                        marker.canDelete ? (
+                          <div className={styles.actions}>
+                            <span>{marker.createdByUserId === state.player.id ? "Your marker" : "Officer action"}</span>
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="ghost"
+                              disabled={deleteMarkerMutation.isPending}
+                              onClick={() => deleteMarkerMutation.mutate(marker.id)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ) : null
+                      }
+                      tone="info"
+                    />
                   ))
                 )}
               </div>
@@ -692,13 +712,13 @@ export function AlliancePage() {
                   <EmptyState title="Log Empty" body="New aid, donation, and diplomacy actions will land here." />
                 ) : (
                   alliance.logs.slice(0, 6).map((entry) => (
-                    <article key={entry.id} className={styles.feedCard}>
-                      <div className={styles.feedMeta}>
-                        <strong>{entry.kind.replaceAll("_", " ")}</strong>
-                        <span>{formatDateTime(entry.createdAt)}</span>
-                      </div>
-                      <p>{entry.body}</p>
-                    </article>
+                    <FeedCardShell
+                      key={entry.id}
+                      title={entry.kind.replaceAll("_", " ")}
+                      meta={formatDateTime(entry.createdAt)}
+                      body={entry.body}
+                      tone="info"
+                    />
                   ))
                 )}
               </div>
@@ -746,24 +766,26 @@ export function AlliancePage() {
                 <EmptyState title="List Empty" body="No visible alliance is available yet." />
               ) : (
                 publicAlliances.map((entry) => (
-                  <article key={entry.id} className={styles.feedCard}>
-                    <div className={styles.feedMeta}>
-                      <strong>{entry.name}</strong>
-                      <Badge tone="info">[{entry.tag}]</Badge>
-                    </div>
-                    <p>{entry.description || "Doctrine note has not been set."}</p>
-                    <div className={styles.actions}>
-                      <span>{entry.memberCount} members</span>
-                      <Button
-                        type="button"
-                        size="small"
-                        disabled={joinAllianceMutation.isPending || entry.joined}
-                        onClick={() => joinAllianceMutation.mutate(entry.id)}
-                      >
-                        {entry.joined ? "Joined" : "Join"}
-                      </Button>
-                    </div>
-                  </article>
+                  <FeedCardShell
+                    key={entry.id}
+                    title={entry.name}
+                    meta={<Badge tone="info">[{entry.tag}]</Badge>}
+                    body={entry.description || "Doctrine note has not been set."}
+                    footer={
+                      <div className={styles.actions}>
+                        <span>{entry.memberCount} members</span>
+                        <Button
+                          type="button"
+                          size="small"
+                          disabled={joinAllianceMutation.isPending || entry.joined}
+                          onClick={() => joinAllianceMutation.mutate(entry.id)}
+                        >
+                          {entry.joined ? "Joined" : "Join"}
+                        </Button>
+                      </div>
+                    }
+                    tone={entry.joined ? "success" : "info"}
+                  />
                 ))
               )}
             </div>

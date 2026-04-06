@@ -35,8 +35,7 @@
 .summaryLabel,
 .attributeLabel,
 .cardEyebrow,
-.portraitKicker,
-.loadoutLabel {
+.portraitKicker {
   color: var(--color-outline);
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -56,7 +55,6 @@
 .heroLead,
 .rosterMeta,
 .rosterNote,
-.loadoutNote,
 .portraitMeta,
 .orderLead {
   color: var(--color-outline);
@@ -97,6 +95,10 @@
   margin-bottom: 1rem;
 }
 
+.attributeStats {
+  margin-top: 0;
+}
+
 .summaryCard,
 .rosterCard,
 .portraitCard,
@@ -110,8 +112,7 @@
 }
 
 .summaryValue,
-.attributeValue,
-.loadoutValue {
+.attributeValue {
   display: block;
   margin-top: 0.35rem;
   font-family: var(--font-mono);
@@ -254,50 +255,6 @@
   gap: 1rem;
 }
 
-.loadoutList,
-.serviceGrid {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.loadoutRow,
-.serviceRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--color-outline-variant);
-}
-
-.loadoutRow:last-child,
-.serviceRow:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.loadoutLabel,
-.serviceRow dt {
-  display: block;
-}
-
-.loadoutNote,
-.serviceRow dt {
-  margin: 0.25rem 0 0;
-  font-size: 0.75rem;
-}
-
-.serviceRow dt {
-  color: var(--color-outline);
-}
-
-.serviceRow dd {
-  margin: 0;
-  text-align: right;
-  color: var(--color-on-surface);
-  font-family: var(--font-mono);
-}
-
 .attributeGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -337,9 +294,7 @@
   .attributeHead,
   .stageHeader,
   .actionRow,
-  .portraitRow,
-  .loadoutRow,
-  .serviceRow {
+  .portraitRow {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -347,9 +302,5 @@
   .summaryGrid,
   .attributeGrid {
     grid-template-columns: 1fr;
-  }
-
-  .serviceRow dd {
-    text-align: left;
   }
 }
