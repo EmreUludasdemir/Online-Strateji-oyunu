@@ -45,6 +45,7 @@ const WorldMap = lazy(() => import("../components/WorldMap"));
 
 type MapFilter = "ALL" | "CITIES" | "CAMPS" | "NODES";
 type ComposerMode = "CITY_ATTACK" | "BARBARIAN_ATTACK" | "RESOURCE_GATHER" | "SCOUT" | "RALLY" | null;
+type MapReadyPhase = "bootstrapping" | "fetching" | "loaded" | "error";
 
 interface ScoutAnimationTarget {
   kind: "CITY" | "POI";
@@ -341,6 +342,10 @@ function formatMarkerAge(isoTime: string, now: number) {
   return `${elapsedDays}d ago`;
 }
 
+function toIsoTimestamp(timestamp: number) {
+  return timestamp > 0 ? new Date(timestamp).toISOString() : null;
+}
+
 function getReportMarkerTone(report: ReportEntryView): "success" | "warning" | "info" {
   if (report.kind === "RESOURCE_GATHER") {
     return "info";
@@ -371,6 +376,11 @@ export function MapPage() {
   const markerInputRef = useRef<HTMLInputElement | null>(null);
   const handleComposerConfirmRef = useRef<(() => Promise<void>) | null>(null);
   const markerCycleIndexRef = useRef(0);
+  const routeMountedAtRef = useRef(new Date().toISOString());
+  const previousChunkFetchStatusRef = useRef<"idle" | "fetching" | "paused" | null>(null);
+  const lastFetchAttemptAtRef = useRef<string | null>(null);
+  const lastFetchSuccessAtRef = useRef<string | null>(null);
+  const lastFetchErrorAtRef = useRef<string | null>(null);
 
   const [filter, setFilter] = useState<MapFilter>("ALL");
   const [showPaths, setShowPaths] = useState(true);
@@ -409,6 +419,25 @@ export function MapPage() {
     placeholderData: (previous) => previous,
     staleTime: 5_000,
   });
+
+  useEffect(() => {
+    if (worldChunkQuery.fetchStatus === "fetching" && previousChunkFetchStatusRef.current !== "fetching") {
+      lastFetchAttemptAtRef.current = new Date().toISOString();
+    }
+    previousChunkFetchStatusRef.current = worldChunkQuery.fetchStatus;
+  }, [worldChunkQuery.fetchStatus]);
+
+  useEffect(() => {
+    if (worldChunkQuery.dataUpdatedAt > 0) {
+      lastFetchSuccessAtRef.current = new Date(worldChunkQuery.dataUpdatedAt).toISOString();
+    }
+  }, [worldChunkQuery.dataUpdatedAt]);
+
+  useEffect(() => {
+    if (worldChunkQuery.errorUpdatedAt > 0) {
+      lastFetchErrorAtRef.current = new Date(worldChunkQuery.errorUpdatedAt).toISOString();
+    }
+  }, [worldChunkQuery.errorUpdatedAt]);
 
   const reportsQuery = useQuery({
     queryKey: ["battle-reports"],
@@ -707,6 +736,52 @@ export function MapPage() {
 
     return mergeWorldChunks(chunkRequest, worldChunkQuery.data ?? null, cachedChunks);
   }, [chunkCacheVersion, chunkRequest, queryClient, worldChunkQuery.data]);
+  const readyPhase: MapReadyPhase = worldChunk
+    ? "loaded"
+    : worldChunkQuery.isError
+      ? "error"
+      : worldChunkQuery.fetchStatus === "fetching" || worldChunkQuery.status === "pending"
+        ? "fetching"
+        : "bootstrapping";
+  const mapDiagnostics = useMemo(
+    () => ({
+      routeMountedAt: routeMountedAtRef.current,
+      chunkRequest,
+      camera: cameraView,
+      activeChunkMeta: worldChunkQuery.data
+        ? {
+            centerTileX: worldChunkQuery.data.center.x,
+            centerTileY: worldChunkQuery.data.center.y,
+            radius: worldChunkQuery.data.radius,
+          }
+        : null,
+      worldChunkQuery: {
+        status: worldChunkQuery.status,
+        fetchStatus: worldChunkQuery.fetchStatus,
+        failureCount: worldChunkQuery.failureCount,
+        hasData: Boolean(worldChunkQuery.data),
+        errorMessage: worldChunkQuery.error instanceof Error ? worldChunkQuery.error.message : null,
+      },
+      dataUpdatedAt: toIsoTimestamp(worldChunkQuery.dataUpdatedAt),
+      errorUpdatedAt: toIsoTimestamp(worldChunkQuery.errorUpdatedAt),
+      lastFetchAttemptAt: lastFetchAttemptAtRef.current,
+      lastFetchSuccessAt: lastFetchSuccessAtRef.current,
+      lastFetchErrorAt: lastFetchErrorAtRef.current,
+      readyPhase,
+    }),
+    [
+      cameraView,
+      chunkRequest,
+      readyPhase,
+      worldChunkQuery.data,
+      worldChunkQuery.dataUpdatedAt,
+      worldChunkQuery.error,
+      worldChunkQuery.errorUpdatedAt,
+      worldChunkQuery.failureCount,
+      worldChunkQuery.fetchStatus,
+      worldChunkQuery.status,
+    ],
+  );
 
   const selectedCity = useMemo(
     () => worldChunk?.cities.find((city) => city.cityId === selectedCityId) ?? null,
@@ -1249,6 +1324,13 @@ export function MapPage() {
     selectedTargetName,
     targetSheetVisible,
   ]);
+
+  useEffect(() => {
+    window.frontierMapDiagnostics = mapDiagnostics;
+    return () => {
+      window.frontierMapDiagnostics = null;
+    };
+  }, [mapDiagnostics]);
 
   const targetCards = useMemo(() => {
     if (!worldChunk) {

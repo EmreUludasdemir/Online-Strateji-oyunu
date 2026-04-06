@@ -35,6 +35,277 @@ export async function waitFor(check, timeoutMs, label, intervalMs = 500) {
   throw new Error(`Timed out while waiting for ${label}.`);
 }
 
+function pushBoundedEntry(collection, entry, limit = 20) {
+  collection.push(entry);
+  if (collection.length > limit) {
+    collection.splice(0, collection.length - limit);
+  }
+}
+
+export function attachBrowserDiagnostics(page) {
+  const state = {
+    consoleMessages: [],
+    pageErrors: [],
+    requestFailures: [],
+    worldChunkResponses: [],
+  };
+
+  const handleConsole = (message) => {
+    if (!["error", "warning"].includes(message.type())) {
+      return;
+    }
+
+    pushBoundedEntry(state.consoleMessages, {
+      at: new Date().toISOString(),
+      type: message.type(),
+      text: message.text(),
+    });
+  };
+
+  const handlePageError = (error) => {
+    pushBoundedEntry(state.pageErrors, {
+      at: new Date().toISOString(),
+      text: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+      stack: error instanceof Error ? error.stack ?? null : null,
+    });
+  };
+
+  const handleRequestFailed = (request) => {
+    pushBoundedEntry(state.requestFailures, {
+      at: new Date().toISOString(),
+      method: request.method(),
+      resourceType: request.resourceType(),
+      url: request.url(),
+      failure: request.failure()?.errorText ?? null,
+    });
+  };
+
+  const handleResponse = (response) => {
+    if (!response.url().includes("/api/game/world/chunk")) {
+      return;
+    }
+
+    pushBoundedEntry(state.worldChunkResponses, {
+      at: new Date().toISOString(),
+      ok: response.ok(),
+      status: response.status(),
+      url: response.url(),
+    });
+  };
+
+  page.on("console", handleConsole);
+  page.on("pageerror", handlePageError);
+  page.on("requestfailed", handleRequestFailed);
+  page.on("response", handleResponse);
+
+  return {
+    state,
+    detach() {
+      page.off("console", handleConsole);
+      page.off("pageerror", handlePageError);
+      page.off("requestfailed", handleRequestFailed);
+      page.off("response", handleResponse);
+    },
+  };
+}
+
+export async function readGameState(page) {
+  return page.evaluate(() => {
+    if (!window.render_game_to_text) {
+      return null;
+    }
+    return JSON.parse(window.render_game_to_text());
+  });
+}
+
+export async function readMapUiState(page) {
+  return page.evaluate(() => window.frontierMapUi ?? null);
+}
+
+export async function readSmokeAutomationSnapshot(page) {
+  return page.evaluate(() => {
+    const renderText = typeof window.render_game_to_text === "function" ? window.render_game_to_text() : null;
+    let rendered = null;
+    let renderParseError = null;
+
+    if (renderText) {
+      try {
+        rendered = JSON.parse(renderText);
+      } catch (error) {
+        renderParseError = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    const errorBoundaryNode = document.querySelector("[data-error-boundary='true']");
+
+    return {
+      route: window.location.pathname,
+      url: window.location.href,
+      hooks: {
+        renderGameToText: typeof window.render_game_to_text === "function",
+        primeMapChunk: typeof window.prime_map_chunk === "function",
+        focusMapTarget: typeof window.focus_map_target === "function",
+        openMapFieldCommand: typeof window.open_map_field_command === "function",
+      },
+      errorBoundary: errorBoundaryNode?.textContent?.replace(/\s+/g, " ").trim().slice(0, 2_000) ?? null,
+      frontierLastError: window.frontierLastError ?? null,
+      frontierMapDiagnostics: window.frontierMapDiagnostics ?? null,
+      frontierMapUi: window.frontierMapUi ?? null,
+      rendered,
+      renderParseError,
+    };
+  });
+}
+
+function summarizeRenderedState(rendered) {
+  if (!rendered) {
+    return null;
+  }
+
+  return {
+    screen: rendered.screen ?? null,
+    shell: rendered.shell ?? null,
+    selectedCity: rendered.selectedCity
+      ? {
+          cityId: rendered.selectedCity.cityId,
+          cityName: rendered.selectedCity.cityName,
+        }
+      : null,
+    selectedPoi: rendered.selectedPoi
+      ? {
+          id: rendered.selectedPoi.id,
+          label: rendered.selectedPoi.label,
+        }
+      : null,
+    map: rendered.map
+      ? {
+          loaded: Boolean(rendered.map.loaded),
+          readyPhase: rendered.map.readyPhase ?? null,
+          center: rendered.map.center ?? null,
+          radius: rendered.map.radius ?? null,
+          tiles: rendered.map.tiles ?? null,
+          cityCount: Array.isArray(rendered.map.cities) ? rendered.map.cities.length : 0,
+          poiCount: Array.isArray(rendered.map.pois) ? rendered.map.pois.length : 0,
+          marchCount: Array.isArray(rendered.map.marches) ? rendered.map.marches.length : 0,
+          fieldCommand: rendered.map.fieldCommand ?? null,
+          diagnostics: rendered.map.diagnostics ?? null,
+          lastError: rendered.map.lastError ?? null,
+        }
+      : null,
+  };
+}
+
+export function formatMapFailureDump(snapshot, browserDiagnostics) {
+  return JSON.stringify(
+    {
+      route: snapshot?.route ?? null,
+      url: snapshot?.url ?? null,
+      hooks: snapshot?.hooks ?? null,
+      errorBoundary: snapshot?.errorBoundary ?? null,
+      frontierLastError: snapshot?.frontierLastError ?? null,
+      frontierMapDiagnostics: snapshot?.frontierMapDiagnostics ?? null,
+      frontierMapUi: snapshot?.frontierMapUi ?? null,
+      rendered: summarizeRenderedState(snapshot?.rendered ?? null),
+      renderParseError: snapshot?.renderParseError ?? null,
+      worldChunkResponses: browserDiagnostics?.state?.worldChunkResponses ?? [],
+      requestFailures: browserDiagnostics?.state?.requestFailures ?? [],
+      consoleMessages: browserDiagnostics?.state?.consoleMessages ?? [],
+      pageErrors: browserDiagnostics?.state?.pageErrors ?? [],
+    },
+    null,
+    2,
+  );
+}
+
+function isTerminalMapFailure(snapshot) {
+  return Boolean(
+    snapshot?.frontierLastError || snapshot?.errorBoundary || snapshot?.frontierMapDiagnostics?.readyPhase === "error",
+  );
+}
+
+async function throwMapDiagnosticsError(message, page, browserDiagnostics) {
+  const snapshot = await readSmokeAutomationSnapshot(page).catch(() => null);
+  throw new Error(`${message}\n${formatMapFailureDump(snapshot, browserDiagnostics)}`);
+}
+
+export async function ensureMapReady(
+  page,
+  browserDiagnostics,
+  {
+    route = "/app/map",
+    routeTimeoutMs = 10_000,
+    automationTimeoutMs = 10_000,
+    readyTimeoutMs = 15_000,
+    primeTimeoutMs = 8_000,
+    label = "the map",
+  } = {},
+) {
+  try {
+    await waitFor(async () => {
+      const snapshot = await readSmokeAutomationSnapshot(page);
+      return snapshot.route === route ? snapshot : null;
+    }, routeTimeoutMs, `${label} route`);
+  } catch {
+    await throwMapDiagnosticsError(`Timed out while waiting for ${label} route.`, page, browserDiagnostics);
+  }
+
+  try {
+    await waitFor(async () => {
+      const snapshot = await readSmokeAutomationSnapshot(page);
+      if (snapshot.route !== route) {
+        return null;
+      }
+      if (isTerminalMapFailure(snapshot)) {
+        throw new Error(`Detected a terminal failure before ${label} automation hooks were ready.\n${formatMapFailureDump(snapshot, browserDiagnostics)}`);
+      }
+      return snapshot.hooks.renderGameToText && snapshot.hooks.primeMapChunk ? snapshot : null;
+    }, automationTimeoutMs, `${label} automation surface`);
+  } catch (error) {
+    if (error instanceof Error && !error.message.startsWith("Timed out while waiting")) {
+      throw error;
+    }
+    await throwMapDiagnosticsError(`Timed out while waiting for ${label} automation surface.`, page, browserDiagnostics);
+  }
+
+  const waitForLoaded = async (timeoutMs, waitLabel) => {
+    try {
+      return await waitFor(async () => {
+        const snapshot = await readSmokeAutomationSnapshot(page);
+        if (snapshot.route !== route) {
+          return null;
+        }
+        if (isTerminalMapFailure(snapshot)) {
+          throw new Error(`Detected a terminal failure while waiting for ${label} readiness.\n${formatMapFailureDump(snapshot, browserDiagnostics)}`);
+        }
+        if (snapshot.rendered?.screen === route && snapshot.rendered?.map?.loaded) {
+          return snapshot.rendered;
+        }
+        return null;
+      }, timeoutMs, waitLabel);
+    } catch (error) {
+      if (error instanceof Error && !error.message.startsWith("Timed out while waiting")) {
+        throw error;
+      }
+      return null;
+    }
+  };
+
+  const loadedState = await waitForLoaded(readyTimeoutMs, `${label} readiness`);
+  if (loadedState) {
+    return loadedState;
+  }
+
+  await page.evaluate(() => window.prime_map_chunk?.()).catch(() => null);
+  await page.waitForTimeout(1_000);
+
+  const primedState = await waitForLoaded(primeTimeoutMs, `${label} readiness after chunk priming`);
+  if (primedState) {
+    return primedState;
+  }
+
+  await throwMapDiagnosticsError(`Timed out while waiting for ${label} to load.`, page, browserDiagnostics);
+}
+
 export function getDefaultSmokeDatabaseUrl() {
   return process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5433/frontier_dominion?schema=public";
 }

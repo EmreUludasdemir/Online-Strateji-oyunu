@@ -2,7 +2,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
-import { ensureBaseUrlReachable, prepareSmokeFixture, waitFor } from "./smoke_support.mjs";
+import {
+  attachBrowserDiagnostics,
+  ensureBaseUrlReachable,
+  ensureMapReady,
+  prepareSmokeFixture,
+  readGameState,
+  readMapUiState,
+  waitFor,
+} from "./smoke_support.mjs";
 
 function parseArgs(argv) {
   const args = {
@@ -31,19 +39,6 @@ function parseArgs(argv) {
   }
 
   return args;
-}
-
-async function readGameState(page) {
-  return page.evaluate(() => {
-    if (!window.render_game_to_text) {
-      return null;
-    }
-    return JSON.parse(window.render_game_to_text());
-  });
-}
-
-async function readMapUiState(page) {
-  return page.evaluate(() => window.frontierMapUi ?? null);
 }
 
 async function confirmComposerAction(page, composerTitle, actionName) {
@@ -83,34 +78,10 @@ async function login(page, baseUrl, username, password) {
   await page.waitForURL("**/app/dashboard");
 }
 
-async function ensureMapLoaded(page) {
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const loadedState = await waitFor(async () => {
-      const state = await readGameState(page);
-      if (state?.screen === "/app/map" && state.map.loaded) {
-        return state;
-      }
-      return null;
-    }, 15_000, "the map chunk to load").catch(() => null);
-
-    if (loadedState) {
-      return loadedState;
-    }
-
-    const canPrimeChunk = await waitFor(async () => {
-      return (await page.evaluate(() => Boolean(window.prime_map_chunk))).valueOf() ? true : null;
-    }, 5_000, "the map chunk primer").catch(() => false);
-
-    if (attempt === 1) {
-      if (canPrimeChunk) {
-        await page.evaluate(() => window.prime_map_chunk?.()).catch(() => null);
-        await page.waitForTimeout(1_000);
-      }
-      await page.reload({ waitUntil: "networkidle" });
-    }
-  }
-
-  throw new Error("Timed out while waiting for the map chunk to load.");
+async function ensureMapLoaded(page, browserDiagnostics) {
+  return ensureMapReady(page, browserDiagnostics, {
+    label: "the map chunk",
+  });
 }
 
 async function ensureAllianceLoaded(page) {
@@ -339,12 +310,7 @@ async function main() {
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
-  const consoleErrors = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      consoleErrors.push(message.text());
-    }
-  });
+  const browserDiagnostics = attachBrowserDiagnostics(page);
 
   try {
     await login(page, args.baseUrl, args.username, args.password);
@@ -366,7 +332,7 @@ async function main() {
     const allianceState = await ensureAllianceLoaded(page);
 
     await page.goto(`${args.baseUrl}/app/map`, { waitUntil: "networkidle" });
-    await ensureMapLoaded(page);
+    await ensureMapLoaded(page, browserDiagnostics);
     await waitForMarchResolution(page);
     const marchDispatch = await dispatchMarch(page);
     let resultHeading;
@@ -386,8 +352,16 @@ async function main() {
       }
     }
 
-    if (consoleErrors.length > 0) {
-      throw new Error(`Console errors detected:\n${consoleErrors.join("\n")}`);
+    const runtimeConsoleErrors = browserDiagnostics.state.consoleMessages
+      .filter((entry) => entry.type === "error")
+      .map((entry) => entry.text);
+    if (runtimeConsoleErrors.length > 0 || browserDiagnostics.state.pageErrors.length > 0) {
+      throw new Error(
+        `Console errors detected:\n${[
+          ...runtimeConsoleErrors,
+          ...browserDiagnostics.state.pageErrors.map((entry) => entry.text),
+        ].join("\n")}`,
+      );
     }
 
     console.log(
@@ -406,6 +380,7 @@ async function main() {
       ),
     );
   } finally {
+    browserDiagnostics.detach();
     await browser.close();
   }
 }

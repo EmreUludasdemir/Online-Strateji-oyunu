@@ -22,10 +22,22 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (typeof window !== "undefined") {
+      window.frontierLastError = {
+        message: error.message,
+        stack: error.stack ?? null,
+        componentStack: errorInfo.componentStack || null,
+        route: window.location.pathname,
+        at: new Date().toISOString(),
+      };
+    }
     console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
 
   handleRetry = () => {
+    if (typeof window !== "undefined") {
+      window.frontierLastError = null;
+    }
     this.setState({ hasError: false, error: null });
   };
 
@@ -40,7 +52,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className={styles.container}>
+        <div className={styles.container} data-error-boundary="true">
           <div className={styles.card}>
             <div className={styles.icon}>⚠️</div>
             <h2 className={styles.title}>Something went wrong</h2>

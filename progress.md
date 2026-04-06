@@ -181,3 +181,15 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - `corepack pnpm build` passed.
   - `corepack pnpm test` remains environment-blocked because `localhost:5433` Postgres is unavailable and Docker cannot be reached from this shell.
   - `corepack pnpm smoke:e2e`, `corepack pnpm smoke:field-command`, and `corepack pnpm smoke:alpha` now all fail early for the same correct environment prerequisite instead of diverging into missing-shell or opaque startup errors.
+- 2026-04-06: Closed the shared repo-owned map smoke blocker with a low-risk browser runtime fix. The real root cause was not chunk-query enablement: `/api/game/world/chunk` was already returning `200`, but the `/app/map` route crashed during the lazy Phaser import with `ReferenceError: global is not defined`, so the route fell into the error boundary before `render_game_to_text`, `prime_map_chunk`, or `frontierMapUi` could mount. `apps/web/src/main.tsx` now seeds `globalThis.global` once during bootstrap for Phaser browser compatibility instead of changing backend contracts or map query semantics.
+- 2026-04-06: Added additive map-route diagnostics for faster smoke triage. `ErrorBoundary` now persists `window.frontierLastError` with route/time/component stack metadata and exposes a stable DOM marker, `MapPage` now publishes `window.frontierMapDiagnostics` with route mount time, chunk request/camera state, query status, last fetch attempt/success/error timestamps, and a fixed `readyPhase`, and `render_game_to_text()` now includes shell readiness plus `map.readyPhase`, `map.diagnostics`, and `map.lastError` while keeping `map.loaded` backward compatible.
+- 2026-04-06: Unified map smoke readiness and failure reporting. `scripts/smoke_support.mjs` now owns shared browser diagnostics collectors plus phased `/app/map` readiness checks, and the kingdom-core / field-command scenarios now fail with one structured dump that includes route, hook presence, map diagnostics, last visible/runtime error, recent chunk responses, request failures, and console/pageerror summaries.
+- 2026-04-06: Validation after the Phaser smoke-completion pass:
+  - `corepack pnpm --filter @frontier/server build` passed.
+  - `corepack pnpm --filter @frontier/web build` passed.
+  - `corepack pnpm --filter @frontier/web test` passed.
+  - `corepack pnpm build` passed.
+  - `corepack pnpm test` passed.
+  - `corepack pnpm smoke:e2e` passed.
+  - `corepack pnpm smoke:field-command` passed.
+  - `corepack pnpm smoke:alpha` passed.

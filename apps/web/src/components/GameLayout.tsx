@@ -109,6 +109,32 @@ declare global {
       cityId?: string;
       poiId?: string;
     }) => void;
+    frontierLastError?: {
+      message: string;
+      stack: string | null;
+      componentStack: string | null;
+      route: string;
+      at: string;
+    } | null;
+    frontierMapDiagnostics?: {
+      routeMountedAt: string;
+      chunkRequest: ActiveMapChunkMeta;
+      camera: MapCameraState;
+      activeChunkMeta: ActiveMapChunkMeta | null;
+      worldChunkQuery: {
+        status: "pending" | "error" | "success";
+        fetchStatus: "idle" | "fetching" | "paused";
+        failureCount: number;
+        hasData: boolean;
+        errorMessage: string | null;
+      };
+      dataUpdatedAt: string | null;
+      errorUpdatedAt: string | null;
+      lastFetchAttemptAt: string | null;
+      lastFetchSuccessAt: string | null;
+      lastFetchErrorAt: string | null;
+      readyPhase: "bootstrapping" | "fetching" | "loaded" | "error";
+    } | null;
   }
 }
 
@@ -556,9 +582,17 @@ export function GameLayout() {
       const cameraView = window.frontierMapCamera ?? null;
       const fieldCommand = window.frontierMapFieldCommand ?? null;
       const mapUi = window.frontierMapUi ?? null;
+      const mapDiagnostics = window.frontierMapDiagnostics ?? null;
+      const lastError = window.frontierLastError ?? null;
 
       return JSON.stringify({
         screen: location.pathname,
+        shell: {
+          bootstrapReady: Boolean(bootstrapQuery.data),
+          sessionReady: !sessionQuery.isPending && !sessionQuery.isError,
+          authenticated: Boolean(sessionQuery.data?.user),
+          gameStateReady: Boolean(stateQuery.data),
+        },
         city: {
           name: stateQuery.data.city.cityName,
           coordinates: stateQuery.data.city.coordinates,
@@ -599,9 +633,12 @@ export function GameLayout() {
         selectedPoi,
         map: {
           loaded: Boolean(worldChunk),
+          readyPhase: mapDiagnostics?.readyPhase ?? (worldChunk ? "loaded" : "bootstrapping"),
           camera: cameraView,
           fieldCommand,
           ui: mapUi,
+          diagnostics: mapDiagnostics,
+          lastError,
           center: worldChunk?.center,
           radius: worldChunk?.radius ?? null,
           tiles: {
@@ -672,7 +709,20 @@ export function GameLayout() {
       delete window.select_map_poi;
       delete window.open_map_field_command;
     };
-  }, [location.pathname, queryClient, selectCity, selectPoi, selectedCityId, selectedPoiId, stateQuery.data, themeMode]);
+  }, [
+    bootstrapQuery.data,
+    location.pathname,
+    queryClient,
+    selectCity,
+    selectPoi,
+    selectedCityId,
+    selectedPoiId,
+    sessionQuery.data?.user,
+    sessionQuery.isError,
+    sessionQuery.isPending,
+    stateQuery.data,
+    themeMode,
+  ]);
 
   useEffect(() => {
     trackAnalyticsEvent("hud_tab_opened", {
