@@ -395,6 +395,7 @@ export function MapPage() {
   const [markerDraft, setMarkerDraft] = useState("");
   const [mapNotice, setMapNotice] = useState<string | null>(null);
   const [fieldCommand, setFieldCommand] = useState<MapFieldCommand | null>(null);
+  const [fieldCommandOpenSource, setFieldCommandOpenSource] = useState<"canvas" | "automation-hook" | null>(null);
   const [fieldMarkerDraft, setFieldMarkerDraft] = useState("");
   const [cameraView, setCameraView] = useState<MapCameraState>(() =>
     createInitialCameraState(state.city.coordinates.x, state.city.coordinates.y),
@@ -659,19 +660,21 @@ export function MapPage() {
           label: fieldCommand.label,
           x: fieldCommand.x,
           y: fieldCommand.y,
+          openSource: fieldCommandOpenSource,
         }
       : null;
 
     return () => {
       window.frontierMapFieldCommand = null;
     };
-  }, [fieldCommand]);
+  }, [fieldCommand, fieldCommandOpenSource]);
 
   useEffect(() => {
     window.open_map_field_command = (command) => {
       setTargetSheetOpen(false);
       setComposerMode(null);
       setSelectedMarchId(null);
+      setFieldCommandOpenSource("automation-hook");
       setFieldCommand({
         kind: command.kind ?? "TILE",
         label: command.label ?? `Frontier ${command.x},${command.y}`,
@@ -709,6 +712,16 @@ export function MapPage() {
   }, []);
 
   useEffect(() => {
+    window.project_map_target_for_smoke = (command) => {
+      return mapCommandRef.current?.projectTileToViewport(command.x, command.y) ?? null;
+    };
+
+    return () => {
+      delete window.project_map_target_for_smoke;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!worldChunkQuery.data) {
       return undefined;
     }
@@ -736,6 +749,39 @@ export function MapPage() {
 
     return mergeWorldChunks(chunkRequest, worldChunkQuery.data ?? null, cachedChunks);
   }, [chunkCacheVersion, chunkRequest, queryClient, worldChunkQuery.data]);
+
+  useEffect(() => {
+    window.get_visible_smoke_targets = () => {
+      const projectionReady = Boolean(mapCommandRef.current?.projectTileToViewport(cameraView.centerTileX, cameraView.centerTileY));
+      if (!worldChunk) {
+        return { pois: [], cities: [], cameraReady: false, camera: cameraView, projectionReady };
+      }
+      return {
+        pois: worldChunk.pois.map((poi) => ({
+          id: poi.id,
+          label: poi.label,
+          kind: poi.kind,
+          x: poi.x,
+          y: poi.y,
+        })),
+        cities: worldChunk.cities
+          .filter((city) => !city.isCurrentPlayer)
+          .map((city) => ({
+            cityId: city.cityId,
+            cityName: city.cityName,
+            x: city.x,
+            y: city.y,
+          })),
+        cameraReady: projectionReady,
+        camera: cameraView,
+        projectionReady,
+      };
+    };
+
+    return () => {
+      delete window.get_visible_smoke_targets;
+    };
+  }, [cameraView, worldChunk]);
   const readyPhase: MapReadyPhase = worldChunk
     ? "loaded"
     : worldChunkQuery.isError
@@ -1308,6 +1354,8 @@ export function MapPage() {
       selectedTargetKind: selectedCity ? "CITY" : selectedPoi ? "POI" : null,
       availableActions: targetSheetVisible ? availableTargetActions : [],
       fieldCommandKind: fieldCommand?.kind ?? null,
+      fieldCommandLabel: fieldCommand?.label ?? null,
+      fieldCommandOpenSource,
     };
 
     return () => {
@@ -1318,6 +1366,8 @@ export function MapPage() {
     composerMode,
     composerActionLabel,
     fieldCommand?.kind,
+    fieldCommand?.label,
+    fieldCommandOpenSource,
     selectedCity,
     selectedMarchId,
     selectedPoi,
@@ -1558,6 +1608,7 @@ export function MapPage() {
     setTargetSheetOpen(false);
     setComposerMode(null);
     setSelectedMarchId(null);
+    setFieldCommandOpenSource("canvas");
     setFieldCommand(command);
     setFieldMarkerDraft(command.label);
     trackAnalyticsEvent("target_sheet_opened", {

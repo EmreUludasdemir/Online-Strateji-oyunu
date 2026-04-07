@@ -83,6 +83,26 @@ export interface WorldMapHandle {
   focusPoi: (poiId: string) => void;
   focusMarch: (marchId: string) => void;
   focusTile: (x: number, y: number) => void;
+  projectTileToViewport: (x: number, y: number) => {
+    worldX: number;
+    worldY: number;
+    canvasX: number;
+    canvasY: number;
+    withinViewport: boolean;
+    viewport: {
+      width: number;
+      height: number;
+    };
+    camera: {
+      scrollX: number;
+      scrollY: number;
+      zoom: number;
+      centerWorldX: number;
+      centerWorldY: number;
+      centerTileX: number;
+      centerTileY: number;
+    };
+  } | null;
 }
 
 export interface MapFieldCommand {
@@ -553,6 +573,41 @@ class FrontierMapScene extends Phaser.Scene {
     this.cameraDrift.y = 0;
     this.spawnPulse(point.x, point.y, 0xf4d79c, 16);
     this.cameras.main.pan(point.x, point.y, duration, "Cubic.easeOut", true);
+  }
+
+  projectTileToViewport(x: number, y: number) {
+    if (!this.isCameraReady()) {
+      return null;
+    }
+
+    const camera = this.cameras.main;
+    const worldPoint = tileToWorld(x, y);
+    const canvasX = (worldPoint.x - camera.scrollX) * camera.zoom;
+    const canvasY = (worldPoint.y - camera.scrollY) * camera.zoom;
+    const centerWorldX = camera.scrollX + this.scale.width / (2 * camera.zoom);
+    const centerWorldY = camera.scrollY + this.scale.height / (2 * camera.zoom);
+    const centerTile = worldToTile(centerWorldX, centerWorldY, this.worldSize);
+
+    return {
+      worldX: Number(worldPoint.x.toFixed(2)),
+      worldY: Number(worldPoint.y.toFixed(2)),
+      canvasX: Number(canvasX.toFixed(2)),
+      canvasY: Number(canvasY.toFixed(2)),
+      withinViewport: canvasX >= 0 && canvasX <= this.scale.width && canvasY >= 0 && canvasY <= this.scale.height,
+      viewport: {
+        width: this.scale.width,
+        height: this.scale.height,
+      },
+      camera: {
+        scrollX: Number(camera.scrollX.toFixed(2)),
+        scrollY: Number(camera.scrollY.toFixed(2)),
+        zoom: Number(camera.zoom.toFixed(2)),
+        centerWorldX: Number(centerWorldX.toFixed(2)),
+        centerWorldY: Number(centerWorldY.toFixed(2)),
+        centerTileX: centerTile.x,
+        centerTileY: centerTile.y,
+      },
+    };
   }
 
   private applyWorldBounds() {
@@ -2422,6 +2477,7 @@ export default function WorldMap({
       focusPoi: (poiId: string) => sceneRef.current?.focusPoi(poiId),
       focusMarch: (marchId: string) => sceneRef.current?.focusMarch(marchId),
       focusTile: (x: number, y: number) => sceneRef.current?.focusTile(x, y),
+      projectTileToViewport: (x: number, y: number) => sceneRef.current?.projectTileToViewport(x, y) ?? null,
     };
 
     return () => {

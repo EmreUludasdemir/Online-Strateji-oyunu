@@ -8,11 +8,9 @@ import {
   ensureMapReady,
   prepareSmokeFixture,
   readGameState,
-  readMapUiState,
+  readSmokeAutomationSnapshot,
   waitFor,
 } from "./smoke_support.mjs";
-
-const MAP_TILE_WORLD_SIZE = 128;
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -45,6 +43,105 @@ function parseArgs(argv) {
   }
 
   return args;
+}
+
+function roundNumber(value) {
+  return Number.isFinite(value) ? Number(value.toFixed(2)) : null;
+}
+
+function summarizeBrowserDiagnostics(browserDiagnostics) {
+  return {
+    worldChunkResponses: browserDiagnostics.state.worldChunkResponses,
+    requestFailures: browserDiagnostics.state.requestFailures,
+    consoleMessages: browserDiagnostics.state.consoleMessages,
+    pageErrors: browserDiagnostics.state.pageErrors,
+  };
+}
+
+function getFieldCommandSource(snapshot) {
+  return (
+    snapshot?.frontierMapFieldCommand?.openSource ??
+    snapshot?.frontierMapUi?.fieldCommandOpenSource ??
+    snapshot?.rendered?.map?.fieldCommand?.openSource ??
+    null
+  );
+}
+
+function getFieldCommandLabel(snapshot) {
+  return (
+    snapshot?.frontierMapFieldCommand?.label ??
+    snapshot?.frontierMapUi?.fieldCommandLabel ??
+    snapshot?.rendered?.map?.fieldCommand?.label ??
+    null
+  );
+}
+
+function buildTargetPayload(target) {
+  if ("id" in target) {
+    return {
+      kind: "POI",
+      label: target.label,
+      x: target.x,
+      y: target.y,
+      poiId: target.id,
+    };
+  }
+
+  return {
+    kind: "CITY",
+    label: target.cityName,
+    x: target.x,
+    y: target.y,
+    cityId: target.cityId,
+  };
+}
+
+function pickTarget(visibleTargets, initialState) {
+  const visiblePoi =
+    visibleTargets?.pois?.find((poi) => poi.kind === "BARBARIAN_CAMP") ??
+    visibleTargets?.pois?.[0] ??
+    null;
+  if (visiblePoi) {
+    return {
+      payload: {
+        kind: "POI",
+        label: visiblePoi.label,
+        x: visiblePoi.x,
+        y: visiblePoi.y,
+        poiId: visiblePoi.id,
+      },
+      source: "visible-targets",
+    };
+  }
+
+  const visibleCity = visibleTargets?.cities?.[0] ?? null;
+  if (visibleCity) {
+    return {
+      payload: {
+        kind: "CITY",
+        label: visibleCity.cityName,
+        x: visibleCity.x,
+        y: visibleCity.y,
+        cityId: visibleCity.cityId,
+      },
+      source: "visible-targets",
+    };
+  }
+
+  const fallbackTarget =
+    initialState.map.pois.find((poi) => poi.kind === "BARBARIAN_CAMP") ??
+    initialState.map.pois[0] ??
+    initialState.map.cities.find((city) => !city.isCurrentPlayer) ??
+    null;
+
+  if (!fallbackTarget) {
+    return null;
+  }
+
+  return {
+    payload: buildTargetPayload(fallbackTarget),
+    source: "rendered-map-state",
+  };
 }
 
 async function login(page, baseUrl, username, password) {
@@ -83,90 +180,544 @@ async function ensureAllianceReady(page) {
 
 async function waitForTargetAction(page, label, actionName) {
   await waitFor(async () => {
-    const state = await readMapUiState(page);
-    if (!state?.targetSheetOpen || state?.selectedTargetName !== label) {
+    const snapshot = await readFieldCommandSmokeSnapshot(page);
+    if (!snapshot.frontierMapUi?.targetSheetOpen || snapshot.frontierMapUi?.selectedTargetName !== label) {
       return null;
     }
-    return Array.isArray(state.availableActions) && state.availableActions.includes(actionName) ? state : null;
+    return Array.isArray(snapshot.frontierMapUi.availableActions) &&
+      snapshot.frontierMapUi.availableActions.includes(actionName)
+      ? snapshot
+      : null;
   }, 15_000, `${actionName} to become available for ${label}`);
 }
 
 async function ensureFieldCommandHook(page) {
   return waitFor(async () => {
-    const available = await page.evaluate(() => ({
-      open: Boolean(window.open_map_field_command),
-      focus: Boolean(window.focus_map_target),
+    const snapshot = await page.evaluate(() => ({
+      hooks: {
+        openMapFieldCommand: typeof window.open_map_field_command === "function",
+        focusMapTarget: typeof window.focus_map_target === "function",
+        getVisibleSmokeTargets: typeof window.get_visible_smoke_targets === "function",
+        projectMapTargetForSmoke: typeof window.project_map_target_for_smoke === "function",
+      },
+      visibleTargets: typeof window.get_visible_smoke_targets === "function" ? window.get_visible_smoke_targets() : null,
     }));
-    return available.open && available.focus ? true : null;
+
+    return snapshot.hooks.openMapFieldCommand &&
+      snapshot.hooks.focusMapTarget &&
+      snapshot.hooks.getVisibleSmokeTargets &&
+      snapshot.hooks.projectMapTargetForSmoke &&
+      snapshot.visibleTargets
+      ? snapshot
+      : null;
   }, 10_000, "the field-command automation hooks");
 }
 
-async function getPrimaryMapCanvasRect(page) {
-  const locator = page.locator("[data-map-canvas] canvas").first();
-  await locator.waitFor({ state: "visible", timeout: 5_000 });
-  const box = await locator.boundingBox();
-  return box ?? null;
+async function armCanvasEventCapture(page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector("[data-map-canvas] canvas");
+    if (!canvas) {
+      return false;
+    }
+
+    const globalKey = "__frontierSmokeCanvasEvents";
+    if (!Array.isArray(window[globalKey])) {
+      window[globalKey] = [];
+    } else {
+      window[globalKey].length = 0;
+    }
+
+    if (canvas.dataset.smokeCaptureAttached !== "true") {
+      const pushEvent = (event) => {
+        const entry = {
+          type: event.type,
+          button: "button" in event ? event.button : null,
+          buttons: "buttons" in event ? event.buttons : null,
+          clientX: "clientX" in event ? Number(event.clientX.toFixed(2)) : null,
+          clientY: "clientY" in event ? Number(event.clientY.toFixed(2)) : null,
+          pointerType: "pointerType" in event ? event.pointerType : null,
+          ctrlKey: Boolean(event.ctrlKey),
+          shiftKey: Boolean(event.shiftKey),
+          altKey: Boolean(event.altKey),
+          metaKey: Boolean(event.metaKey),
+          defaultPrevented: event.defaultPrevented,
+        };
+        window[globalKey].push(entry);
+        if (window[globalKey].length > 24) {
+          window[globalKey].splice(0, window[globalKey].length - 24);
+        }
+      };
+
+      for (const type of ["pointermove", "pointerdown", "mousedown", "mouseup", "auxclick", "contextmenu"]) {
+        canvas.addEventListener(type, pushEvent, true);
+      }
+      canvas.dataset.smokeCaptureAttached = "true";
+    }
+
+    return true;
+  });
+}
+
+async function readCanvasEventCapture(page) {
+  return page.evaluate(() => {
+    const globalKey = "__frontierSmokeCanvasEvents";
+    return Array.isArray(window[globalKey]) ? window[globalKey] : [];
+  });
+}
+
+async function readFieldCommandSmokeSnapshot(page, target = null) {
+  const baseSnapshot = await readSmokeAutomationSnapshot(page).catch(() => null);
+  const fieldSnapshot = await page
+    .evaluate((payload) => {
+      const canvas = document.querySelector("[data-map-canvas] canvas");
+      const rect = canvas?.getBoundingClientRect() ?? null;
+      return {
+        route: window.location.pathname,
+        visibleTargets: typeof window.get_visible_smoke_targets === "function" ? window.get_visible_smoke_targets() : null,
+        projectedTarget:
+          payload && typeof window.project_map_target_for_smoke === "function"
+            ? window.project_map_target_for_smoke(payload)
+            : null,
+        frontierMapFieldCommand: window.frontierMapFieldCommand ?? null,
+        frontierMapUi: window.frontierMapUi ?? null,
+        canvasRect: rect
+          ? {
+              x: Number(rect.x.toFixed(2)),
+              y: Number(rect.y.toFixed(2)),
+              width: Number(rect.width.toFixed(2)),
+              height: Number(rect.height.toFixed(2)),
+            }
+          : null,
+      };
+    }, target)
+    .catch(() => ({
+      route: null,
+      visibleTargets: null,
+      projectedTarget: null,
+      frontierMapFieldCommand: null,
+      frontierMapUi: null,
+      canvasRect: null,
+    }));
+
+  return {
+    ...(baseSnapshot ?? {}),
+    ...fieldSnapshot,
+    route: fieldSnapshot.route ?? baseSnapshot?.route ?? null,
+    frontierMapFieldCommand: fieldSnapshot.frontierMapFieldCommand ?? baseSnapshot?.frontierMapFieldCommand ?? null,
+    frontierMapUi: fieldSnapshot.frontierMapUi ?? baseSnapshot?.frontierMapUi ?? null,
+  };
+}
+
+function formatFieldCommandFailureDump({
+  stage,
+  target,
+  targetSource,
+  canvasClickDiagnostics,
+  snapshot,
+  browserDiagnostics,
+}) {
+  return JSON.stringify(
+    {
+      stage,
+      route: snapshot?.route ?? null,
+      hooks: snapshot?.hooks ?? null,
+      targetSource: targetSource ?? null,
+      target:
+        target == null
+          ? null
+          : {
+              kind: target.kind,
+              label: target.label,
+              x: target.x,
+              y: target.y,
+              cityId: target.cityId ?? null,
+              poiId: target.poiId ?? null,
+            },
+      canvasRect: snapshot?.canvasRect ?? null,
+      visibleTargets: snapshot?.visibleTargets ?? null,
+      projectedTarget: snapshot?.projectedTarget ?? null,
+      frontierMapDiagnostics: snapshot?.frontierMapDiagnostics ?? null,
+      frontierMapUi: snapshot?.frontierMapUi ?? null,
+      frontierMapFieldCommand: snapshot?.frontierMapFieldCommand ?? null,
+      frontierLastError: snapshot?.frontierLastError ?? null,
+      errorBoundary: snapshot?.errorBoundary ?? null,
+      rendered: snapshot?.rendered ?? null,
+      canvasClickDiagnostics: canvasClickDiagnostics ?? null,
+      browser: summarizeBrowserDiagnostics(browserDiagnostics),
+    },
+    null,
+    2,
+  );
+}
+
+async function throwFieldCommandDiagnosticsError(
+  page,
+  browserDiagnostics,
+  message,
+  { stage, target = null, targetSource = null, canvasClickDiagnostics = null } = {},
+) {
+  const snapshot = await readFieldCommandSmokeSnapshot(page, target).catch(() => null);
+  throw new Error(
+    `${message}\n${formatFieldCommandFailureDump({
+      stage,
+      target,
+      targetSource,
+      canvasClickDiagnostics,
+      snapshot,
+      browserDiagnostics,
+    })}`,
+  );
 }
 
 async function focusTargetForCanvasCommand(page, target) {
+  let previousProjection = null;
+  let stableProjectionCount = 0;
+
   await page.evaluate((payload) => {
     window.focus_map_target?.(payload);
   }, target);
 
   return waitFor(async () => {
-    const state = await readGameState(page);
-    const camera = state?.map?.camera;
-    if (!camera) {
+    const snapshot = await readFieldCommandSmokeSnapshot(page, target);
+    if (!snapshot.visibleTargets?.cameraReady || !snapshot.visibleTargets?.projectionReady) {
+      previousProjection = null;
+      stableProjectionCount = 0;
       return null;
     }
-    const dx = Math.abs(camera.centerTileX - target.x);
-    const dy = Math.abs(camera.centerTileY - target.y);
-    return dx <= 2 && dy <= 2 ? state : null;
-  }, 5_000, `the camera to focus ${target.label}`);
+    if (!snapshot.projectedTarget?.withinViewport) {
+      previousProjection = null;
+      stableProjectionCount = 0;
+      return null;
+    }
+
+    const currentProjection = snapshot.projectedTarget;
+    if (
+      previousProjection &&
+      Math.abs(previousProjection.canvasX - currentProjection.canvasX) <= 1 &&
+      Math.abs(previousProjection.canvasY - currentProjection.canvasY) <= 1 &&
+      Math.abs(previousProjection.camera.scrollX - currentProjection.camera.scrollX) <= 1 &&
+      Math.abs(previousProjection.camera.scrollY - currentProjection.camera.scrollY) <= 1
+    ) {
+      stableProjectionCount += 1;
+    } else {
+      stableProjectionCount = 1;
+    }
+
+    previousProjection = currentProjection;
+    return stableProjectionCount >= 2 ? snapshot : null;
+  }, 6_000, `the camera to focus ${target.label}`, 200);
 }
 
-async function openFieldCommandWithRightClick(page, target) {
-  const state = await focusTargetForCanvasCommand(page, target).catch(() => null);
-  const canvas = await getPrimaryMapCanvasRect(page).catch(() => null);
-  if (!canvas || !state?.map?.camera) {
-    return false;
+async function waitForFieldCommandOpen(page, targetLabel, timeoutMs, label) {
+  return waitFor(async () => {
+    const snapshot = await readFieldCommandSmokeSnapshot(page);
+    return getFieldCommandLabel(snapshot) === targetLabel ? snapshot : null;
+  }, timeoutMs, label, 200).catch(() => null);
+}
+
+function buildCanvasClickDiagnostics({
+  target,
+  targetSource,
+  visibleTargets,
+  projection,
+  canvasRect,
+  relativeClick,
+  pageClick,
+  withinBounds,
+  rightClickSent,
+  fieldCommandOpened,
+  openSource,
+  failureReason,
+  clickAttempts,
+}) {
+  return {
+    target: {
+      kind: target.kind,
+      label: target.label,
+      x: target.x,
+      y: target.y,
+      cityId: target.cityId ?? null,
+      poiId: target.poiId ?? null,
+    },
+    targetSource,
+    visibleTargets,
+    projectedTarget: projection
+      ? {
+          worldX: projection.worldX,
+          worldY: projection.worldY,
+          canvasX: projection.canvasX,
+          canvasY: projection.canvasY,
+          withinViewport: projection.withinViewport,
+          viewport: projection.viewport,
+          camera: projection.camera,
+        }
+      : null,
+    canvasRect,
+    relativeClick,
+    pageClick,
+    withinBounds,
+    rightClickSent,
+    fieldCommandOpened,
+    openSource,
+    failureReason,
+    clickAttempts,
+  };
+}
+
+async function openFieldCommandWithRightClick(page, target, targetSource) {
+  const diagnostics = {
+    focusAttempted: true,
+    focusSucceeded: false,
+    canvasFound: false,
+    cameraReady: false,
+    projectionReady: false,
+    withinBounds: false,
+    rightClickSent: false,
+    fieldCommandOpened: false,
+    openSource: null,
+    failureReason: null,
+    visibleTargets: null,
+    canvasRect: null,
+    projectedTarget: null,
+    relativeClick: null,
+    pageClick: null,
+    clickAttempts: [],
+    clickDiagnostics: null,
+  };
+
+  const focusSnapshot = await focusTargetForCanvasCommand(page, target).catch(() => null);
+  diagnostics.focusSucceeded = Boolean(focusSnapshot);
+
+  await page.waitForTimeout(450);
+
+  const snapshot = (await readFieldCommandSmokeSnapshot(page, target).catch(() => null)) ?? focusSnapshot;
+  diagnostics.visibleTargets = snapshot?.visibleTargets ?? null;
+  diagnostics.projectedTarget = snapshot?.projectedTarget ?? null;
+  diagnostics.canvasRect = snapshot?.canvasRect ?? null;
+  diagnostics.canvasFound = Boolean(snapshot?.canvasRect);
+  diagnostics.cameraReady = Boolean(snapshot?.visibleTargets?.cameraReady);
+  diagnostics.projectionReady = Boolean(snapshot?.visibleTargets?.projectionReady && snapshot?.projectedTarget);
+
+  if (!snapshot?.canvasRect) {
+    diagnostics.failureReason = "canvas-not-found";
+    diagnostics.clickDiagnostics = buildCanvasClickDiagnostics({
+      target,
+      targetSource,
+      visibleTargets: diagnostics.visibleTargets,
+      projection: diagnostics.projectedTarget,
+      canvasRect: null,
+      relativeClick: null,
+      pageClick: null,
+      withinBounds: false,
+      rightClickSent: false,
+      fieldCommandOpened: false,
+      openSource: null,
+      failureReason: diagnostics.failureReason,
+      clickAttempts: diagnostics.clickAttempts,
+    });
+    return { success: false, diagnostics, snapshot };
   }
 
-  const screenCenterX = canvas.x + canvas.width / 2;
-  const screenCenterY = canvas.y + canvas.height / 2;
-  const offsetX = (target.x - state.map.camera.centerTileX) * MAP_TILE_WORLD_SIZE * state.map.camera.zoom;
-  const offsetY = (target.y - state.map.camera.centerTileY) * MAP_TILE_WORLD_SIZE * state.map.camera.zoom;
-  const clickX = screenCenterX + offsetX;
-  const clickY = screenCenterY + offsetY;
-
-  if (clickX < canvas.x || clickX > canvas.x + canvas.width || clickY < canvas.y || clickY > canvas.y + canvas.height) {
-    return false;
+  if (!snapshot.visibleTargets?.cameraReady || !snapshot.visibleTargets?.projectionReady || !snapshot.projectedTarget) {
+    diagnostics.failureReason = "camera-not-ready";
+    diagnostics.clickDiagnostics = buildCanvasClickDiagnostics({
+      target,
+      targetSource,
+      visibleTargets: diagnostics.visibleTargets,
+      projection: diagnostics.projectedTarget,
+      canvasRect: diagnostics.canvasRect,
+      relativeClick: null,
+      pageClick: null,
+      withinBounds: false,
+      rightClickSent: false,
+      fieldCommandOpened: false,
+      openSource: null,
+      failureReason: diagnostics.failureReason,
+      clickAttempts: diagnostics.clickAttempts,
+    });
+    return { success: false, diagnostics, snapshot };
   }
 
-  await page.mouse.click(clickX, clickY, { button: "right" });
+  const viewportWidth = Math.max(snapshot.projectedTarget.viewport.width, 1);
+  const viewportHeight = Math.max(snapshot.projectedTarget.viewport.height, 1);
+  const scaleX = snapshot.canvasRect.width / viewportWidth;
+  const scaleY = snapshot.canvasRect.height / viewportHeight;
+  const relativeClick = {
+    x: roundNumber(snapshot.projectedTarget.canvasX * scaleX),
+    y: roundNumber(snapshot.projectedTarget.canvasY * scaleY),
+  };
+  const pageClick = {
+    x: roundNumber(snapshot.canvasRect.x + relativeClick.x),
+    y: roundNumber(snapshot.canvasRect.y + relativeClick.y),
+  };
+  const withinBounds =
+    snapshot.projectedTarget.withinViewport &&
+    relativeClick.x >= 0 &&
+    relativeClick.x <= snapshot.canvasRect.width &&
+    relativeClick.y >= 0 &&
+    relativeClick.y <= snapshot.canvasRect.height;
 
-  const opened = await waitFor(async () => {
-    const nextState = await readGameState(page);
-    return nextState?.map?.fieldCommand?.label === target.label ? nextState : null;
-  }, 3_000, "field command sheet after right click").catch(() => null);
+  diagnostics.relativeClick = relativeClick;
+  diagnostics.pageClick = pageClick;
+  diagnostics.withinBounds = withinBounds;
 
-  return Boolean(opened);
+  if (!withinBounds) {
+    diagnostics.failureReason = "projection-out-of-bounds";
+    diagnostics.clickDiagnostics = buildCanvasClickDiagnostics({
+      target,
+      targetSource,
+      visibleTargets: diagnostics.visibleTargets,
+      projection: diagnostics.projectedTarget,
+      canvasRect: diagnostics.canvasRect,
+      relativeClick,
+      pageClick,
+      withinBounds: false,
+      rightClickSent: false,
+      fieldCommandOpened: false,
+      openSource: null,
+      failureReason: diagnostics.failureReason,
+      clickAttempts: diagnostics.clickAttempts,
+    });
+    return { success: false, diagnostics, snapshot };
+  }
+
+  const canvasLocator = page.locator("[data-map-canvas] canvas").first();
+  await canvasLocator.waitFor({ state: "visible", timeout: 5_000 });
+  await armCanvasEventCapture(page);
+  await canvasLocator.hover({ position: relativeClick, force: true });
+
+  diagnostics.clickAttempts.push({
+    method: "locator-right-click",
+    relativeClick,
+    pageClick,
+  });
+
+  await canvasLocator.click({
+    button: "right",
+    force: true,
+    position: relativeClick,
+    timeout: 2_000,
+  });
+  diagnostics.rightClickSent = true;
+
+  let openedSnapshot = await waitForFieldCommandOpen(
+    page,
+    target.label,
+    1_800,
+    "field command sheet after locator right click",
+  );
+
+  if (!openedSnapshot) {
+    diagnostics.clickAttempts.push({
+      method: "page-mouse-right-click",
+      relativeClick,
+      pageClick,
+    });
+
+    await page.mouse.move(pageClick.x, pageClick.y);
+    await page.mouse.click(pageClick.x, pageClick.y, { button: "right" });
+    openedSnapshot = await waitForFieldCommandOpen(
+      page,
+      target.label,
+      1_800,
+      "field command sheet after page-mouse right click",
+    );
+  }
+
+  if (!openedSnapshot) {
+    diagnostics.clickAttempts.push({
+      method: "page-mouse-press",
+      relativeClick,
+      pageClick,
+    });
+
+    await page.mouse.move(pageClick.x, pageClick.y);
+    await page.mouse.down({ button: "right" });
+    await page.waitForTimeout(120);
+    await page.mouse.up({ button: "right" });
+    openedSnapshot = await waitForFieldCommandOpen(
+      page,
+      target.label,
+      1_800,
+      "field command sheet after page-mouse press",
+    );
+  }
+
+  diagnostics.fieldCommandOpened = Boolean(openedSnapshot);
+  diagnostics.openSource = getFieldCommandSource(openedSnapshot);
+  diagnostics.canvasDomEvents = await readCanvasEventCapture(page).catch(() => []);
+
+  if (!openedSnapshot) {
+    diagnostics.failureReason = "pointer-open-timeout";
+    diagnostics.clickDiagnostics = buildCanvasClickDiagnostics({
+      target,
+      targetSource,
+      visibleTargets: diagnostics.visibleTargets,
+      projection: diagnostics.projectedTarget,
+      canvasRect: diagnostics.canvasRect,
+      relativeClick,
+      pageClick,
+      withinBounds: true,
+      rightClickSent: true,
+      fieldCommandOpened: false,
+      openSource: null,
+      failureReason: diagnostics.failureReason,
+      clickAttempts: diagnostics.clickAttempts,
+    });
+    return { success: false, diagnostics, snapshot };
+  }
+
+  diagnostics.clickDiagnostics = buildCanvasClickDiagnostics({
+    target,
+    targetSource,
+    visibleTargets: diagnostics.visibleTargets,
+    projection: diagnostics.projectedTarget,
+    canvasRect: diagnostics.canvasRect,
+    relativeClick,
+    pageClick,
+    withinBounds: true,
+    rightClickSent: true,
+    fieldCommandOpened: true,
+    openSource: diagnostics.openSource,
+    failureReason: null,
+    clickAttempts: diagnostics.clickAttempts,
+  });
+
+  return { success: diagnostics.openSource === "canvas", diagnostics, snapshot: openedSnapshot };
 }
 
 async function openFieldCommandWithHook(page, target) {
+  const hookReady = await waitFor(async () => {
+    const available = await page.evaluate(() => ({
+      openMapFieldCommand: typeof window.open_map_field_command === "function",
+    }));
+    return available.openMapFieldCommand ? true : null;
+  }, 5_000, "the field-command hook before automation fallback", 200).catch(() => null);
+
+  if (!hookReady) {
+    return null;
+  }
+
   await page.evaluate((payload) => {
     window.open_map_field_command?.(payload);
   }, target);
+
+  await page.waitForTimeout(150);
+  const openedSnapshot = await waitForFieldCommandOpen(
+    page,
+    target.label,
+    3_000,
+    "field command sheet after automation hook",
+  );
+  if (!openedSnapshot) {
+    return null;
+  }
 
   const dialog = page.getByRole("dialog", {
     name: new RegExp(`Field Command: ${escapeRegExp(target.label)}`),
   });
   await dialog.waitFor({ timeout: 3_000 });
-
-  return waitFor(async () => {
-    const state = await readGameState(page);
-    return state?.map?.fieldCommand?.label === target.label ? state : null;
-  }, 3_000, "field command sheet after automation hook").catch(() => null);
+  return openedSnapshot;
 }
 
 async function main() {
@@ -185,39 +736,46 @@ async function main() {
 
     const initialState = await ensureMapLoaded(page, browserDiagnostics);
     await ensureAllianceReady(page);
-    await ensureFieldCommandHook(page);
-    const target =
-      initialState.map.pois.find((poi) => poi.kind === "BARBARIAN_CAMP") ??
-      initialState.map.pois[0] ??
-      initialState.map.cities.find((city) => !city.isCurrentPlayer);
+    const hookSnapshot = await ensureFieldCommandHook(page);
+    const selectedTarget = pickTarget(hookSnapshot.visibleTargets, initialState);
 
-    if (!target) {
-      throw new Error("No visible POI or enemy city was available for the field-command scenario.");
+    if (!selectedTarget) {
+      await throwFieldCommandDiagnosticsError(
+        page,
+        browserDiagnostics,
+        "No visible POI or enemy city was available for the field-command scenario.",
+        { stage: "target-selection" },
+      );
     }
 
-    const targetPayload =
-      "id" in target
-        ? {
-            kind: "POI",
-            label: target.label,
-            x: target.x,
-            y: target.y,
-            poiId: target.id,
-          }
-        : {
-            kind: "CITY",
-            label: target.cityName,
-            x: target.x,
-            y: target.y,
-            cityId: target.cityId,
-          };
+    const targetPayload = selectedTarget.payload;
+    const initialVisibleTargets = hookSnapshot.visibleTargets;
 
-    const interactionMode = (await openFieldCommandWithRightClick(page, targetPayload))
-      ? "canvas-right-click"
-      : "automation-hook";
+    const rightClickResult = await openFieldCommandWithRightClick(page, targetPayload, selectedTarget.source);
+    const initialInteractionSnapshot = rightClickResult.snapshot
+      ? await readFieldCommandSmokeSnapshot(page, targetPayload).catch(() => rightClickResult.snapshot)
+      : null;
 
-    if (interactionMode === "automation-hook") {
-      await openFieldCommandWithHook(page, targetPayload);
+    let interactionMode = rightClickResult.success ? "canvas-originated" : "automation-hook";
+    let openingSnapshot = initialInteractionSnapshot;
+    const canvasClickDiagnostics = rightClickResult.diagnostics;
+
+    if (!rightClickResult.success) {
+      openingSnapshot = await openFieldCommandWithHook(page, targetPayload);
+      if (!openingSnapshot) {
+        await throwFieldCommandDiagnosticsError(
+          page,
+          browserDiagnostics,
+          "Field Command did not open via canvas right-click or automation hook.",
+          {
+            stage: "field-command-open",
+            target: targetPayload,
+            targetSource: selectedTarget.source,
+            canvasClickDiagnostics,
+          },
+        );
+      }
+      interactionMode = "automation-hook";
     }
 
     const fieldCommandDialog = page.getByRole("dialog", {
@@ -226,6 +784,7 @@ async function main() {
     await fieldCommandDialog.waitFor({ timeout: 5_000 });
 
     let targetTrayValidated = false;
+    let postReloadOpenSource = null;
     if (targetPayload.kind !== "TILE") {
       await fieldCommandDialog.locator("footer").getByRole("button", { name: "Open Target" }).click();
 
@@ -235,7 +794,11 @@ async function main() {
       await targetDialog.waitFor({ timeout: 5_000 });
 
       const targetPrimaryActionLabel =
-        "id" in target ? (target.kind === "BARBARIAN_CAMP" ? "Attack Camp" : "Gather Here") : "Attack City";
+        targetPayload.kind === "POI" && initialState.map.pois.some((poi) => poi.id === targetPayload.poiId && poi.kind === "BARBARIAN_CAMP")
+          ? "Attack Camp"
+          : targetPayload.kind === "POI"
+            ? "Gather Here"
+            : "Attack City";
       await waitForTargetAction(page, targetPayload.label, targetPrimaryActionLabel);
       await targetDialog.getByRole("button", { name: targetPrimaryActionLabel }).waitFor({ timeout: 5_000 });
       targetTrayValidated = true;
@@ -247,7 +810,21 @@ async function main() {
       await ensureMapLoaded(page, browserDiagnostics);
       await ensureAllianceReady(page);
       await ensureFieldCommandHook(page);
-      await openFieldCommandWithHook(page, targetPayload);
+      const reopenedSnapshot = await openFieldCommandWithHook(page, targetPayload);
+      if (!reopenedSnapshot) {
+        await throwFieldCommandDiagnosticsError(
+          page,
+          browserDiagnostics,
+          "Field Command did not reopen after target-tray validation.",
+          {
+            stage: "field-command-reopen",
+            target: targetPayload,
+            targetSource: selectedTarget.source,
+            canvasClickDiagnostics,
+          },
+        );
+      }
+      postReloadOpenSource = getFieldCommandSource(reopenedSnapshot);
       await fieldCommandDialog.waitFor({ timeout: 5_000 });
     }
 
@@ -263,7 +840,17 @@ async function main() {
 
     const createdMarker = finalState.alliance.markers.find((entry) => entry.label === markerLabel) ?? null;
     if (!createdMarker?.expiresAt) {
-      throw new Error("Expected the field marker to have an expiration timestamp.");
+      await throwFieldCommandDiagnosticsError(
+        page,
+        browserDiagnostics,
+        "Expected the field marker to have an expiration timestamp.",
+        {
+          stage: "marker-validation",
+          target: targetPayload,
+          targetSource: selectedTarget.source,
+          canvasClickDiagnostics,
+        },
+      );
     }
 
     await page.screenshot({ path: args.screenshotPath, fullPage: true });
@@ -280,21 +867,38 @@ async function main() {
       );
     }
 
+    const completionSnapshot = await readFieldCommandSmokeSnapshot(page, targetPayload);
+    const initialOpenSource = interactionMode === "canvas-originated" ? "canvas" : getFieldCommandSource(openingSnapshot);
+
     console.log(
       JSON.stringify(
         {
           ok: true,
           screenshot: args.screenshotPath,
+          currentRoute: completionSnapshot.route,
           interactionMode,
-          target: {
+          initialFieldCommandOpenSource: initialOpenSource,
+          postReloadOpenSource,
+          fallbackReason: interactionMode === "automation-hook" ? canvasClickDiagnostics.failureReason : null,
+          targetSource: selectedTarget.source,
+          chosenTarget: {
             kind: targetPayload.kind,
             label: targetPayload.label,
             x: targetPayload.x,
             y: targetPayload.y,
+            cityId: targetPayload.cityId ?? null,
+            poiId: targetPayload.poiId ?? null,
           },
-          fieldCommand: finalState.map.fieldCommand,
+          visibleTargets: initialVisibleTargets,
+          projectedTarget: canvasClickDiagnostics.projectedTarget,
+          canvasRect: canvasClickDiagnostics.canvasRect,
+          cameraState: canvasClickDiagnostics.projectedTarget?.camera ?? initialVisibleTargets?.camera ?? null,
+          canvasClickDiagnostics,
+          frontierMapUi: completionSnapshot.frontierMapUi,
+          frontierMapFieldCommand: completionSnapshot.frontierMapFieldCommand,
           targetTrayValidated,
           marker: createdMarker,
+          browser: summarizeBrowserDiagnostics(browserDiagnostics),
         },
         null,
         2,

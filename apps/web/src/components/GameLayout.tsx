@@ -90,6 +90,7 @@ declare global {
       label: string;
       x: number;
       y: number;
+      openSource: "canvas" | "automation-hook" | null;
     } | null;
     frontierMapUi?: {
       targetSheetOpen: boolean;
@@ -100,6 +101,8 @@ declare global {
       selectedTargetKind: "CITY" | "POI" | null;
       availableActions: string[];
       fieldCommandKind: string | null;
+      fieldCommandLabel: string | null;
+      fieldCommandOpenSource: "canvas" | "automation-hook" | null;
     } | null;
     focus_map_target?: (command: {
       kind?: "TILE" | "CITY" | "POI";
@@ -109,6 +112,40 @@ declare global {
       cityId?: string;
       poiId?: string;
     }) => void;
+    get_visible_smoke_targets?: () => {
+      pois: Array<{ id: string; label: string; kind: string; x: number; y: number }>;
+      cities: Array<{ cityId: string; cityName: string; x: number; y: number }>;
+      cameraReady: boolean;
+      camera: MapCameraState | null;
+      projectionReady: boolean;
+    };
+    project_map_target_for_smoke?: (command: {
+      kind?: "TILE" | "CITY" | "POI";
+      label?: string;
+      x: number;
+      y: number;
+      cityId?: string;
+      poiId?: string;
+    }) => {
+      worldX: number;
+      worldY: number;
+      canvasX: number;
+      canvasY: number;
+      withinViewport: boolean;
+      viewport: {
+        width: number;
+        height: number;
+      };
+      camera: {
+        scrollX: number;
+        scrollY: number;
+        zoom: number;
+        centerWorldX: number;
+        centerWorldY: number;
+        centerTileX: number;
+        centerTileY: number;
+      };
+    } | null;
     frontierLastError?: {
       message: string;
       stack: string | null;
@@ -707,7 +744,6 @@ export function GameLayout() {
       delete window.advanceTime;
       delete window.select_map_city;
       delete window.select_map_poi;
-      delete window.open_map_field_command;
     };
   }, [
     bootstrapQuery.data,

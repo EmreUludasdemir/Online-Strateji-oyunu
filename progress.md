@@ -193,3 +193,24 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - `corepack pnpm smoke:e2e` passed.
   - `corepack pnpm smoke:field-command` passed.
   - `corepack pnpm smoke:alpha` passed.
+- 2026-04-07: Improved field-command smoke determinism for canvas-originated interactions. `MapPage` now tracks `fieldCommandOpenSource` ("canvas" vs "automation-hook") and exposes it through `window.frontierMapFieldCommand.openSource` and `window.frontierMapUi.fieldCommandOpenSource`. Added `window.get_visible_smoke_targets()` for smoke automation.
+- 2026-04-07: Enhanced `scripts/smoke_map_field_command.mjs` with structured canvas-click diagnostics. The right-click path now returns detailed diagnostics including focus success, canvas bounds, camera state, click coordinates, projection info, and specific fallback reasons (`canvas-not-found`, `camera-not-ready`, `projection-out-of-bounds`, `pointer-open-timeout`).
+- 2026-04-07: Smoke output now includes `canvasClickDiagnostics` and `fallbackReason` fields so the exact reason for automation-hook fallback is visible in test reports. Added a 300ms render pause after camera focus to give Phaser time to position entities before right-click.
+- 2026-04-07: Updated `GameLayout.tsx` Window interface to include the new `openSource` field in `frontierMapFieldCommand`, added `fieldCommandLabel` and `fieldCommandOpenSource` to `frontierMapUi`, and declared the new `get_visible_smoke_targets` automation hook.
+- 2026-04-07: Extended the field-command smoke instrumentation with exact scene-side projection, canvas-event capture, richer route/target/camera dumps, and repeated right-click attempts (`locator`, `page.mouse.click`, `page.mouse.down/up`). The smoke now reports chosen target IDs, visible target snapshots, projected viewport coordinates, canvas rect, camera scroll/center, and recent browser/request diagnostics in one payload.
+- 2026-04-07: Closed a regression that re-broke automation-hook fallback during shell re-renders. The shared `GameLayout` cleanup was deleting `window.open_map_field_command` even though the hook is owned by `MapPage`; removing that cleanup restored deterministic fallback behavior for both `smoke:field-command` and the alpha chain.
+- 2026-04-07: Current field-command root cause is now isolated much more tightly. In repeated repo-owned runs the camera focus succeeds, exact target projection lands inside the visible canvas, and the map stays loaded, but the browser-side right-click attempts never produce canvas DOM events (`canvasDomEvents: []`) and `fieldCommandOpenSource` remains `automation-hook`. That means the remaining gap is not map data/query readiness; it is the headless browser-to-Phaser canvas input path.
+- 2026-04-07: Validation after the field-command diagnostics and hook-lifecycle fix:
+  - `corepack pnpm --filter @frontier/server build` passed.
+  - `corepack pnpm --filter @frontier/web build` passed.
+  - `corepack pnpm --filter @frontier/web test` passed.
+  - `corepack pnpm build` passed.
+  - `corepack pnpm test` passed.
+  - `corepack pnpm smoke:e2e` passed.
+  - `corepack pnpm smoke:field-command` passed.
+  - `corepack pnpm smoke:alpha` passed.
+- 2026-04-07: Repeated repo-owned `smoke:field-command`/alpha field-command observations after the fix stayed consistent:
+  - canvas-originated success: `0`
+  - automation-hook fallback: `3`
+  - stable fallback reason: `pointer-open-timeout`
+  - stable projection state: target `Barbarian Camp 5` at `30,30`, projected to the visible canvas center-ish with `withinBounds: true`
