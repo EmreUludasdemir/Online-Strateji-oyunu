@@ -1,5 +1,5 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CommanderProgressView } from "@frontier/shared";
+import type { CommanderProgressView, CommanderTalentTrack } from "@frontier/shared";
 import { useMemo, useState } from "react";
 
 import { api } from "../api";
@@ -13,6 +13,32 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { formatNumber } from "../lib/formatters";
 import styles from "./CommanderPage.module.css";
+
+type ResearchSynergyEntry = {
+  research: string;
+  label: string;
+  bonus: string;
+};
+
+const TRACK_SYNERGIES: Record<CommanderTalentTrack, ResearchSynergyEntry[]> = {
+  CONQUEST: [
+    { research: "MILITARY_DRILL",   label: "Military Drill",   bonus: "+8% all troop attack / level" },
+    { research: "METALLURGY",       label: "Metallurgy",       bonus: "+10% all troop attack / level" },
+    { research: "ARCHERY",          label: "Archery",          bonus: "+8% archer attack / level" },
+    { research: "CAVALRY_TACTICS",  label: "Cavalry Tactics",  bonus: "+8% cavalry attack, +6% march speed / level" },
+  ],
+  PEACEKEEPING: [
+    { research: "MEDICINE",         label: "Medicine",         bonus: "+20% hospital healing rate / level" },
+    { research: "CITY_PLANNING",    label: "City Planning",    bonus: "-10% building upgrade duration / level" },
+    { research: "STONEWORK",        label: "Stonework",        bonus: "+5% structural defense, +12% stone / level" },
+  ],
+  GATHERING: [
+    { research: "LOGISTICS",        label: "Logistics",        bonus: "+8% march speed / level" },
+    { research: "AGRONOMY",         label: "Agronomy",         bonus: "+12% food production / level" },
+    { research: "GOLD_TRADE",       label: "Gold Trade",       bonus: "+12% gold income / level" },
+    { research: "SCOUTING",         label: "Scouting",         bonus: "+1 vision radius / level" },
+  ],
+};
 
 function getProgressPct(commander: CommanderProgressView) {
   const total = Math.max(1, commander.xp + commander.xpToNextLevel);
@@ -309,6 +335,26 @@ export function CommanderPage() {
           </SectionCard>
 
           <CommanderSkillTree commander={selectedCommander} />
+
+          <SectionCard
+            kicker="Research Synergy"
+            title="Doctrine amplifiers"
+            aside={<Badge tone="info">{TRACK_SYNERGIES[selectedCommander.skillTree.track].length} synergies</Badge>}
+          >
+            <p className={styles.orderLead}>
+              These research branches amplify the{" "}
+              <strong>{selectedCommander.skillTree.trackLabel}</strong> doctrine track.
+              Higher research tiers multiply the bonus for every level of this commander.
+            </p>
+            <div className={styles.synergyGrid}>
+              {TRACK_SYNERGIES[selectedCommander.skillTree.track].map((entry) => (
+                <article key={entry.research} className={styles.synergyCard}>
+                  <span className={styles.synergyLabel}>{entry.label}</span>
+                  <strong className={styles.synergyBonus}>{entry.bonus}</strong>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       </div>
     </section>

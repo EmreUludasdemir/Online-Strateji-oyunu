@@ -49,6 +49,7 @@ import {
   getBuildingLevels,
   getCarryCapacity,
   getDefensePower,
+  getHospitalHealingCapacity,
   getMarchPosition,
   getResearchCost,
   getResearchDurationMs,
@@ -728,6 +729,9 @@ export function mapBuildingViews(city: CityStateRecord): BuildingView[] {
       level: building.level,
     })),
   );
+  const researchLevels = getResearchLevels(
+    city.researchLevels.map((r) => ({ researchType: r.researchType as ResearchType, level: r.level })),
+  );
 
   const activeUpgrade = city.upgrades[0] ?? null;
 
@@ -742,7 +746,7 @@ export function mapBuildingViews(city: CityStateRecord): BuildingView[] {
       level: currentLevel,
       nextLevel,
       upgradeCost: getUpgradeCost(type, nextLevel),
-      upgradeDurationSeconds: Math.floor(getUpgradeDurationMs(type, nextLevel) / 1000),
+      upgradeDurationSeconds: Math.floor(getUpgradeDurationMs(type, nextLevel, researchLevels) / 1000),
       isUpgradeActive: activeUpgrade?.buildingType === type,
     };
   });
@@ -877,13 +881,19 @@ export function mapCityState(city: CityStateRecord, now: Date = new Date()): Cit
     activeTraining: mapTrainingQueueView(city, now),
     activeResearch: mapResearchQueueView(city, now),
     troops: mapTroopViews(city),
+    woundedTroops: {
+      INFANTRY: city.woundedInfantry,
+      ARCHER: city.woundedArcher,
+      CAVALRY: city.woundedCavalry,
+    },
     commanders: mapCommanderViews(city),
     research: mapResearchViews(city),
     activeMarches: city.outgoingMarches.map((march) => mapMarchView(march, { x: city.x, y: city.y }, now)),
     openMarchCount: city.outgoingMarches.length,
     visionRadius: getVisionRadius(buildingLevels.WATCHTOWER, researchLevels),
-    attackPower: getAttackPower(troopLedger, commanderBonuses, researchLevels),
+    attackPower: getAttackPower(troopLedger, commanderBonuses, researchLevels, buildingLevels),
     defensePower: getDefensePower(troopLedger, buildingLevels, commanderBonuses, researchLevels),
+    hospitalHealingCapacity: getHospitalHealingCapacity(buildingLevels, researchLevels),
     peaceShieldUntil: city.peaceShieldUntil?.toISOString() ?? null,
   };
 }

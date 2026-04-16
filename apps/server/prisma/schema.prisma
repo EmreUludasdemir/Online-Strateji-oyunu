@@ -16,6 +16,10 @@ enum BuildingType {
   BARRACKS
   ACADEMY
   WATCHTOWER
+  HOSPITAL
+  WALL
+  EMBASSY
+  FORGE
 }
 
 enum UpgradeStatus {
@@ -47,6 +51,11 @@ enum ResearchType {
   STONEWORK
   GOLD_TRADE
   SCOUTING
+  METALLURGY
+  MEDICINE
+  CAVALRY_TACTICS
+  CITY_PLANNING
+  ARCHERY
 }
 
 enum PoiKind {
@@ -195,6 +204,9 @@ model City {
   gold              Float
   peaceShieldUntil  DateTime?
   resourceUpdatedAt DateTime
+  woundedInfantry   Int                 @default(0)
+  woundedArcher     Int                 @default(0)
+  woundedCavalry    Int                 @default(0)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   buildings         Building[]

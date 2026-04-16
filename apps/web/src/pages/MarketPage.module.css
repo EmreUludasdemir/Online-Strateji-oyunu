@@ -135,6 +135,76 @@
   gap: 0.5rem;
 }
 
+.inventoryStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.inventoryGroup {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.inventoryGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.inventoryGroupCount {
+  color: var(--color-outline);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.inventoryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+}
+
+.inventoryRowBody {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.inventoryLabel {
+  color: var(--color-on-surface);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inventoryDesc {
+  margin: 0;
+  color: var(--color-outline);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.inventoryQty {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 32px;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-xs);
+  background: var(--surface-chip-warning);
+  color: var(--color-primary-fixed);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .feedback {
   min-height: 60vh;
   display: grid;

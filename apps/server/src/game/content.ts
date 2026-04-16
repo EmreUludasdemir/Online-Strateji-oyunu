@@ -130,6 +130,62 @@ export const ITEM_TEMPLATES: Record<ItemKey, ItemTemplate> = {
     kind: "BUFF",
     durationMs: 8 * 60 * 60 * 1000,
   },
+  BUILDING_SPEEDUP_30M: {
+    key: "BUILDING_SPEEDUP_30M",
+    label: ITEM_LABELS.BUILDING_SPEEDUP_30M,
+    description: "Reduces the active building upgrade timer by 30 minutes.",
+    kind: "SPEEDUP",
+    durationMs: 30 * 60 * 1000,
+  },
+  TRAINING_SPEEDUP_30M: {
+    key: "TRAINING_SPEEDUP_30M",
+    label: ITEM_LABELS.TRAINING_SPEEDUP_30M,
+    description: "Reduces the active training queue by 30 minutes.",
+    kind: "SPEEDUP",
+    durationMs: 30 * 60 * 1000,
+  },
+  RESEARCH_SPEEDUP_30M: {
+    key: "RESEARCH_SPEEDUP_30M",
+    label: ITEM_LABELS.RESEARCH_SPEEDUP_30M,
+    description: "Reduces the active research queue by 30 minutes.",
+    kind: "SPEEDUP",
+    durationMs: 30 * 60 * 1000,
+  },
+  RESOURCE_CHEST_MEDIUM: {
+    key: "RESOURCE_CHEST_MEDIUM",
+    label: ITEM_LABELS.RESOURCE_CHEST_MEDIUM,
+    description: "Opens a medium chest containing frontier resources.",
+    kind: "RESOURCE_CHEST",
+    resourceAmount: 600,
+  },
+  RESOURCE_CHEST_LARGE: {
+    key: "RESOURCE_CHEST_LARGE",
+    label: ITEM_LABELS.RESOURCE_CHEST_LARGE,
+    description: "Opens a large chest containing frontier resources.",
+    kind: "RESOURCE_CHEST",
+    resourceAmount: 1400,
+  },
+  HEALING_SPEEDUP_30M: {
+    key: "HEALING_SPEEDUP_30M",
+    label: ITEM_LABELS.HEALING_SPEEDUP_30M,
+    description: "Accelerates hospital troop recovery for 30 minutes.",
+    kind: "SPEEDUP",
+    durationMs: 30 * 60 * 1000,
+  },
+  COMMANDER_XP_CODEX: {
+    key: "COMMANDER_XP_CODEX",
+    label: ITEM_LABELS.COMMANDER_XP_CODEX,
+    description: "Adds a large amount of experience to the selected commander.",
+    kind: "COMMANDER_XP",
+    commanderXp: 500,
+  },
+  UNIVERSAL_SPEEDUP_1H: {
+    key: "UNIVERSAL_SPEEDUP_1H",
+    label: ITEM_LABELS.UNIVERSAL_SPEEDUP_1H,
+    description: "Reduces any active build, training, or research timer by 1 hour.",
+    kind: "SPEEDUP",
+    durationMs: 60 * 60 * 1000,
+  },
 };
 
 export interface TaskTemplate {

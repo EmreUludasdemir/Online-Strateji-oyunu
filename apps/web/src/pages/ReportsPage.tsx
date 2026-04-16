@@ -98,7 +98,7 @@ function getCasualtyTotal(losses: TroopStock): number {
 
 export function ReportsPage() {
   const navigate = useNavigate();
-  const { notifications } = useGameLayoutContext();
+  const { notifications, state } = useGameLayoutContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [kindFilter, setKindFilter] = useState<"ALL" | ReportEntryView["kind"]>("ALL");
   const [resultFilter, setResultFilter] = useState<"ALL" | "ATTACKER_WIN" | "DEFENDER_HOLD" | "LOGISTICS">("ALL");
@@ -503,6 +503,23 @@ export function ReportsPage() {
                         ))}
                       </dl>
                     </div>
+                    {state.city.hospitalHealingCapacity > 0 && getCasualtyTotal(activeReport.attackerLosses) > 0 && (
+                      <div className={styles.hospitalNotice}>
+                        <span className={styles.hospitalNoticeIcon}>+</span>
+                        <div>
+                          <strong className={styles.hospitalNoticeTitle}>Hospital Recovery Active</strong>
+                          <p className={styles.hospitalNoticeBody}>
+                            Wounded troops from this engagement are recovering in your hospital.
+                            {" "}Currently{" "}
+                            {formatNumber(
+                              Object.values(state.city.woundedTroops).reduce((s, v) => s + v, 0)
+                            )}{" "}
+                            troops in recovery at{" "}
+                            {formatNumber(state.city.hospitalHealingCapacity)} per cycle.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </SectionCard>
                 )}
 

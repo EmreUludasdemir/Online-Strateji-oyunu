@@ -668,6 +668,34 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
+            {(() => {
+              const embassy = state.city.buildings.find((building) => building.type === "EMBASSY");
+              if (!embassy) return null;
+              const helpSlots = Math.max(3, embassy.level + 2);
+              const maxMembers = Math.min(12, 8 + embassy.level);
+              return (
+                <SectionCard
+                  kicker="Embassy"
+                  title="Diplomatic standing"
+                  aside={<Badge tone="info">L{embassy.level}</Badge>}
+                >
+                  <div>
+                    <div className={styles.embassyStatRow}>
+                      <span className={styles.mutedText}>Aid request slots</span>
+                      <strong>{helpSlots}</strong>
+                    </div>
+                    <div className={styles.embassyStatRow}>
+                      <span className={styles.mutedText}>Max alliance members</span>
+                      <strong>{maxMembers}</strong>
+                    </div>
+                    <p className={styles.mutedText}>
+                      Upgrade the Embassy to unlock more aid slots and expand the alliance roster capacity.
+                    </p>
+                  </div>
+                </SectionCard>
+              );
+            })()}
+
             <SectionCard kicker="War Markers" title="Active pins">
               <PanelStatGrid items={markerStats} columns={2} compact className={styles.railStats} />
               <div className={styles.feedList}>

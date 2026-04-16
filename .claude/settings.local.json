@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma *)",
+      "Bash(pnpm run *)",
+      "Bash(./apps/server/node_modules/.bin/tsc --noEmit -p apps/server/tsconfig.json)",
+      "Bash(./apps/web/node_modules/.bin/tsc --noEmit -p apps/web/tsconfig.json)",
+      "Bash(pnpm --filter @frontier/server exec prisma migrate dev --name add_new_buildings_research_wounded_troops)",
+      "Bash(corepack pnpm *)",
+      "Bash(ls apps/server/src/routes/)",
+      "Bash(ls apps/server/src/)"
+    ]
+  }
+}

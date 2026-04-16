@@ -233,6 +233,71 @@
   gap: 0.5rem;
 }
 
+.rankMeter {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin-top: 0.6rem;
+  border-radius: var(--radius-xs);
+  border: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--surface-shell-card);
+  overflow: hidden;
+}
+
+.rankMeter::-webkit-meter-bar {
+  background: var(--surface-shell-card);
+  border-radius: var(--radius-xs);
+}
+
+.rankMeter::-webkit-meter-optimum-value {
+  background: linear-gradient(90deg, var(--color-secondary), var(--color-primary-fixed-dim));
+  border-radius: var(--radius-xs);
+}
+
+.rankMeter::-moz-meter-bar {
+  background: linear-gradient(90deg, var(--color-secondary), var(--color-primary-fixed-dim));
+  border-radius: var(--radius-xs);
+}
+
+.rankRailLabel {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--color-outline);
+  font-size: 0.7rem;
+}
+
+.gapRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.gapCell {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+}
+
+.gapValue {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.gapValueNext {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
 .feedback {
   color: var(--color-outline);
 }

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ItemKey } from "@frontier/shared";
 import { Navigate } from "react-router-dom";
 
 import { api } from "../api";
@@ -11,6 +12,29 @@ import { formatNumber } from "../lib/formatters";
 import { summarizeRewardLines } from "../lib/rewardSummaries";
 import styles from "./MarketPage.module.css";
 
+type ItemKind = "SPEEDUP" | "RESOURCE_CHEST" | "COMMANDER_XP" | "BUFF";
+
+function getItemKind(itemKey: ItemKey): ItemKind {
+  if (itemKey.includes("SPEEDUP")) return "SPEEDUP";
+  if (itemKey.includes("RESOURCE_CHEST")) return "RESOURCE_CHEST";
+  if (itemKey.includes("COMMANDER_XP") || itemKey.includes("CODEX")) return "COMMANDER_XP";
+  return "BUFF";
+}
+
+const ITEM_KIND_LABELS: Record<ItemKind, string> = {
+  SPEEDUP: "Speedup",
+  RESOURCE_CHEST: "Resource Chest",
+  COMMANDER_XP: "Commander XP",
+  BUFF: "Buff",
+};
+
+const ITEM_KIND_TONES: Record<ItemKind, "warning" | "success" | "info" | "danger"> = {
+  SPEEDUP: "warning",
+  RESOURCE_CHEST: "success",
+  COMMANDER_XP: "info",
+  BUFF: "danger",
+};
+
 export function MarketPage() {
   const { state, bootstrap } = useGameLayoutContext();
 
@@ -20,10 +44,20 @@ export function MarketPage() {
 
   const storeCatalogQuery = useQuery({ queryKey: ["store-catalog"], queryFn: api.storeCatalog });
   const entitlementsQuery = useQuery({ queryKey: ["entitlements"], queryFn: api.entitlements });
+  const inventoryQuery = useQuery({ queryKey: ["inventory"], queryFn: api.inventory });
 
   const products = storeCatalogQuery.data?.catalog.products ?? [];
   const offers = storeCatalogQuery.data?.catalog.offers ?? [];
   const entitlements = entitlementsQuery.data?.entitlements ?? [];
+  const inventoryItems = (inventoryQuery.data?.items ?? []).filter((item) => item.quantity > 0);
+  const inventoryByKind = inventoryItems.reduce<Record<ItemKind, typeof inventoryItems>>(
+    (acc, item) => {
+      const kind = getItemKind(item.itemKey);
+      acc[kind] = [...(acc[kind] ?? []), item];
+      return acc;
+    },
+    { SPEEDUP: [], RESOURCE_CHEST: [], COMMANDER_XP: [], BUFF: [] },
+  );
   const productLookup = new Map(products.map((product) => [product.productId, product]));
   const featuredProducts = products.slice(0, 4);
   const activeOffers = offers.slice(0, 5).map((offer) => ({
@@ -146,6 +180,38 @@ export function MarketPage() {
               <ResourcePill label="Food" value={state.city.resources.food} />
               <ResourcePill label="Gold" value={state.city.resources.gold} />
             </div>
+          </SectionCard>
+
+          <SectionCard
+            kicker="Item inventory"
+            title="Stockpile"
+            aside={<Badge tone="info">{formatNumber(inventoryItems.length)} types</Badge>}
+          >
+            {inventoryItems.length === 0 ? (
+              <EmptyState title="Stockpile empty" body="Items from rewards, purchases, and event bundles will appear here once granted." />
+            ) : (
+              <div className={styles.inventoryStack}>
+                {(Object.entries(inventoryByKind) as [ItemKind, typeof inventoryItems][])
+                  .filter(([, items]) => items.length > 0)
+                  .map(([kind, items]) => (
+                    <div key={kind} className={styles.inventoryGroup}>
+                      <div className={styles.inventoryGroupHead}>
+                        <Badge tone={ITEM_KIND_TONES[kind]}>{ITEM_KIND_LABELS[kind]}</Badge>
+                        <span className={styles.inventoryGroupCount}>{items.length} type{items.length !== 1 ? "s" : ""}</span>
+                      </div>
+                      {items.map((item) => (
+                        <article key={item.itemKey} className={styles.inventoryRow}>
+                          <div className={styles.inventoryRowBody}>
+                            <strong className={styles.inventoryLabel}>{item.label}</strong>
+                            <p className={styles.inventoryDesc}>{item.description}</p>
+                          </div>
+                          <span className={styles.inventoryQty}>×{formatNumber(item.quantity)}</span>
+                        </article>
+                      ))}
+                    </div>
+                  ))}
+              </div>
+            )}
           </SectionCard>
 
           <SectionCard kicker="Imperial warrants" title="Entitlement archive" aside={<Badge tone="warning">{formatNumber(grantedEntitlements)} granted</Badge>}>

@@ -169,6 +169,8 @@ const baseState: GameStateResponse = {
     visionRadius: 8,
     attackPower: 420,
     defensePower: 395,
+    woundedTroops: { INFANTRY: 0, ARCHER: 0, CAVALRY: 0 },
+    hospitalHealingCapacity: 0,
   },
   alliance: {
     id: "alliance-1",

@@ -11,6 +11,10 @@ export const BUILDING_TYPES = [
   "BARRACKS",
   "ACADEMY",
   "WATCHTOWER",
+  "HOSPITAL",
+  "WALL",
+  "EMBASSY",
+  "FORGE",
 ] as const;
 
 export type BuildingType = (typeof BUILDING_TYPES)[number];
@@ -26,6 +30,11 @@ export const RESEARCH_TYPES = [
   "STONEWORK",
   "GOLD_TRADE",
   "SCOUTING",
+  "METALLURGY",
+  "MEDICINE",
+  "CAVALRY_TACTICS",
+  "CITY_PLANNING",
+  "ARCHERY",
 ] as const;
 
 export type ResearchType = (typeof RESEARCH_TYPES)[number];
@@ -81,6 +90,14 @@ export const ITEM_KEYS = [
   "RESOURCE_CHEST_SMALL",
   "COMMANDER_XP_TOME",
   "PEACE_SHIELD_8H",
+  "BUILDING_SPEEDUP_30M",
+  "TRAINING_SPEEDUP_30M",
+  "RESEARCH_SPEEDUP_30M",
+  "RESOURCE_CHEST_MEDIUM",
+  "RESOURCE_CHEST_LARGE",
+  "HEALING_SPEEDUP_30M",
+  "COMMANDER_XP_CODEX",
+  "UNIVERSAL_SPEEDUP_1H",
 ] as const;
 
 export type ItemKey = (typeof ITEM_KEYS)[number];
@@ -175,7 +192,7 @@ export const SOCKET_EVENT_TYPES = [
 
 export type SocketEventType = (typeof SOCKET_EVENT_TYPES)[number];
 
-export const MAP_SIZE = 64;
+export const MAP_SIZE = 100;
 
 export const BUILDING_LABELS: Record<BuildingType, string> = {
   TOWN_HALL: "Town Hall",
@@ -186,6 +203,10 @@ export const BUILDING_LABELS: Record<BuildingType, string> = {
   BARRACKS: "Barracks",
   ACADEMY: "Academy",
   WATCHTOWER: "Watchtower",
+  HOSPITAL: "Hospital",
+  WALL: "City Wall",
+  EMBASSY: "Embassy",
+  FORGE: "Forge",
 };
 
 export const BUILDING_DESCRIPTIONS: Record<BuildingType, string> = {
@@ -197,6 +218,10 @@ export const BUILDING_DESCRIPTIONS: Record<BuildingType, string> = {
   BARRACKS: "Trains frontline troops and improves enlistment speed.",
   ACADEMY: "Unlocks long-term doctrine and strategic upgrades.",
   WATCHTOWER: "Improves vision across the frontier and strengthens defense.",
+  HOSPITAL: "Recovers wounded troops from battle instead of losing them permanently.",
+  WALL: "Reinforces city defenses with thick stone ramparts and battlements.",
+  EMBASSY: "Expands alliance capacity and unlocks diplomatic coordination.",
+  FORGE: "Crafts superior weapons and armor, boosting all troop attack power.",
 };
 
 export const TROOP_LABELS: Record<TroopType, string> = {
@@ -224,6 +249,11 @@ export const RESEARCH_LABELS: Record<ResearchType, string> = {
   STONEWORK: "Stonework",
   GOLD_TRADE: "Gold Trade",
   SCOUTING: "Scouting",
+  METALLURGY: "Metallurgy",
+  MEDICINE: "Medicine",
+  CAVALRY_TACTICS: "Cavalry Tactics",
+  CITY_PLANNING: "City Planning",
+  ARCHERY: "Archery",
 };
 
 export const RESEARCH_DESCRIPTIONS: Record<ResearchType, string> = {
@@ -233,6 +263,11 @@ export const RESEARCH_DESCRIPTIONS: Record<ResearchType, string> = {
   STONEWORK: "Improves quarry output and structural resilience.",
   GOLD_TRADE: "Strengthens gold generation from market activity.",
   SCOUTING: "Expands visible frontier range and tactical awareness.",
+  METALLURGY: "Advances forge craft, boosting troop attack and forge output.",
+  MEDICINE: "Improves hospital healing rate and wounded troop recovery.",
+  CAVALRY_TACTICS: "Sharpens cavalry charge efficiency and mounted speed.",
+  CITY_PLANNING: "Reduces building upgrade times and expands city capacity.",
+  ARCHERY: "Improves archer range, accuracy, and volley discipline.",
 };
 
 export const COMMANDER_TALENT_LABELS: Record<CommanderTalentTrack, string> = {
@@ -245,9 +280,17 @@ export const ITEM_LABELS: Record<ItemKey, string> = {
   UNIVERSAL_SPEEDUP_5M: "Universal Speedup (5m)",
   TRAINING_SPEEDUP_5M: "Training Speedup (5m)",
   RESEARCH_SPEEDUP_5M: "Research Speedup (5m)",
-  RESOURCE_CHEST_SMALL: "Resource Chest",
+  RESOURCE_CHEST_SMALL: "Resource Chest (S)",
   COMMANDER_XP_TOME: "Commander XP Tome",
   PEACE_SHIELD_8H: "Peace Shield (8h)",
+  BUILDING_SPEEDUP_30M: "Building Speedup (30m)",
+  TRAINING_SPEEDUP_30M: "Training Speedup (30m)",
+  RESEARCH_SPEEDUP_30M: "Research Speedup (30m)",
+  RESOURCE_CHEST_MEDIUM: "Resource Chest (M)",
+  RESOURCE_CHEST_LARGE: "Resource Chest (L)",
+  HEALING_SPEEDUP_30M: "Healing Speedup (30m)",
+  COMMANDER_XP_CODEX: "Commander XP Codex",
+  UNIVERSAL_SPEEDUP_1H: "Universal Speedup (1h)",
 };
 
 export const LIVE_EVENT_LABELS: Record<LiveEventKey, string> = {

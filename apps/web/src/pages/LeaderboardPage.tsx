@@ -290,17 +290,40 @@ export function LeaderboardPage() {
             title={currentPlayerEntry ? `${state.player.username} is ranked` : "No personal entry yet"}
             aside={currentPlayerEntry ? <Badge tone="warning">#{currentPlayerEntry.rank}</Badge> : null}
           >
-            {currentPlayerEntry ? (
-              <div className={styles.sideStack}>
-                <div className={styles.personalMetric}>
-                  <span className={styles.summaryLabel}>Registered score</span>
-                  <strong className={styles.personalScore}>{formatNumber(currentPlayerEntry.value)}</strong>
+            {currentPlayerEntry ? (() => {
+              const topScore = entries[0]?.value ?? 1;
+              const gapToLeader = topScore - currentPlayerEntry.value;
+              const rankAbove = entries.find((entry) => entry.rank === currentPlayerEntry.rank - 1);
+              const gapToNext = rankAbove ? rankAbove.value - currentPlayerEntry.value : 0;
+              const rankPct = Math.max(0, Math.min(100, (currentPlayerEntry.value / Math.max(1, topScore)) * 100));
+              return (
+                <div className={styles.sideStack}>
+                  <div className={styles.personalMetric}>
+                    <span className={styles.summaryLabel}>Registered score</span>
+                    <strong className={styles.personalScore}>{formatNumber(currentPlayerEntry.value)}</strong>
+                    <meter className={styles.rankMeter} value={currentPlayerEntry.value} min={0} max={Math.max(1, topScore)} />
+                    <span className={styles.rankRailLabel}>{rankPct.toFixed(1)}% of crown score</span>
+                  </div>
+                  {gapToLeader > 0 && (
+                    <div className={styles.gapRow}>
+                      <div className={styles.gapCell}>
+                        <span className={styles.summaryLabel}>Gap to crown</span>
+                        <strong className={styles.gapValue}>{formatNumber(gapToLeader)}</strong>
+                      </div>
+                      {gapToNext > 0 && (
+                        <div className={styles.gapCell}>
+                          <span className={styles.summaryLabel}>Gap to rank {currentPlayerEntry.rank - 1}</span>
+                          <strong className={styles.gapValueNext}>{formatNumber(gapToNext)}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <p className={styles.sideMeta}>
+                    {currentPlayerEntry.secondaryLabel ?? "Continue pushing this event or banner board to climb the ledger."}
+                  </p>
                 </div>
-                <p className={styles.sideMeta}>
-                  {currentPlayerEntry.secondaryLabel ?? "Continue pushing this event or banner board to climb the ledger."}
-                </p>
-              </div>
-            ) : (
+              );
+            })() : (
               <EmptyState
                 title="No current placement"
                 body="This ruler has not entered the visible range of the active board yet."

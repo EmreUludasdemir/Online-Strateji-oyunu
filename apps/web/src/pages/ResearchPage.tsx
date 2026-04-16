@@ -1,5 +1,24 @@
 ﻿import type { ResearchType } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
+
+// Returns a human-readable bonus string for each research type at a given level
+function getResearchBonusLabel(type: ResearchType, level: number): string {
+  if (level <= 0) return "No bonus yet";
+  switch (type) {
+    case "MILITARY_DRILL":  return `+${level * 5}% attack power (all troops)`;
+    case "LOGISTICS":       return `+${level * 8}% march speed`;
+    case "AGRONOMY":        return `+${level * 12}% food production`;
+    case "STONEWORK":       return `+${level * 12}% stone production, +${level * 5}% structural defense`;
+    case "GOLD_TRADE":      return `+${level * 12}% gold production`;
+    case "SCOUTING":        return `+${level} vision radius`;
+    case "METALLURGY":      return `+${level * 5}% attack power (all troops, stacks with Drill)`;
+    case "MEDICINE":        return `+${level * 20}% hospital healing rate`;
+    case "CAVALRY_TACTICS": return `+${level * 8}% cavalry attack, +${level * 6}% cavalry march speed`;
+    case "CITY_PLANNING":   return `-${level * 10}% building upgrade duration`;
+    case "ARCHERY":         return `+${level * 8}% archer attack`;
+    default:                return `Level ${level} active`;
+  }
+}
 import { useNavigate } from "react-router-dom";
 
 import { useGameLayoutContext } from "../components/GameLayout";
@@ -25,7 +44,19 @@ const RESEARCH_LANES = [
     id: "prosperity",
     label: "Imperial Works",
     note: "District output, stone pressure, and treasury flow.",
-    types: ["AGRONOMY", "STONEWORK", "GOLD_TRADE"] as ResearchType[],
+    types: ["AGRONOMY", "STONEWORK", "GOLD_TRADE", "CITY_PLANNING"] as ResearchType[],
+  },
+  {
+    id: "arms",
+    label: "Arms & Tactics",
+    note: "Specialized troop disciplines and forge mastery.",
+    types: ["METALLURGY", "CAVALRY_TACTICS", "ARCHERY"] as ResearchType[],
+  },
+  {
+    id: "administration",
+    label: "City Administration",
+    note: "Healing doctrine and civic resilience.",
+    types: ["MEDICINE"] as ResearchType[],
   },
 ] as const;
 
@@ -73,6 +104,36 @@ const RESEARCH_BRIEFS: Record<
     effect: "Expands visible territory and makes the frontier easier to read.",
     directive: "Best when locating camps, routes, and hostile staging is becoming slow.",
     metricLabel: "Vision Radius",
+  },
+  METALLURGY: {
+    chapter: "Forge doctrine",
+    effect: "Enhances weapon quality, raising attack power for all troop classes.",
+    directive: "Best when you have a Forge built and want to amplify offensive pressure.",
+    metricLabel: "Attack Bonus",
+  },
+  MEDICINE: {
+    chapter: "Field medicine",
+    effect: "Accelerates wounded troop recovery in the Hospital between engagements.",
+    directive: "Best when your garrison suffers heavy losses and Hospital capacity needs to scale.",
+    metricLabel: "Healing Rate",
+  },
+  CAVALRY_TACTICS: {
+    chapter: "Cavalry doctrine",
+    effect: "Sharpens cavalry attack angles and march speed across frontier operations.",
+    directive: "Best when your march composition is cavalry-heavy or you need faster strike tempo.",
+    metricLabel: "Cavalry Edge",
+  },
+  CITY_PLANNING: {
+    chapter: "Civic records",
+    effect: "Reduces building upgrade durations across all district tiers.",
+    directive: "Best when construction queues are bottlenecking city growth and research.",
+    metricLabel: "Build Speed",
+  },
+  ARCHERY: {
+    chapter: "Archer corps",
+    effect: "Improves arrow discipline and volley coordination for archer formations.",
+    directive: "Best when your garrison or field force relies on archer output for holding power.",
+    metricLabel: "Archer Damage",
   },
 };
 
@@ -182,7 +243,7 @@ export function ResearchPage() {
           <SectionCard
             kicker="Research atlas"
             title="Doctrine lanes"
-            aside={<Badge tone="warning">2 chapters</Badge>}
+            aside={<Badge tone="warning">4 chapters</Badge>}
             className={styles.canvasCard}
           >
             <div className={styles.laneStack}>
@@ -296,9 +357,26 @@ export function ResearchPage() {
                   <strong className={styles.detailValue}>L{selectedResearch.level}</strong>
                 </article>
                 <article>
-                  <span className={styles.detailLabel}>Upgrade duration</span>
+                  <span className={styles.detailLabel}>Next tier duration</span>
                   <strong className={styles.detailValue}>{formatNumber(selectedResearch.durationSeconds / 60)}m</strong>
                 </article>
+              </div>
+
+              <div className={styles.bonusStrip}>
+                <article className={styles.bonusRow}>
+                  <span className={styles.detailLabel}>Current bonus</span>
+                  <strong className={styles.bonusValue}>
+                    {getResearchBonusLabel(selectedResearch.type, selectedResearch.level)}
+                  </strong>
+                </article>
+                {selectedResearch.level < selectedResearch.maxLevel && (
+                  <article className={styles.bonusRow}>
+                    <span className={styles.detailLabel}>At tier {selectedResearch.nextLevel}</span>
+                    <strong className={styles.bonusValueNext}>
+                      {getResearchBonusLabel(selectedResearch.type, selectedResearch.nextLevel)}
+                    </strong>
+                  </article>
+                )}
               </div>
 
               <div className={styles.costList}>

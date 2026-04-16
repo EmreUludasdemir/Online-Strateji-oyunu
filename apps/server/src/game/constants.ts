@@ -28,25 +28,33 @@ export const STARTING_BUILDING_LEVEL = 1;
 export const STARTING_RESEARCH_LEVEL = 0;
 
 export const UPGRADE_COST_BASE: Record<BuildingType, ResourceStock> = {
-  TOWN_HALL: { wood: 120, stone: 120, food: 60, gold: 40 },
-  FARM: { wood: 60, stone: 20, food: 0, gold: 10 },
-  LUMBER_MILL: { wood: 40, stone: 30, food: 20, gold: 10 },
-  QUARRY: { wood: 30, stone: 40, food: 20, gold: 10 },
-  GOLD_MINE: { wood: 50, stone: 50, food: 30, gold: 20 },
-  BARRACKS: { wood: 80, stone: 70, food: 40, gold: 30 },
-  ACADEMY: { wood: 90, stone: 90, food: 50, gold: 40 },
-  WATCHTOWER: { wood: 70, stone: 110, food: 20, gold: 35 },
+  TOWN_HALL:   { wood: 120, stone: 120, food:  60, gold:  40 },
+  FARM:        { wood:  60, stone:  20, food:   0, gold:  10 },
+  LUMBER_MILL: { wood:  40, stone:  30, food:  20, gold:  10 },
+  QUARRY:      { wood:  30, stone:  40, food:  20, gold:  10 },
+  GOLD_MINE:   { wood:  50, stone:  50, food:  30, gold:  20 },
+  BARRACKS:    { wood:  80, stone:  70, food:  40, gold:  30 },
+  ACADEMY:     { wood:  90, stone:  90, food:  50, gold:  40 },
+  WATCHTOWER:  { wood:  70, stone: 110, food:  20, gold:  35 },
+  HOSPITAL:    { wood: 100, stone:  80, food:  60, gold:  45 },
+  WALL:        { wood:  60, stone: 140, food:  20, gold:  50 },
+  EMBASSY:     { wood: 110, stone:  80, food:  70, gold:  60 },
+  FORGE:       { wood:  80, stone:  60, food:  40, gold:  55 },
 };
 
 export const PRODUCTION_PER_MINUTE_PER_LEVEL: Record<BuildingType, Partial<ResourceStock>> = {
-  TOWN_HALL: {},
-  FARM: { food: 20 },
+  TOWN_HALL:   {},
+  FARM:        { food: 20 },
   LUMBER_MILL: { wood: 16 },
-  QUARRY: { stone: 16 },
-  GOLD_MINE: { gold: 10 },
-  BARRACKS: {},
-  ACADEMY: {},
-  WATCHTOWER: {},
+  QUARRY:      { stone: 16 },
+  GOLD_MINE:   { gold: 10 },
+  BARRACKS:    {},
+  ACADEMY:     {},
+  WATCHTOWER:  {},
+  HOSPITAL:    {},
+  WALL:        {},
+  EMBASSY:     {},
+  FORGE:       {},
 };
 
 export const TROOP_BASE_COST: Record<TroopType, ResourceStock> = {
@@ -88,21 +96,31 @@ export const TROOP_CARRY: Record<TroopType, number> = {
 export const RESEARCH_MAX_LEVEL = 3;
 
 export const RESEARCH_BASE_COST: Record<ResearchType, ResourceStock> = {
-  MILITARY_DRILL: { wood: 90, stone: 60, food: 70, gold: 30 },
-  LOGISTICS: { wood: 70, stone: 40, food: 90, gold: 30 },
-  AGRONOMY: { wood: 80, stone: 20, food: 110, gold: 20 },
-  STONEWORK: { wood: 60, stone: 100, food: 50, gold: 30 },
-  GOLD_TRADE: { wood: 70, stone: 70, food: 40, gold: 60 },
-  SCOUTING: { wood: 80, stone: 50, food: 60, gold: 35 },
+  MILITARY_DRILL:  { wood:  90, stone:  60, food:  70, gold:  30 },
+  LOGISTICS:       { wood:  70, stone:  40, food:  90, gold:  30 },
+  AGRONOMY:        { wood:  80, stone:  20, food: 110, gold:  20 },
+  STONEWORK:       { wood:  60, stone: 100, food:  50, gold:  30 },
+  GOLD_TRADE:      { wood:  70, stone:  70, food:  40, gold:  60 },
+  SCOUTING:        { wood:  80, stone:  50, food:  60, gold:  35 },
+  METALLURGY:      { wood:  70, stone:  80, food:  40, gold:  60 },
+  MEDICINE:        { wood:  90, stone:  40, food:  80, gold:  40 },
+  CAVALRY_TACTICS: { wood:  80, stone:  60, food:  80, gold:  50 },
+  CITY_PLANNING:   { wood: 100, stone:  80, food:  60, gold:  50 },
+  ARCHERY:         { wood:  80, stone:  50, food:  60, gold:  40 },
 };
 
 export const RESEARCH_DURATION_MINUTES: Record<ResearchType, number> = {
-  MILITARY_DRILL: 4,
-  LOGISTICS: 4,
-  AGRONOMY: 3,
-  STONEWORK: 3,
-  GOLD_TRADE: 3,
-  SCOUTING: 2,
+  MILITARY_DRILL:  4,
+  LOGISTICS:       4,
+  AGRONOMY:        3,
+  STONEWORK:       3,
+  GOLD_TRADE:      3,
+  SCOUTING:        2,
+  METALLURGY:      4,
+  MEDICINE:        3,
+  CAVALRY_TACTICS: 4,
+  CITY_PLANNING:   5,
+  ARCHERY:         3,
 };
 
 export const ATTACK_LOOT_PERCENT = 0.2;

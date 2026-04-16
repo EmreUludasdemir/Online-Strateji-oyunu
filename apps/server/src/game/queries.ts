@@ -72,6 +72,11 @@ function buildVisibleSet(city: Awaited<ReturnType<typeof loadCityStateRecordOrTh
       STONEWORK: researchLevels.STONEWORK ?? 0,
       GOLD_TRADE: researchLevels.GOLD_TRADE ?? 0,
       SCOUTING: researchLevels.SCOUTING ?? 0,
+      METALLURGY: researchLevels.METALLURGY ?? 0,
+      MEDICINE: researchLevels.MEDICINE ?? 0,
+      CAVALRY_TACTICS: researchLevels.CAVALRY_TACTICS ?? 0,
+      CITY_PLANNING: researchLevels.CITY_PLANNING ?? 0,
+      ARCHERY: researchLevels.ARCHERY ?? 0,
     },
   );
 

@@ -118,9 +118,16 @@ export function getUpgradeCost(buildingType: BuildingType, targetLevel: number):
   }, createResourceLedger());
 }
 
-export function getUpgradeDurationMs(buildingType: BuildingType, targetLevel: number): number {
+export function getUpgradeDurationMs(
+  buildingType: BuildingType,
+  targetLevel: number,
+  researchLevels?: ResearchLevelMap,
+): number {
   const secondsPerLevel = buildingType === "TOWN_HALL" ? 60 : 30;
-  return secondsPerLevel * targetLevel * 1000;
+  const baseMs = secondsPerLevel * targetLevel * 1000;
+  if (!researchLevels) return baseMs;
+  const reduction = researchLevels.CITY_PLANNING * 0.1;
+  return Math.max(5000, Math.round(baseMs * (1 - reduction)));
 }
 
 export function getProductionPerMinute(
@@ -271,7 +278,8 @@ export function getStructuralDefense(
   const base =
     buildingLevels.TOWN_HALL * 34 +
     buildingLevels.WATCHTOWER * 28 +
-    buildingLevels.QUARRY * 8;
+    buildingLevels.QUARRY * 8 +
+    buildingLevels.WALL * 40;
 
   return Math.round(base * (1 + researchLevels.STONEWORK * 0.05));
 }
@@ -280,9 +288,20 @@ export function getAttackPower(
   troops: TroopStock,
   commander: CommanderBonuses,
   researchLevels: ResearchLevelMap,
+  buildingLevels?: BuildingLevelMap,
 ): number {
-  const troopPower = getTroopAttackPower(troops);
-  return Math.round(troopPower * (1 + commander.attackBonus + researchLevels.MILITARY_DRILL * 0.05));
+  // Per-type bonuses from specialisation research
+  const infantryPower = troops.INFANTRY * TROOP_ATTACK.INFANTRY;
+  const archerPower = troops.ARCHER * TROOP_ATTACK.ARCHER * (1 + researchLevels.ARCHERY * 0.08);
+  const cavalryPower =
+    troops.CAVALRY * TROOP_ATTACK.CAVALRY * (1 + researchLevels.CAVALRY_TACTICS * 0.08);
+  const troopPower = infantryPower + archerPower + cavalryPower;
+
+  const forgeMult = buildingLevels ? 1 + buildingLevels.FORGE * 0.04 : 1;
+  const globalMult =
+    1 + commander.attackBonus + researchLevels.MILITARY_DRILL * 0.05 + researchLevels.METALLURGY * 0.05;
+
+  return Math.round(troopPower * globalMult * forgeMult);
 }
 
 export function getDefensePower(
@@ -307,8 +326,15 @@ export function getMarchDurationMs(
     return MIN_MARCH_SECONDS * 1000;
   }
 
+  // Cavalry Tactics research boosts cavalry march speed contribution
   const weightedSpeed =
-    TROOP_TYPES.reduce((sum, type) => sum + troops[type] * TROOP_SPEED[type], 0) / totalTroops;
+    TROOP_TYPES.reduce((sum, type) => {
+      const speed =
+        type === "CAVALRY"
+          ? TROOP_SPEED[type] * (1 + researchLevels.CAVALRY_TACTICS * 0.06)
+          : TROOP_SPEED[type];
+      return sum + troops[type] * speed;
+    }, 0) / totalTroops;
   const speedModifier =
     Math.max(0.6, weightedSpeed) *
     (1 + commander.marchSpeedBonus + researchLevels.LOGISTICS * 0.08);
@@ -399,6 +425,15 @@ export function getMarchPosition(
   };
 }
 
+export function getHospitalHealingCapacity(
+  buildingLevels: BuildingLevelMap,
+  researchLevels: ResearchLevelMap,
+): number {
+  if (buildingLevels.HOSPITAL < 1) return 0;
+  const base = buildingLevels.HOSPITAL * 5;
+  return Math.round(base * (1 + researchLevels.MEDICINE * 0.2));
+}
+
 export function resolveBattle(
   attackerTroops: TroopStock,
   defenderTroops: TroopStock,
@@ -408,8 +443,9 @@ export function resolveBattle(
   defenderResearch: ResearchLevelMap,
   defenderBuildings: BuildingLevelMap,
   defenderResources: ResourceStock,
+  attackerBuildings?: BuildingLevelMap,
 ): BattleResolution {
-  const attackerPower = getAttackPower(attackerTroops, attackerCommander, attackerResearch);
+  const attackerPower = getAttackPower(attackerTroops, attackerCommander, attackerResearch, attackerBuildings);
   const defenderPower = getDefensePower(
     defenderTroops,
     defenderBuildings,

@@ -706,6 +706,10 @@ export async function startBuildingUpgrade(userId: string, buildingType: Buildin
       throw new HttpError(400, "INSUFFICIENT_RESOURCES", "Not enough resources for that upgrade.");
     }
 
+    const researchLevels = getResearchLevels(
+      city.researchLevels.map((r) => ({ researchType: r.researchType, level: r.level })),
+    );
+
     await tx.city.update({
       where: { id: city.id },
       data: resourceLedgerToCityUpdate(spendResources(resources, cost), now),
@@ -717,7 +721,7 @@ export async function startBuildingUpgrade(userId: string, buildingType: Buildin
         fromLevel: building.level,
         toLevel: targetLevel,
         startedAt: now,
-        completesAt: new Date(now.getTime() + getUpgradeDurationMs(buildingType, targetLevel)),
+        completesAt: new Date(now.getTime() + getUpgradeDurationMs(buildingType, targetLevel, researchLevels)),
       },
     });
     await progressGameTriggerTx(tx, userId, "building_upgrade_started", 1, now);
@@ -1041,7 +1045,17 @@ export async function joinAlliance(userId: string, allianceId: string): Promise<
       throw new HttpError(404, "ALLIANCE_NOT_FOUND", "That alliance could not be found.");
     }
 
-    if (alliance.members.length >= ALLIANCE_MAX_MEMBERS) {
+    // Max member cap scales with the leader's Embassy level
+    const leaderMember = alliance.members.find((member) => member.role === "LEADER");
+    const leaderEmbassyLevel = leaderMember
+      ? ((await tx.building.findFirst({
+          where: { city: { ownerId: leaderMember.userId }, buildingType: "EMBASSY" },
+          select: { level: true },
+        }))?.level ?? 0)
+      : 0;
+    const maxMembers = ALLIANCE_MAX_MEMBERS + leaderEmbassyLevel;
+
+    if (alliance.members.length >= maxMembers) {
       throw new HttpError(409, "ALLIANCE_FULL", "That alliance is already at full capacity.");
     }
 
@@ -1174,6 +1188,13 @@ export async function requestAllianceHelp(userId: string, kind: AllianceHelpKind
     const { city } = await snapshotCityTx(tx, userId, now);
     const helpTarget = getHelpRequestLabel(kind, city);
 
+    const embassyBuilding = await tx.building.findFirst({
+      where: { cityId: city.id, buildingType: "EMBASSY" },
+      select: { level: true },
+    });
+    const embassyLevel = embassyBuilding?.level ?? 0;
+    const maxHelps = ALLIANCE_HELP_MAX_RESPONSES + embassyLevel;
+
     const existing = await tx.allianceHelpRequest.findUnique({
       where: {
         kind_targetId: {
@@ -1200,7 +1221,7 @@ export async function requestAllianceHelp(userId: string, kind: AllianceHelpKind
         kind,
         targetId: helpTarget.targetId,
         label: helpTarget.label,
-        maxHelps: ALLIANCE_HELP_MAX_RESPONSES,
+        maxHelps,
       },
       update: {
         allianceId: membership.allianceId,
@@ -1208,7 +1229,7 @@ export async function requestAllianceHelp(userId: string, kind: AllianceHelpKind
         cityId: city.id,
         label: helpTarget.label,
         helpCount: 0,
-        maxHelps: ALLIANCE_HELP_MAX_RESPONSES,
+        maxHelps,
         isOpen: true,
         fulfilledAt: null,
         createdAt: now,

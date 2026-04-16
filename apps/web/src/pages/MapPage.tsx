@@ -109,6 +109,7 @@ function estimateMarchDurationMs(
   troopViews: Array<{ type: TroopType; speed: number }>,
   commanderSpeedBonusPct: number,
   logisticsLevel: number,
+  cavalryTacticsLevel = 0,
 ) {
   const totalTroops = Object.values(troops).reduce((sum, value) => sum + value, 0);
   if (distance <= 0 || totalTroops <= 0) {
@@ -116,7 +117,11 @@ function estimateMarchDurationMs(
   }
 
   const weightedSpeed =
-    troopViews.reduce((sum, troop) => sum + troop.speed * troops[troop.type], 0) / totalTroops;
+    troopViews.reduce((sum, troop) => {
+      const speed =
+        troop.type === "CAVALRY" ? troop.speed * (1 + cavalryTacticsLevel * 0.06) : troop.speed;
+      return sum + speed * troops[troop.type];
+    }, 0) / totalTroops;
   const speedModifier = Math.max(0.6, weightedSpeed) * (1 + commanderSpeedBonusPct / 100 + logisticsLevel * 0.08);
 
   return Math.max(
@@ -137,8 +142,14 @@ function estimateTroopCarry(
 function estimateTroopPower(
   troops: TroopStock,
   troopViews: Array<{ type: TroopType; attack: number; defense: number }>,
+  researchBonuses?: { militaryDrill?: number; metallurgy?: number; archery?: number; cavalryTactics?: number },
 ) {
-  return troopViews.reduce((sum, troop) => sum + (troop.attack + troop.defense) * troops[troop.type], 0);
+  const drill = 1 + (researchBonuses?.militaryDrill ?? 0) * 0.05 + (researchBonuses?.metallurgy ?? 0) * 0.05;
+  return troopViews.reduce((sum, troop) => {
+    const archerBonus = troop.type === "ARCHER" ? 1 + (researchBonuses?.archery ?? 0) * 0.08 : 1;
+    const cavalryBonus = troop.type === "CAVALRY" ? 1 + (researchBonuses?.cavalryTactics ?? 0) * 0.08 : 1;
+    return sum + (troop.attack * archerBonus * cavalryBonus * drill + troop.defense) * troops[troop.type];
+  }, 0);
 }
 
 function getComposerTitle(mode: ComposerMode) {
@@ -874,6 +885,13 @@ export function MapPage() {
   const totalAssignedTroops = Object.values(troopPayload).reduce((sum, value) => sum + value, 0);
   const activeMarchCount = worldChunk?.marches.length ?? state.city.activeMarches.length;
   const logisticsLevel = state.city.research.find((entry) => entry.type === "LOGISTICS")?.level ?? 0;
+  const cavalryTacticsLevel = state.city.research.find((entry) => entry.type === "CAVALRY_TACTICS")?.level ?? 0;
+  const researchBonuses = {
+    militaryDrill: state.city.research.find((entry) => entry.type === "MILITARY_DRILL")?.level ?? 0,
+    metallurgy: state.city.research.find((entry) => entry.type === "METALLURGY")?.level ?? 0,
+    archery: state.city.research.find((entry) => entry.type === "ARCHERY")?.level ?? 0,
+    cavalryTactics: cavalryTacticsLevel,
+  };
   const selectedCommander =
     state.city.commanders.find((commander) => commander.id === commanderId) ?? state.city.commanders[0] ?? null;
   const alliance = allianceQuery.data?.alliance ?? null;
@@ -969,13 +987,17 @@ export function MapPage() {
           state.city.troops,
           selectedCommander.marchSpeedBonusPct,
           logisticsLevel,
+          cavalryTacticsLevel,
         )
       : null;
   const estimatedCarry =
     composerMode && composerMode !== "SCOUT" && selectedCommander
       ? estimateTroopCarry(troopPayload, state.city.troops, selectedCommander.carryBonusPct)
       : 0;
-  const estimatedPower = composerMode && composerMode !== "SCOUT" ? estimateTroopPower(troopPayload, state.city.troops) : 0;
+  const estimatedPower =
+    composerMode && composerMode !== "SCOUT"
+      ? estimateTroopPower(troopPayload, state.city.troops, researchBonuses)
+      : 0;
   const previewMarchEtaMs =
     selectedTargetDistance != null && selectedCommander
       ? estimateMarchDurationMs(
@@ -984,10 +1006,11 @@ export function MapPage() {
           state.city.troops,
           selectedCommander.marchSpeedBonusPct,
           logisticsLevel,
+          cavalryTacticsLevel,
         )
       : null;
   const previewCarry = selectedCommander ? estimateTroopCarry(troopPayload, state.city.troops, selectedCommander.carryBonusPct) : 0;
-  const previewPower = estimateTroopPower(troopPayload, state.city.troops);
+  const previewPower = estimateTroopPower(troopPayload, state.city.troops, researchBonuses);
   const composerTitle = getComposerTitle(composerMode);
   const composerActionLabel = getComposerActionLabel(composerMode);
   const targetPrimaryMode = selectedCity

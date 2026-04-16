@@ -293,6 +293,37 @@
   gap: 0.5rem;
 }
 
+.bonusStrip {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bonusRow {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+}
+
+.bonusValue {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-success-300);
+}
+
+.bonusValueNext {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
 @media (max-width: 1180px) {
   .summaryGrid,
   .metricsGrid {

@@ -297,6 +297,7 @@ export interface CityState {
   activeTraining: TrainingQueueView | null;
   activeResearch: ResearchQueueView | null;
   troops: TroopView[];
+  woundedTroops: TroopStock;
   commanders: CommanderView[];
   research: ResearchView[];
   activeMarches: MarchView[];
@@ -304,6 +305,7 @@ export interface CityState {
   visionRadius: number;
   attackPower: number;
   defensePower: number;
+  hospitalHealingCapacity: number;
   peaceShieldUntil: string | null;
 }
 

@@ -34,6 +34,10 @@ const districtStageLayout: Record<BuildingType, DistrictStageLayoutEntry> = {
   LUMBER_MILL: { x: 59, y: 68, tone: "economy" },
   QUARRY: { x: 73, y: 56, tone: "economy" },
   GOLD_MINE: { x: 44, y: 72, tone: "economy" },
+  HOSPITAL: { x: 20, y: 48, tone: "support" },
+  WALL: { x: 50, y: 82, tone: "war" },
+  EMBASSY: { x: 22, y: 22, tone: "support" },
+  FORGE: { x: 78, y: 46, tone: "war" },
 };
 
 export function DashboardPage() {
@@ -148,17 +152,23 @@ export function DashboardPage() {
             : selectedDistrictType === building.type
               ? "selected"
               : "ready";
+          const BUILDING_HINTS: Partial<Record<BuildingType, string>> = {
+            TOWN_HALL: "City cap, district ceiling, and command level.",
+            BARRACKS: "Troop throughput and drill cadence.",
+            ACADEMY: "Doctrine depth and logistics research.",
+            WATCHTOWER: "Threat readout and frontier awareness.",
+            FARM: "Food output sustains troop upkeep and training.",
+            LUMBER_MILL: "Timber flow powers district construction.",
+            QUARRY: "Stone pressure feeds defensive upgrades.",
+            GOLD_MINE: "Treasury income funds research and elite actions.",
+            HOSPITAL: "Wounded troop recovery — heals garrison losses over time.",
+            WALL: "Fortification layer — adds heavy structural defense to the city.",
+            EMBASSY: "Diplomatic hub — enables alliance coordination and aid requests.",
+            FORGE: "Weapon craft — sharpens attack power across all garrison troops.",
+          };
           const hint = building.isUpgradeActive
             ? `Upgrade lane to L${building.nextLevel} is active.`
-            : building.type === "BARRACKS"
-              ? "Troop throughput and drill cadence."
-              : building.type === "ACADEMY"
-                ? "Doctrine depth and logistics research."
-                : building.type === "WATCHTOWER"
-                  ? "Threat readout and frontier awareness."
-                  : building.type === "TOWN_HALL"
-                    ? "City cap, district ceiling, and command level."
-                    : "Resource flow and empire upkeep.";
+            : BUILDING_HINTS[building.type] ?? "Resource flow and empire upkeep.";
 
           return {
             ...layout,
@@ -204,6 +214,23 @@ export function DashboardPage() {
     : activeResearch
       ? `${activeResearchLabel} is active inside the academy. Pair it with a field march so the city deck keeps compounding in the background.`
       : `${state.city.cityName} is stable. Use the district atlas to pick the next upgrade lane without losing sight of marches, research, or dispatches.`;
+  const woundedTotal =
+    state.city.woundedTroops.INFANTRY +
+    state.city.woundedTroops.ARCHER +
+    state.city.woundedTroops.CAVALRY;
+  const getBuildingBonusStat = (type: BuildingType, level: number) => {
+    if (type === "HOSPITAL")
+      return { id: "bonus", label: "Heal capacity", value: `${state.city.hospitalHealingCapacity}/tick`, note: "Wounded troops recovered per reconcile" };
+    if (type === "WALL")
+      return { id: "bonus", label: "Wall defense", value: `+${level * 40}`, note: "Structural defense added to city shield" };
+    if (type === "FORGE")
+      return { id: "bonus", label: "Attack boost", value: `+${level * 4}%`, note: "Forge multiplier on all troop attack" };
+    if (type === "WATCHTOWER")
+      return { id: "bonus", label: "Vision radius", value: `${state.city.visionRadius}`, note: "Current scouting coverage in tiles" };
+    if (type === "BARRACKS")
+      return { id: "bonus", label: "Train speed", value: `+${Math.max(0, level - 1) * 12}%`, note: "Training queue acceleration" };
+    return null;
+  };
   const selectedDistrictStats = selectedDistrict
     ? [
         {
@@ -225,6 +252,9 @@ export function DashboardPage() {
           note: selectedDistrict.isUpgradeActive ? "Master queue is live" : activeUpgrade ? "Another district holds the line" : "Open for a fresh order",
           tone: selectedDistrict.isUpgradeActive ? ("warning" as const) : activeUpgrade ? ("info" as const) : ("success" as const),
         },
+        ...(getBuildingBonusStat(selectedDistrict.type as BuildingType, selectedDistrict.level)
+          ? [getBuildingBonusStat(selectedDistrict.type as BuildingType, selectedDistrict.level)!]
+          : []),
       ]
     : [];
 
@@ -540,6 +570,47 @@ export function DashboardPage() {
                 </Button>
               </div>
             </SectionCard>
+
+            {woundedTotal > 0 || state.city.hospitalHealingCapacity > 0 ? (
+              <SectionCard
+                kicker="Hospital"
+                title="Wounded recovery"
+                aside={
+                  woundedTotal > 0 ? (
+                    <Badge tone="warning">{formatNumber(woundedTotal)} wounded</Badge>
+                  ) : (
+                    <Badge tone="success">Garrison healthy</Badge>
+                  )
+                }
+              >
+                <div className={styles.compactList}>
+                  {state.city.woundedTroops.INFANTRY > 0 && (
+                    <div className={styles.taskMeta}>
+                      <span className={styles.operationsLabel}>Infantry</span>
+                      <strong>{formatNumber(state.city.woundedTroops.INFANTRY)} recovering</strong>
+                    </div>
+                  )}
+                  {state.city.woundedTroops.ARCHER > 0 && (
+                    <div className={styles.taskMeta}>
+                      <span className={styles.operationsLabel}>Archers</span>
+                      <strong>{formatNumber(state.city.woundedTroops.ARCHER)} recovering</strong>
+                    </div>
+                  )}
+                  {state.city.woundedTroops.CAVALRY > 0 && (
+                    <div className={styles.taskMeta}>
+                      <span className={styles.operationsLabel}>Cavalry</span>
+                      <strong>{formatNumber(state.city.woundedTroops.CAVALRY)} recovering</strong>
+                    </div>
+                  )}
+                  {woundedTotal === 0 && (
+                    <p className={styles.stackHint}>No wounded troops in the recovery ward.</p>
+                  )}
+                </div>
+                <p className={styles.stackHint}>
+                  Heal capacity: {formatNumber(state.city.hospitalHealingCapacity)} troops/tick. Upgrade Hospital and research Medicine to increase recovery speed.
+                </p>
+              </SectionCard>
+            ) : null}
 
             <SectionCard kicker={copy.dashboard.inventory} title="Speedups and chests" aside={<Badge tone="warning">{inventoryItems.length} lots</Badge>}>
               <div className={styles.compactList}>

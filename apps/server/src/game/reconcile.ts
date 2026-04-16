@@ -31,6 +31,7 @@ import {
   getAttackPower,
   getBuildingLevels,
   getCarryCapacity,
+  getHospitalHealingCapacity,
   getMarchDurationMs,
   getMarchPosition,
   getResearchLevels,
@@ -112,6 +113,11 @@ function createEmptyResearchLevels() {
     STONEWORK: 0,
     GOLD_TRADE: 0,
     SCOUTING: 0,
+    METALLURGY: 0,
+    MEDICINE: 0,
+    CAVALRY_TACTICS: 0,
+    CITY_PLANNING: 0,
+    ARCHERY: 0,
   };
 }
 
@@ -125,6 +131,10 @@ function createEmptyBuildingLevels() {
     BARRACKS: 0,
     ACADEMY: 0,
     WATCHTOWER: 0,
+    HOSPITAL: 0,
+    WALL: 0,
+    EMBASSY: 0,
+    FORGE: 0,
   };
 }
 
@@ -435,9 +445,46 @@ export async function syncCityStateTx(
     });
   }
 
+  // Hospital: heal wounded troops up to the per-reconcile capacity
+  const healCapacity = getHospitalHealingCapacity(buildingLevels, researchLevels);
+  let woundedInfantry = city.woundedInfantry;
+  let woundedArcher = city.woundedArcher;
+  let woundedCavalry = city.woundedCavalry;
+  const totalWounded = woundedInfantry + woundedArcher + woundedCavalry;
+
+  if (healCapacity > 0 && totalWounded > 0) {
+    const healed = Math.min(healCapacity, totalWounded);
+    const ratio = healed / totalWounded;
+    const healInfantry = Math.min(woundedInfantry, Math.floor(woundedInfantry * ratio));
+    const healArcher = Math.min(woundedArcher, Math.floor(woundedArcher * ratio));
+    const healCavalry = Math.min(woundedCavalry, healed - healInfantry - healArcher);
+
+    if (healInfantry + healArcher + healCavalry > 0) {
+      const currentTroops = getTroopLedger(
+        city.troopGarrisons.map((troop) => ({
+          troopType: troop.troopType,
+          quantity: troop.quantity,
+        })),
+      );
+      await upsertTroopLedgerTx(tx, cityId, addTroops(currentTroops, {
+        INFANTRY: healInfantry,
+        ARCHER: healArcher,
+        CAVALRY: healCavalry,
+      }));
+      woundedInfantry -= healInfantry;
+      woundedArcher -= healArcher;
+      woundedCavalry -= healCavalry;
+    }
+  }
+
   await tx.city.update({
     where: { id: cityId },
-    data: resourceLedgerToCityUpdate(resources, now),
+    data: {
+      ...resourceLedgerToCityUpdate(resources, now),
+      woundedInfantry,
+      woundedArcher,
+      woundedCavalry,
+    },
   });
 
   return {
@@ -503,6 +550,12 @@ async function reconcileCityBattleTx(
       level: building.level,
     })),
   );
+  const attackerBuildings = getBuildingLevels(
+    attackerCity.buildings.map((building) => ({
+      buildingType: building.buildingType,
+      level: building.level,
+    })),
+  );
   const attackerCommander = attackerCity.owner.commanders.find((entry) => entry.id === march.commanderId);
   const defenderCommander = getPrimaryCommander(defenderCity);
   const attackerCommanderBonuses = mergeCommanderSupport(toCommanderBonuses(attackerCommander), march.supportBonusPct);
@@ -527,6 +580,7 @@ async function reconcileCityBattleTx(
     defenderResearch,
     defenderBuildings,
     defenderResources,
+    attackerBuildings,
   );
 
   const attackerGarrison = getTroopLedger(
@@ -541,13 +595,24 @@ async function reconcileCityBattleTx(
   await upsertTroopLedgerTx(tx, attackerCity.id, nextAttackerGarrison);
   await upsertTroopLedgerTx(tx, defenderCity.id, nextDefenderGarrison);
 
+  // Wounded troops: losses go to wounded pool for hospital recovery
   await tx.city.update({
     where: { id: attackerCity.id },
-    data: resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), battle.loot), now),
+    data: {
+      ...resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), battle.loot), now),
+      woundedInfantry: { increment: battle.attackerLosses.INFANTRY },
+      woundedArcher: { increment: battle.attackerLosses.ARCHER },
+      woundedCavalry: { increment: battle.attackerLosses.CAVALRY },
+    },
   });
   await tx.city.update({
     where: { id: defenderCity.id },
-    data: resourceLedgerToCityUpdate(spendResources(defenderResources, battle.loot), now),
+    data: {
+      ...resourceLedgerToCityUpdate(spendResources(defenderResources, battle.loot), now),
+      woundedInfantry: { increment: battle.defenderLosses.INFANTRY },
+      woundedArcher: { increment: battle.defenderLosses.ARCHER },
+      woundedCavalry: { increment: battle.defenderLosses.CAVALRY },
+    },
   });
 
   const report = await tx.battleReport.create({
@@ -796,7 +861,12 @@ async function reconcileBarbarianBattleTx(
   await upsertTroopLedgerTx(tx, attackerCity.id, nextAttackerGarrison);
   await tx.city.update({
     where: { id: attackerCity.id },
-    data: resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), loot), now),
+    data: {
+      ...resourceLedgerToCityUpdate(addResources(getResourceLedger(attackerCity), loot), now),
+      woundedInfantry: { increment: baseBattle.attackerLosses.INFANTRY },
+      woundedArcher: { increment: baseBattle.attackerLosses.ARCHER },
+      woundedCavalry: { increment: baseBattle.attackerLosses.CAVALRY },
+    },
   });
   await tx.mapPoi.update({
     where: { id: poi.id },

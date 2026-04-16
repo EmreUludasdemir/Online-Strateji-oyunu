@@ -817,11 +817,18 @@ export function GameLayout() {
     ? `[${contextValue.state.alliance.tag}] ${contextValue.state.alliance.name}`
     : "Independent Province";
   const provinceStatus = contextValue.state.city.peaceShieldUntil ? "Peace shield active" : "Battle ready";
+  const woundedTotal =
+    contextValue.state.city.woundedTroops.INFANTRY +
+    contextValue.state.city.woundedTroops.ARCHER +
+    contextValue.state.city.woundedTroops.CAVALRY;
   const sidebarSummary = [
     { label: "Alliance Banner", value: allianceLabel },
     { label: "Open Marches", value: formatNumber(contextValue.state.city.openMarchCount) },
     { label: "Unread Dispatches", value: formatNumber(mailboxQuery.data?.unreadCount ?? 0) },
     { label: "Province Status", value: provinceStatus },
+    ...(woundedTotal > 0
+      ? [{ label: "Wounded Recovery", value: `${formatNumber(woundedTotal)} in hospital` }]
+      : []),
   ];
   const navigationItems = [
     { id: "map", to: "/app/map", eyebrow: "Field Theater", label: "Strategic Map", code: "MAP" },
