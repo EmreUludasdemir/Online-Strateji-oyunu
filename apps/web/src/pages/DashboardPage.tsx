@@ -518,6 +518,65 @@ export function DashboardPage() {
             </div>
           </SectionCard>
 
+          <SectionCard
+            kicker="Combat Intelligence"
+            title="City power breakdown"
+            aside={<Badge tone="warning">{formatNumber(state.city.attackPower + state.city.defensePower)} total power</Badge>}
+          >
+            {(() => {
+              const barracksLevel = state.city.buildings.find((b) => b.type === "BARRACKS")?.level ?? 0;
+              const academyLevel  = state.city.buildings.find((b) => b.type === "ACADEMY")?.level ?? 0;
+              const militaryDrill = state.city.research.find((r) => r.type === "MILITARY_DRILL")?.level ?? 0;
+              const cityPlanning  = state.city.research.find((r) => r.type === "CITY_PLANNING")?.level ?? 0;
+              const trainingSpeedPct = Math.round(((1 + Math.max(0, barracksLevel - 1) * 0.12) * (1 + militaryDrill * 0.08) - 1) * 100);
+              const researchSpeedPct = Math.round(Math.max(0, academyLevel - 1) * 10);
+              return (
+                <div className={styles.combatGrid}>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Attack power</span>
+                    <strong className={styles.statValue}>{formatNumber(state.city.attackPower)}</strong>
+                    <span className={styles.stackHint}>Garrison + Forge + research</span>
+                  </div>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Defense power</span>
+                    <strong className={styles.statValue}>{formatNumber(state.city.defensePower)}</strong>
+                    <span className={styles.stackHint}>Garrison + Wall + Stonework</span>
+                  </div>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Vision radius</span>
+                    <strong className={styles.statValue}>{formatNumber(state.city.visionRadius)}</strong>
+                    <span className={styles.stackHint}>Watchtower + Scouting</span>
+                  </div>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Hospital cap</span>
+                    <strong className={styles.statValue}>{formatNumber(state.city.hospitalHealingCapacity)}</strong>
+                    <span className={styles.stackHint}>troops healed / tick</span>
+                  </div>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Train speed</span>
+                    <strong className={styles.statValue}>{trainingSpeedPct > 0 ? `+${trainingSpeedPct}%` : "Base"}</strong>
+                    <span className={styles.stackHint}>Barracks L{barracksLevel} · Drill L{militaryDrill}</span>
+                  </div>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Upgrade speed</span>
+                    <strong className={styles.statValue}>{cityPlanning > 0 ? `-${cityPlanning * 10}%` : "Base"}</strong>
+                    <span className={styles.stackHint}>City Planning L{cityPlanning}</span>
+                  </div>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Research speed</span>
+                    <strong className={styles.statValue}>{researchSpeedPct > 0 ? `+${researchSpeedPct}%` : "Base"}</strong>
+                    <span className={styles.stackHint}>Academy L{academyLevel}</span>
+                  </div>
+                  <div className={styles.statCard}>
+                    <span className={styles.statLabel}>Open marches</span>
+                    <strong className={styles.statValue}>{formatNumber(state.city.openMarchCount)}</strong>
+                    <span className={styles.stackHint}>Town Hall march cap</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </SectionCard>
+
           <SectionCard kicker={copy.dashboard.tasks} title="First 5-minute flow" aside={<Badge tone={tasksQuery.data?.tutorialCompleted ? "success" : "warning"}>{tasksQuery.data?.tutorialCompleted ? "Complete" : "Open"}</Badge>}>
             <div className={styles.taskList}>
               {[...tutorialTasks.slice(0, 4), ...dailyTasks.slice(0, 2)].map((task) => (

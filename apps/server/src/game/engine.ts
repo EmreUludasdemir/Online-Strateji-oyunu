@@ -227,10 +227,13 @@ export function getTrainingDurationMs(
   troopType: TroopType,
   quantity: number,
   barracksLevel: number,
+  militaryDrillLevel = 0,
 ): number {
   const baseSeconds = TROOP_BASE_DURATION_SECONDS[troopType] * quantity;
-  const speedMultiplier = 1 + Math.max(0, barracksLevel - 1) * 0.12;
-  return Math.ceil((baseSeconds / speedMultiplier) * 1000);
+  const barracksBonus = 1 + Math.max(0, barracksLevel - 1) * 0.12;
+  const drillBonus = 1 + militaryDrillLevel * 0.08;
+  const ms = Math.ceil((baseSeconds / (barracksBonus * drillBonus)) * 1000);
+  return Math.max(5_000, ms);
 }
 
 export function getResearchCost(researchType: ResearchType, nextLevel: number): ResourceStock {
@@ -241,8 +244,10 @@ export function getResearchCost(researchType: ResearchType, nextLevel: number): 
   }, createResourceLedger());
 }
 
-export function getResearchDurationMs(researchType: ResearchType, nextLevel: number): number {
-  return RESEARCH_DURATION_MINUTES[researchType] * nextLevel * 60 * 1000;
+export function getResearchDurationMs(researchType: ResearchType, nextLevel: number, academyLevel = 0): number {
+  const base = RESEARCH_DURATION_MINUTES[researchType] * nextLevel * 60 * 1000;
+  const speedMultiplier = 1 + Math.max(0, academyLevel - 1) * 0.1;
+  return Math.max(5_000, Math.ceil(base / speedMultiplier));
 }
 
 export function canAdvanceResearch(level: number): boolean {

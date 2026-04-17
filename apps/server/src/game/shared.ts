@@ -755,6 +755,8 @@ export function mapBuildingViews(city: CityStateRecord): BuildingView[] {
 export function mapTroopViews(city: CityStateRecord) {
   const barracksLevel =
     city.buildings.find((building) => building.buildingType === "BARRACKS")?.level ?? 1;
+  const militaryDrillLevel =
+    city.researchLevels.find((r) => r.researchType === "MILITARY_DRILL")?.level ?? 0;
   const troopLedger = getTroopLedger(
     city.troopGarrisons.map((entry) => ({
       troopType: entry.troopType as TroopType,
@@ -771,7 +773,7 @@ export function mapTroopViews(city: CityStateRecord) {
     speed: TROOP_SPEED[type],
     carry: TROOP_CARRY[type],
     trainingCost: getTroopTrainingCost(type, 1),
-    trainingDurationSeconds: Math.floor(getTrainingDurationMs(type, 1, barracksLevel) / 1000),
+    trainingDurationSeconds: Math.floor(getTrainingDurationMs(type, 1, barracksLevel, militaryDrillLevel) / 1000),
   }));
 }
 
@@ -799,6 +801,7 @@ export function mapResearchViews(city: CityStateRecord): ResearchView[] {
       level: research.level,
     })),
   );
+  const academyLevel = city.buildings.find((b) => b.buildingType === "ACADEMY")?.level ?? 0;
   const activeResearch = city.researchQueues[0] ?? null;
 
   return RESEARCH_TYPES.map((type) => {
@@ -813,7 +816,7 @@ export function mapResearchViews(city: CityStateRecord): ResearchView[] {
       nextLevel,
       maxLevel: RESEARCH_MAX_LEVEL,
       startCost: getResearchCost(type, nextLevel),
-      durationSeconds: Math.floor(getResearchDurationMs(type, nextLevel) / 1000),
+      durationSeconds: Math.floor(getResearchDurationMs(type, nextLevel, academyLevel) / 1000),
       isActive: activeResearch?.researchType === type,
     };
   });

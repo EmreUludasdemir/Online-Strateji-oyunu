@@ -756,6 +756,9 @@ export async function trainTroops(userId: string, troopType: TroopType, quantity
       throw new HttpError(400, "BARRACKS_REQUIRED", "Barracks must be built before training troops.");
     }
 
+    const researchLevels = getResearchLevels(
+      city.researchLevels.map((r) => ({ researchType: r.researchType as ResearchType, level: r.level })),
+    );
     const cost = getTroopTrainingCost(troopType, quantity);
     const resources = getResourceLedger(city);
     if (!hasEnoughResources(resources, cost)) {
@@ -771,7 +774,9 @@ export async function trainTroops(userId: string, troopType: TroopType, quantity
         cityId: city.id,
         troopType,
         quantity,
-        completesAt: new Date(now.getTime() + getTrainingDurationMs(troopType, quantity, barracksLevel)),
+        completesAt: new Date(
+          now.getTime() + getTrainingDurationMs(troopType, quantity, barracksLevel, researchLevels.MILITARY_DRILL),
+        ),
       },
     });
     await progressGameTriggerTx(tx, userId, "troop_train_started", 1, now);
@@ -822,7 +827,7 @@ export async function startResearch(userId: string, researchType: ResearchType):
         researchType,
         fromLevel: currentLevel,
         toLevel: nextLevel,
-        completesAt: new Date(now.getTime() + getResearchDurationMs(researchType, nextLevel)),
+        completesAt: new Date(now.getTime() + getResearchDurationMs(researchType, nextLevel, academyLevel)),
       },
     });
     await progressGameTriggerTx(tx, userId, "research_started", 1, now);
