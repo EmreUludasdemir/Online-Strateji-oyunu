@@ -11,6 +11,8 @@
 .operationsList,
 .queueLedger,
 .quickOrderGrid,
+.briefingLayout,
+.briefingActionGrid,
 .cityStageLayout,
 .cityStageStats,
 .cityStageCosts,
@@ -48,7 +50,8 @@
 .inlineForm,
 .resourceList,
 .buildingHeader,
-.actionRow {
+.actionRow,
+.briefingFooter {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -90,6 +93,57 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+.briefingLayout {
+  gap: 1rem;
+}
+
+.briefingActionGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.briefingStats {
+  gap: 0.75rem;
+}
+
+.briefingHeader {
+  margin-bottom: 0.15rem;
+}
+
+.briefingCardBody {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.briefingEyebrow,
+.briefingDetail,
+.briefingImpact {
+  margin: 0;
+}
+
+.briefingEyebrow {
+  color: var(--color-outline);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.briefingDetail {
+  color: var(--color-on-surface-variant);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.briefingImpact {
+  color: var(--color-primary-fixed);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.briefingFooter {
+  justify-content: flex-start;
 }
 
 .operationsDeck {
@@ -605,6 +659,7 @@
   .resourceStrip,
   .heroStats,
   .operationsDeck,
+  .briefingActionGrid,
   .operationsList,
   .quickOrderGrid,
   .grid,
@@ -630,5 +685,9 @@
     min-width: 132px;
     max-width: 148px;
     padding: 0.7rem 0.75rem;
+  }
+
+  .briefingFooter button {
+    width: 100%;
   }
 }

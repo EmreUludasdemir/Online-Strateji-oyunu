@@ -7,7 +7,7 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
+import { FeedCardShell, PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
 import { ResourcePill } from "../components/ui/ResourcePill";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
@@ -15,6 +15,8 @@ import { trackAnalyticsOnce } from "../lib/analytics";
 import { copy } from "../lib/i18n";
 import { formatNumber } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
+import type { DashboardBriefingAction } from "./dashboardBriefing";
+import { buildDashboardBriefing } from "./dashboardBriefing";
 import styles from "./DashboardPage.module.css";
 
 type DistrictStageTone = "core" | "war" | "economy" | "support";
@@ -68,17 +70,24 @@ export function DashboardPage() {
     enabled: bootstrap.storeEnabled,
   });
 
+  const invalidateProgressQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+      queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+      queryClient.invalidateQueries({ queryKey: ["mailbox"] }),
+      queryClient.invalidateQueries({ queryKey: ["events"] }),
+      queryClient.invalidateQueries({ queryKey: ["game-state"] }),
+    ]);
+  };
+
   const claimTaskMutation = useMutation({
     mutationFn: (taskId: string) => api.claimTask(taskId),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
-        queryClient.invalidateQueries({ queryKey: ["inventory"] }),
-        queryClient.invalidateQueries({ queryKey: ["mailbox"] }),
-        queryClient.invalidateQueries({ queryKey: ["events"] }),
-        queryClient.invalidateQueries({ queryKey: ["game-state"] }),
-      ]);
-    },
+    onSuccess: invalidateProgressQueries,
+  });
+
+  const claimMailboxMutation = useMutation({
+    mutationFn: (mailboxId: string) => api.claimMailbox(mailboxId),
+    onSuccess: invalidateProgressQueries,
   });
 
   const useItemMutation = useMutation({
@@ -95,6 +104,7 @@ export function DashboardPage() {
   const dailyTasks = tasksQuery.data?.daily ?? [];
   const inventoryItems = inventoryQuery.data?.items ?? [];
   const mailboxEntries = mailboxQuery.data?.entries ?? [];
+  const unreadMailboxCount = mailboxQuery.data?.unreadCount ?? 0;
   const seasonPass = eventsQuery.data?.seasonPass ?? null;
   const liveEvents = eventsQuery.data?.events ?? [];
   const storeOffers = storeCatalogQuery.data?.catalog.offers ?? [];
@@ -198,8 +208,8 @@ export function DashboardPage() {
       detail:
         mailboxEntries[0]?.canClaim ?? false
           ? "Claimable warrant waiting in the archive"
-          : `${mailboxQuery.data?.unreadCount ?? 0} unread messages on the rail`,
-      tone: mailboxQuery.data?.unreadCount ? "info" : "success",
+          : `${unreadMailboxCount} unread messages on the rail`,
+      tone: unreadMailboxCount ? "info" : "success",
     },
     {
       id: "doctrine",
@@ -257,6 +267,58 @@ export function DashboardPage() {
           : []),
       ]
     : [];
+  const dashboardBriefing = useMemo(
+    () =>
+      buildDashboardBriefing({
+        state,
+        tutorialTasks,
+        dailyTasks,
+        mailboxEntries,
+        unreadMailboxCount,
+        liveEvents,
+      }),
+    [dailyTasks, liveEvents, mailboxEntries, state, tutorialTasks, unreadMailboxCount],
+  );
+
+  const isBriefingActionBusy = (action: DashboardBriefingAction) => {
+    switch (action.command.type) {
+      case "claim_task":
+        return claimTaskMutation.isPending;
+      case "claim_mailbox":
+        return claimMailboxMutation.isPending;
+      case "upgrade":
+        return isUpgrading || Boolean(state.city.activeUpgrade);
+      case "train":
+        return isTraining || Boolean(state.city.activeTraining);
+      case "research":
+        return isResearching || Boolean(state.city.activeResearch);
+      case "open_route":
+        return false;
+    }
+  };
+
+  const runBriefingAction = async (action: DashboardBriefingAction) => {
+    switch (action.command.type) {
+      case "claim_task":
+        claimTaskMutation.mutate(action.command.taskId);
+        return;
+      case "claim_mailbox":
+        claimMailboxMutation.mutate(action.command.mailboxId);
+        return;
+      case "upgrade":
+        await upgrade(action.command.buildingType);
+        return;
+      case "train":
+        await train(action.command.troopType, action.command.quantity);
+        return;
+      case "research":
+        await research(action.command.researchType);
+        return;
+      case "open_route":
+        navigate(action.command.route);
+        return;
+    }
+  };
 
   useEffect(() => {
     if (!selectedDistrict && state.city.buildings[0]) {
@@ -410,6 +472,52 @@ export function DashboardPage() {
           </article>
         </div>
       </header>
+
+      <SectionCard
+        kicker="Command Briefing"
+        title={dashboardBriefing.headline}
+        aside={<Badge tone={dashboardBriefing.badgeTone}>{dashboardBriefing.badgeLabel}</Badge>}
+      >
+        <div className={styles.briefingLayout}>
+          <SectionHeaderBlock
+            kicker="Short-session loop"
+            title="Queue, claim, then leave with purpose"
+            lead={dashboardBriefing.lead}
+            className={styles.briefingHeader}
+          />
+          <PanelStatGrid items={dashboardBriefing.stats} columns={4} className={styles.briefingStats} />
+          <div className={styles.briefingActionGrid} data-command-briefing="true">
+            {dashboardBriefing.actions.map((action) => (
+              <FeedCardShell
+                key={action.id}
+                tone={action.tone}
+                title={action.title}
+                meta={<Badge tone={action.tone}>{action.badgeLabel}</Badge>}
+                body={
+                  <div className={styles.briefingCardBody}>
+                    <p className={styles.briefingEyebrow}>{action.eyebrow}</p>
+                    <p className={styles.briefingDetail}>{action.detail}</p>
+                    <p className={styles.briefingImpact}>Impact: {action.impact}</p>
+                  </div>
+                }
+                footer={
+                  <div className={styles.briefingFooter}>
+                    <Button
+                      type="button"
+                      size="small"
+                      data-briefing-action={action.id}
+                      disabled={isBriefingActionBusy(action)}
+                      onClick={() => void runBriefingAction(action)}
+                    >
+                      {action.ctaLabel}
+                    </Button>
+                  </div>
+                }
+              />
+            ))}
+          </div>
+        </div>
+      </SectionCard>
 
       <div className={styles.columns}>
         <div className={styles.mainColumn}>
@@ -733,7 +841,7 @@ export function DashboardPage() {
             <div className={styles.actionRow}><Button type="button" onClick={() => openCommanderPanel(primaryCommander?.id)}>Open Commander Panel</Button></div>
           </SectionCard>
 
-          <SectionCard kicker={copy.dashboard.mailbox} title="Latest dispatches" aside={<Badge tone="warning">{mailboxQuery.data?.unreadCount ?? 0} new</Badge>}>
+          <SectionCard kicker={copy.dashboard.mailbox} title="Latest dispatches" aside={<Badge tone="warning">{unreadMailboxCount} new</Badge>}>
             <div className={styles.compactList}>
               {mailboxEntries.slice(0, 4).map((entry) => <div key={entry.id} className={styles.taskMeta}><strong>{entry.title}</strong><span className={styles.stackHint}>{entry.canClaim ? "Reward waiting" : "Report archived"}</span></div>)}
             </div>

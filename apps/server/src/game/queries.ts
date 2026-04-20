@@ -145,6 +145,9 @@ export async function getGameState(userId: string): Promise<GameStateResponse> {
           : null;
       })(),
     };
+  }, {
+    maxWait: 10_000,
+    timeout: 15_000,
   });
 }
 

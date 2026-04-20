@@ -1938,25 +1938,32 @@ export async function refreshFogOfWar(
     }
   }
 
-  for (const coordinate of coordinates.values()) {
-    await tx.fogTile.upsert({
-      where: {
-        userId_x_y: {
-          userId: city.ownerId,
-          x: coordinate.x,
-          y: coordinate.y,
-        },
-      },
-      create: {
-        userId: city.ownerId,
+  const visibleCoordinates = Array.from(coordinates.values());
+  if (visibleCoordinates.length === 0) {
+    return;
+  }
+
+  await tx.fogTile.createMany({
+    data: visibleCoordinates.map((coordinate) => ({
+      userId: city.ownerId,
+      x: coordinate.x,
+      y: coordinate.y,
+      discoveredAt: now,
+      lastSeenAt: now,
+    })),
+    skipDuplicates: true,
+  });
+
+  await tx.fogTile.updateMany({
+    where: {
+      userId: city.ownerId,
+      OR: visibleCoordinates.map((coordinate) => ({
         x: coordinate.x,
         y: coordinate.y,
-        discoveredAt: now,
-        lastSeenAt: now,
-      },
-      update: {
-        lastSeenAt: now,
-      },
-    });
-  }
+      })),
+    },
+    data: {
+      lastSeenAt: now,
+    },
+  });
 }

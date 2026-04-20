@@ -214,3 +214,13 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - automation-hook fallback: `3`
   - stable fallback reason: `pointer-open-timeout`
   - stable projection state: target `Barbarian Camp 5` at `30,30`, projected to the visible canvas center-ish with `withinBounds: true`
+- 2026-04-20: Added a new dashboard-side `Command Briefing` surface tuned for the current product direction: a short-session action queue that synthesizes claimable rewards, idle build/train/research lanes, live-event pressure, mailbox intel, and alliance/community prompts into one fast command deck instead of another passive stat wall. The logic lives in `apps/web/src/pages/dashboardBriefing.ts`, the route now renders it through `FeedCardShell`, and focused coverage landed in `apps/web/src/pages/dashboardBriefing.test.ts`.
+- 2026-04-20: Browser validation of the new dashboard surfaced a real backend runtime issue unrelated to the new UI: `GET /api/game/state` could time out on first login because `refreshFogOfWar()` was doing per-tile sequential `upsert()` calls inside a 5s interactive transaction. Fixed this by batching fog refresh into `createMany(skipDuplicates)` + one `updateMany` pass and by giving `getGameState()` the same `maxWait 10s / timeout 15s` envelope already used by `getWorldChunk()`.
+- 2026-04-20: Validation after the briefing + fog-refresh pass:
+  - `corepack pnpm --filter @frontier/web test` passed.
+  - `corepack pnpm --filter @frontier/web build` passed.
+  - `corepack pnpm build` passed.
+  - Repo-owned browser capture against a temporary public/open shell succeeded via `scripts/web_game_playwright_client.js`; `output/briefing-client/state-0.json` confirmed `/app/dashboard` with `bootstrapReady`, `sessionReady`, and `gameStateReady` all `true`, and no `errors-0.json` was emitted.
+  - `corepack pnpm test` is still red for pre-existing server drift outside this pass: `tests/gameEngine.test.ts` still expects old engine assumptions (resource/combat assertions) and `tests/api.test.ts` still expects `8` buildings even though live city state returns `12`.
+- TODO: Fold the new `Command Briefing` heuristics into deeper retention loops next: alliance-help urgency, rally availability, and mailbox scout-report routing are the next obvious signals to promote into the short-session deck.
+- TODO: Clean up the lingering server test drift (`gameEngine.test.ts` + the old building-count assertion in `api.test.ts`) so full-repo `pnpm test` matches the actual post-expansion game data again.
