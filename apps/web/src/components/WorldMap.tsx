@@ -1,8 +1,17 @@
-import type { AllianceMarkerView, FogTileView, MapCity, MarchView, PoiResourceType, PoiView } from "@frontier/shared";
+import type {
+  AllianceMarkerView,
+  BuildingType,
+  FogTileView,
+  MapCity,
+  MarchView,
+  PoiResourceType,
+  PoiView,
+} from "@frontier/shared";
 import { type MutableRefObject, useEffect, useRef, useState } from "react";
 
 import Phaser from "./phaserRuntime";
 import styles from "./WorldMap.module.css";
+import { BUILDING_ICONS } from "./ui/buildingIcons";
 import {
   getKingdomPasses,
   getKingdomRingRadii,
@@ -69,6 +78,7 @@ interface WorldMapProps {
   marches: MarchView[];
   scoutTrails: ScoutTrailView[];
   reportMarkers: MapReportMarkerView[];
+  playerCityBuildings?: ReadonlyArray<PlayerCityDistrictView>;
   filter: MapFilter;
   showPaths: boolean;
   showScoutTrails: boolean;
@@ -137,8 +147,8 @@ interface AnimatedMarchEntity {
   container: Phaser.GameObjects.Container;
   compactToken: Phaser.GameObjects.Arc;
   shadow: Phaser.GameObjects.Ellipse;
-  troopLead: Phaser.GameObjects.Ellipse;
-  troopSupport: Phaser.GameObjects.Ellipse;
+  troopLead: Phaser.GameObjects.Image;
+  troopSupport: Phaser.GameObjects.Image;
   bannerPole: Phaser.GameObjects.Rectangle;
   bannerPennant: Phaser.GameObjects.Triangle;
   stagingRing: Phaser.GameObjects.Arc;
@@ -158,7 +168,7 @@ interface ScoutTrailEntity {
   container: Phaser.GameObjects.Container;
   routeGraphic: Phaser.GameObjects.Graphics;
   shadow: Phaser.GameObjects.Ellipse;
-  body: Phaser.GameObjects.Arc;
+  body: Phaser.GameObjects.Image;
   pennant: Phaser.GameObjects.Triangle;
   from: {
     x: number;
@@ -194,14 +204,25 @@ interface BaseStaticGraphicBundle {
 interface AllianceMarkerGraphicBundle extends BaseStaticGraphicBundle {
   kind: "alliance-marker";
   beacon: Phaser.GameObjects.Arc;
-  pin: Phaser.GameObjects.Triangle;
-  core: Phaser.GameObjects.Arc;
+  sprite: Phaser.GameObjects.Image;
 }
 
 interface ReportGraphicBundle extends BaseStaticGraphicBundle {
   kind: "report";
   ping: Phaser.GameObjects.Arc;
   bubble: Phaser.GameObjects.Arc;
+}
+
+export interface PlayerCityDistrictView {
+  type: BuildingType;
+  level: number;
+}
+
+interface PlayerCityDistrictsEntity {
+  container: Phaser.GameObjects.Container;
+  sprites: Map<BuildingType, Phaser.GameObjects.Image>;
+  centerWorldX: number;
+  centerWorldY: number;
 }
 
 interface PoiCampGraphicBundle extends BaseStaticGraphicBundle {
@@ -220,8 +241,7 @@ interface CityGraphicBundle extends BaseStaticGraphicBundle {
   kind: "city";
   territory: Phaser.GameObjects.Arc;
   aura: Phaser.GameObjects.Arc;
-  marker: Phaser.GameObjects.Arc;
-  core: Phaser.GameObjects.Rectangle;
+  sprite: Phaser.GameObjects.Image;
 }
 
 type StaticGraphicBundle =
@@ -277,6 +297,7 @@ interface SceneConfig {
   marches: MarchView[];
   scoutTrails: ScoutTrailView[];
   reportMarkers: MapReportMarkerView[];
+  playerCityBuildings: ReadonlyArray<PlayerCityDistrictView>;
   filter: MapFilter;
   showPaths: boolean;
   showScoutTrails: boolean;
@@ -427,6 +448,8 @@ class FrontierMapScene extends Phaser.Scene {
   private ambientMotes: AmbientMoteEntity[] = [];
   private marchEntities = new Map<string, AnimatedMarchEntity>();
   private scoutEntities = new Map<string, ScoutTrailEntity>();
+  private playerCityBuildings: ReadonlyArray<PlayerCityDistrictView> = [];
+  private districtsEntity: PlayerCityDistrictsEntity | null = null;
   private selectionObjects: Phaser.GameObjects.GameObject[] = [];
   private selectionDetailObjects: Phaser.GameObjects.GameObject[] = [];
   private lastCameraState: MapCameraState | null = null;
@@ -466,6 +489,25 @@ class FrontierMapScene extends Phaser.Scene {
     this.load.svg("poi-node-stone", "/assets/icons/resources/stone.svg", spriteSize);
     this.load.svg("poi-node-food", "/assets/icons/resources/food.svg", spriteSize);
     this.load.svg("poi-node-gold", "/assets/icons/resources/gold.svg", spriteSize);
+    this.load.svg("march-soldier", "/assets/icons/map/march_soldier.svg", {
+      width: 18,
+      height: 18,
+    });
+    this.load.svg("city-marker", "/assets/icons/map/city_marker.svg", {
+      width: 44,
+      height: 44,
+    });
+    this.load.svg("alliance-marker", "/assets/icons/map/alliance_marker.svg", {
+      width: 40,
+      height: 40,
+    });
+    this.load.svg("scout-runner", "/assets/icons/map/scout_runner.svg", {
+      width: 18,
+      height: 18,
+    });
+    for (const [type, path] of Object.entries(BUILDING_ICONS) as [BuildingType, string][]) {
+      this.load.svg(`building-${type.toLowerCase()}`, path, { width: 24, height: 24 });
+    }
   }
 
   create() {
@@ -536,6 +578,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.marches = config.marches;
     this.scoutTrails = config.scoutTrails;
     this.reportMarkers = config.reportMarkers;
+    this.playerCityBuildings = config.playerCityBuildings;
     this.filter = config.filter;
     this.showPaths = config.showPaths;
     this.showScoutTrails = config.showScoutTrails;
@@ -1172,14 +1215,19 @@ class FrontierMapScene extends Phaser.Scene {
         hashCoordinate(marker.x, marker.y),
       );
       markerBundle.beacon.setRadius(this.currentDetailLevel === "far" ? 18 : 24);
-      markerBundle.pin.setY(-4);
-      markerBundle.core.setY(2);
       this.addAmbientPulse(markerBundle.beacon, {
         minScale: 0.96,
         maxScale: this.currentDetailLevel === "far" ? 1.06 : 1.12,
         minAlpha: 0.05,
         maxAlpha: 0.16,
         duration: 1800 + (hashCoordinate(marker.x, marker.y) % 5) * 190,
+      });
+      this.addAmbientPulse(markerBundle.sprite, {
+        minScale: 0.94,
+        maxScale: 1.02,
+        minAlpha: 0.88,
+        maxAlpha: 1,
+        duration: 2200 + (hashCoordinate(marker.x + 5, marker.y) % 5) * 180,
       });
 
       if (showLabels) {
@@ -1384,8 +1432,7 @@ class FrontierMapScene extends Phaser.Scene {
       cityBundle.territory.setActive(allied);
       cityBundle.territory.setRadius(this.currentDetailLevel === "near" ? 72 : 64);
       cityBundle.aura.setFillStyle(auraColor, city.isCurrentPlayer ? 0.18 : 0.12);
-      cityBundle.marker.setFillStyle(cityColor, 0.98);
-      cityBundle.marker.setStrokeStyle(2, MAP_COLOR_REPORT, 0.95);
+      cityBundle.sprite.setTint(cityColor);
       if (allied) {
         this.addAmbientPulse(cityBundle.territory, {
           minScale: 0.98,
@@ -1402,10 +1449,10 @@ class FrontierMapScene extends Phaser.Scene {
         maxAlpha: city.isCurrentPlayer ? 0.22 : 0.16,
         duration: 2100 + (hashCoordinate(city.x, city.y) % 5) * 180,
       });
-      this.addAmbientPulse(cityBundle.marker, {
-        minScale: 0.99,
+      this.addAmbientPulse(cityBundle.sprite, {
+        minScale: 0.96,
         maxScale: 1.04,
-        minAlpha: 0.84,
+        minAlpha: 0.92,
         maxAlpha: 1,
         duration: 1700 + (hashCoordinate(city.x + 11, city.y) % 5) * 160,
       });
@@ -1428,6 +1475,75 @@ class FrontierMapScene extends Phaser.Scene {
           1,
         );
         this.addLabelFloat(label, point.y - 30, hashCoordinate(city.x, city.y));
+      }
+    }
+
+    this.syncPlayerCityDistricts();
+  }
+
+  private syncPlayerCityDistricts() {
+    const playerCity = this.cities.find((entry) => entry.isCurrentPlayer);
+    const shouldShow =
+      playerCity != null &&
+      this.currentDetailLevel === "near" &&
+      this.playerCityBuildings.length > 0 &&
+      playerCity.fogState === "VISIBLE";
+
+    if (!shouldShow) {
+      if (this.districtsEntity) {
+        this.districtsEntity.container.setVisible(false);
+        this.districtsEntity.container.setActive(false);
+      }
+      return;
+    }
+
+    const point = tileToWorld(playerCity.x, playerCity.y);
+    let entity = this.districtsEntity;
+    if (!entity) {
+      const container = this.add.container(point.x, point.y);
+      this.objectLayer?.add(container);
+      entity = {
+        container,
+        sprites: new Map<BuildingType, Phaser.GameObjects.Image>(),
+        centerWorldX: point.x,
+        centerWorldY: point.y,
+      };
+      this.districtsEntity = entity;
+    } else {
+      entity.container.setPosition(point.x, point.y);
+      entity.centerWorldX = point.x;
+      entity.centerWorldY = point.y;
+    }
+    entity.container.setVisible(true);
+    entity.container.setActive(true);
+
+    const radius = 64;
+    const slots = Math.max(this.playerCityBuildings.length, 1);
+    const seenTypes = new Set<BuildingType>();
+
+    this.playerCityBuildings.forEach((building, index) => {
+      seenTypes.add(building.type);
+      const angle = -Math.PI / 2 + (index / slots) * Math.PI * 2;
+      const offsetX = Math.cos(angle) * radius;
+      const offsetY = Math.sin(angle) * radius;
+      let sprite = entity!.sprites.get(building.type);
+      const textureKey = `building-${building.type.toLowerCase()}`;
+      if (!sprite) {
+        sprite = this.add.image(offsetX, offsetY, textureKey).setOrigin(0.5, 0.5);
+        entity!.container.add(sprite);
+        entity!.sprites.set(building.type, sprite);
+      } else {
+        sprite.setPosition(offsetX, offsetY);
+        sprite.setVisible(true);
+        sprite.setActive(true);
+      }
+      sprite.setAlpha(0.92);
+    });
+
+    for (const [type, sprite] of entity.sprites) {
+      if (!seenTypes.has(type)) {
+        sprite.setVisible(false);
+        sprite.setActive(false);
       }
     }
   }
@@ -1612,17 +1728,15 @@ class FrontierMapScene extends Phaser.Scene {
 
     const container = this.add.container(0, 0);
     const beacon = this.add.circle(0, 0, 24, 0x53c8d2, 0.14);
-    const pin = this.add.triangle(0, -4, 0, 0, 18, 18, 9, 30, MAP_COLOR_ALLIED, 0.92);
-    const core = this.add.circle(0, 2, 4, MAP_COLOR_NEUTRAL, 0.94);
-    container.add([beacon, pin, core]);
+    const sprite = this.add.image(0, 0, "alliance-marker").setOrigin(0.5, 0.7);
+    container.add([beacon, sprite]);
     this.objectLayer?.add(container);
 
     const bundle: AllianceMarkerGraphicBundle = {
       kind: "alliance-marker",
       container,
       beacon,
-      pin,
-      core,
+      sprite,
     };
     this.staticGraphicCache.set(key, bundle);
     return bundle;
@@ -1717,9 +1831,8 @@ class FrontierMapScene extends Phaser.Scene {
     const container = this.add.container(0, 0);
     const territory = this.add.circle(0, 0, 64, MAP_COLOR_ALLIED_TERRITORY, 0.08);
     const aura = this.add.circle(0, 0, 38, MAP_COLOR_HOME, 0.18);
-    const marker = this.add.circle(0, 0, 20, MAP_COLOR_HOME, 0.98);
-    const core = this.add.rectangle(0, 0, 12, 12, 0x1b100b, 0.72).setAngle(45);
-    container.add([territory, aura, marker, core]);
+    const sprite = this.add.image(0, 0, "city-marker").setOrigin(0.5, 0.55);
+    container.add([territory, aura, sprite]);
     this.objectLayer?.add(container);
 
     const bundle: CityGraphicBundle = {
@@ -1727,8 +1840,7 @@ class FrontierMapScene extends Phaser.Scene {
       container,
       territory,
       aura,
-      marker,
-      core,
+      sprite,
     };
     this.staticGraphicCache.set(key, bundle);
     return bundle;
@@ -2063,8 +2175,15 @@ class FrontierMapScene extends Phaser.Scene {
 
       const color = getMarchColor(march.objective);
       const shadow = this.add.ellipse(0, 14, 34, 14, 0x000000, 0.26);
-      const troopLead = this.add.ellipse(-10, 2, 11, 11, 0xf6e0b8, 0.98);
-      const troopSupport = this.add.ellipse(7, 4, 9, 9, 0xe8d1a3, 0.94);
+      const troopLead = this.add
+        .image(-9, 2, "march-soldier")
+        .setOrigin(0.5, 0.5)
+        .setScale(0.95);
+      const troopSupport = this.add
+        .image(7, 4, "march-soldier")
+        .setOrigin(0.5, 0.5)
+        .setScale(0.78)
+        .setAlpha(0.92);
       const bannerPole = this.add.rectangle(4, -8, 3, 24, 0x23120d, 0.9);
       const bannerPennant = this.add.triangle(10, -12, 0, 0, 18, 8, 0, 16, color, 0.98);
       const compactToken = this.add.circle(0, 0, 12, color, 0.98);
@@ -2154,8 +2273,7 @@ class FrontierMapScene extends Phaser.Scene {
       this.routeLayer.add(routeGraphic);
 
       const shadow = this.add.ellipse(0, 10, 24, 10, 0x000000, 0.22);
-      const body = this.add.circle(0, 0, 8, MAP_COLOR_SCOUT, 0.98);
-      body.setStrokeStyle(2, 0xe4f6ff, 0.82);
+      const body = this.add.image(0, 0, "scout-runner").setOrigin(0.5, 0.5);
       const pennant = this.add.triangle(10, -2, 0, 0, 14, 5, 0, 10, 0xdaf7ff, 0.96);
       const container = this.add.container(from.x, from.y, [shadow, body, pennant]);
       this.unitLayer.add(container);
@@ -2857,6 +2975,7 @@ export default function WorldMap({
   marches,
   scoutTrails,
   reportMarkers,
+  playerCityBuildings,
   filter,
   showPaths,
   showScoutTrails,
@@ -2988,6 +3107,7 @@ export default function WorldMap({
       marches,
       scoutTrails,
       reportMarkers,
+      playerCityBuildings: playerCityBuildings ?? [],
       filter,
       showPaths,
       showScoutTrails,
@@ -3009,6 +3129,7 @@ export default function WorldMap({
     cities,
     filter,
     reportMarkers,
+    playerCityBuildings,
     showPaths,
     showReports,
     showScoutTrails,

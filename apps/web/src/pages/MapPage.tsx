@@ -2423,6 +2423,10 @@ export function MapPage() {
                 marches={worldChunk.marches}
                 scoutTrails={scoutTrails}
                 reportMarkers={reportMarkers}
+                playerCityBuildings={state.city.buildings.map((building) => ({
+                  type: building.type,
+                  level: building.level,
+                }))}
                 filter={filter}
                 showPaths={showPaths}
                 showScoutTrails={showScoutTrails}
