@@ -207,15 +207,13 @@ interface ReportGraphicBundle extends BaseStaticGraphicBundle {
 interface PoiCampGraphicBundle extends BaseStaticGraphicBundle {
   kind: "poi-camp";
   aura: Phaser.GameObjects.Arc;
-  fortOuter: Phaser.GameObjects.Rectangle;
-  fortInner: Phaser.GameObjects.Rectangle;
+  sprite: Phaser.GameObjects.Image;
 }
 
 interface PoiNodeGraphicBundle extends BaseStaticGraphicBundle {
   kind: "poi-node";
   aura: Phaser.GameObjects.Arc;
-  marker: Phaser.GameObjects.Arc;
-  core: Phaser.GameObjects.Arc;
+  sprite: Phaser.GameObjects.Image;
 }
 
 interface CityGraphicBundle extends BaseStaticGraphicBundle {
@@ -455,6 +453,19 @@ class FrontierMapScene extends Phaser.Scene {
 
   constructor() {
     super("frontier-map");
+  }
+
+  preload() {
+    const spriteSize = { width: 40, height: 40 } as const;
+    this.load.svg(
+      "poi-camp-barbarian",
+      "/assets/icons/map/poi_camp_barbarian.svg",
+      spriteSize,
+    );
+    this.load.svg("poi-node-wood", "/assets/icons/resources/wood.svg", spriteSize);
+    this.load.svg("poi-node-stone", "/assets/icons/resources/stone.svg", spriteSize);
+    this.load.svg("poi-node-food", "/assets/icons/resources/food.svg", spriteSize);
+    this.load.svg("poi-node-gold", "/assets/icons/resources/gold.svg", spriteSize);
   }
 
   create() {
@@ -1284,8 +1295,6 @@ class FrontierMapScene extends Phaser.Scene {
           hashCoordinate(poi.x, poi.y),
         );
         poiBundle.aura.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
-        poiBundle.fortOuter.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.95 : 0.55);
-        poiBundle.fortOuter.setStrokeStyle(2, MAP_COLOR_REPORT, 0.95);
         this.addAmbientPulse(poiBundle.aura, {
           minScale: 0.96,
           maxScale: 1.18,
@@ -1293,11 +1302,11 @@ class FrontierMapScene extends Phaser.Scene {
           maxAlpha: poi.state === "ACTIVE" ? 0.2 : 0.1,
           duration: 1800 + (hashCoordinate(poi.x, poi.y) % 5) * 220,
         });
-        this.addAmbientPulse(poiBundle.fortOuter, {
-          minScale: 0.98,
-          maxScale: 1.04,
-          minAlpha: poi.state === "ACTIVE" ? 0.74 : 0.42,
-          maxAlpha: poi.state === "ACTIVE" ? 0.96 : 0.62,
+        this.addAmbientPulse(poiBundle.sprite, {
+          minScale: 0.94,
+          maxScale: 1.02,
+          minAlpha: poi.state === "ACTIVE" ? 0.85 : 0.55,
+          maxAlpha: poi.state === "ACTIVE" ? 1 : 0.78,
           duration: 2000 + (hashCoordinate(poi.x + 7, poi.y) % 5) * 180,
         });
       } else {
@@ -1308,8 +1317,7 @@ class FrontierMapScene extends Phaser.Scene {
           hashCoordinate(poi.x, poi.y),
         );
         poiBundle.aura.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
-        poiBundle.marker.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.96 : 0.62);
-        poiBundle.marker.setStrokeStyle(2, MAP_COLOR_REPORT, 0.95);
+        poiBundle.sprite.setTexture(this.poiNodeTextureKey(poi.resourceType));
         this.addAmbientPulse(poiBundle.aura, {
           minScale: 0.96,
           maxScale: 1.1,
@@ -1317,11 +1325,11 @@ class FrontierMapScene extends Phaser.Scene {
           maxAlpha: poi.state === "ACTIVE" ? 0.2 : 0.1,
           duration: 1800 + (hashCoordinate(poi.x, poi.y) % 5) * 220,
         });
-        this.addAmbientPulse(poiBundle.marker, {
-          minScale: 0.98,
-          maxScale: 1.04,
-          minAlpha: poi.state === "ACTIVE" ? 0.8 : 0.45,
-          maxAlpha: poi.state === "ACTIVE" ? 0.98 : 0.66,
+        this.addAmbientPulse(poiBundle.sprite, {
+          minScale: 0.94,
+          maxScale: 1.02,
+          minAlpha: poi.state === "ACTIVE" ? 0.92 : 0.6,
+          maxAlpha: poi.state === "ACTIVE" ? 1 : 0.82,
           duration: 1700 + (hashCoordinate(poi.x, poi.y + 9) % 5) * 200,
         });
       }
@@ -1650,17 +1658,15 @@ class FrontierMapScene extends Phaser.Scene {
 
     const container = this.add.container(0, 0);
     const aura = this.add.circle(0, 0, 34, MAP_COLOR_HOSTILE, 0.14);
-    const fortOuter = this.add.rectangle(0, 0, 44, 44, MAP_COLOR_HOSTILE, 0.95).setAngle(45);
-    const fortInner = this.add.rectangle(0, 0, 18, 18, 0x2a130e, 0.78).setAngle(45);
-    container.add([aura, fortOuter, fortInner]);
+    const sprite = this.add.image(0, 0, "poi-camp-barbarian").setOrigin(0.5, 0.5);
+    container.add([aura, sprite]);
     this.objectLayer?.add(container);
 
     const bundle: PoiCampGraphicBundle = {
       kind: "poi-camp",
       container,
       aura,
-      fortOuter,
-      fortInner,
+      sprite,
     };
     this.staticGraphicCache.set(key, bundle);
     return bundle;
@@ -1674,20 +1680,32 @@ class FrontierMapScene extends Phaser.Scene {
 
     const container = this.add.container(0, 0);
     const aura = this.add.circle(0, 0, 34, MAP_COLOR_GATHER, 0.14);
-    const marker = this.add.circle(0, 0, 18, MAP_COLOR_GATHER, 0.96);
-    const core = this.add.circle(0, 0, 8, 0x1b100b, 0.65);
-    container.add([aura, marker, core]);
+    const sprite = this.add.image(0, 0, "poi-node-wood").setOrigin(0.5, 0.5);
+    container.add([aura, sprite]);
     this.objectLayer?.add(container);
 
     const bundle: PoiNodeGraphicBundle = {
       kind: "poi-node",
       container,
       aura,
-      marker,
-      core,
+      sprite,
     };
     this.staticGraphicCache.set(key, bundle);
     return bundle;
+  }
+
+  private poiNodeTextureKey(resourceType: PoiView["resourceType"]) {
+    switch (resourceType) {
+      case "STONE":
+        return "poi-node-stone";
+      case "FOOD":
+        return "poi-node-food";
+      case "GOLD":
+        return "poi-node-gold";
+      case "WOOD":
+      default:
+        return "poi-node-wood";
+    }
   }
 
   private getOrCreateCityGraphicBundle(key: string) {
@@ -2622,7 +2640,7 @@ class FrontierMapScene extends Phaser.Scene {
   }
 
   private addAmbientPulse(
-    target: Phaser.GameObjects.Shape,
+    target: Phaser.GameObjects.Shape | Phaser.GameObjects.Image,
     options: {
       minScale: number;
       maxScale: number;

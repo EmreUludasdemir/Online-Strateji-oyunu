@@ -9,6 +9,7 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { FeedCardShell, PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
 import { ResourcePill } from "../components/ui/ResourcePill";
+import { buildingIcon } from "../components/ui/buildingIcons";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
 import { trackAnalyticsOnce } from "../lib/analytics";
@@ -188,6 +189,7 @@ export function DashboardPage() {
             nextLevel: building.nextLevel,
             status,
             hint,
+            iconSrc: buildingIcon(building.type),
           };
         })
         .sort((left, right) => (left.type === selectedDistrictType ? -1 : right.type === selectedDistrictType ? 1 : left.y - right.y)),
@@ -563,6 +565,12 @@ export function DashboardPage() {
                     }
                     onClick={() => setSelectedDistrictType(node.type)}
                   >
+                    <img
+                      src={node.iconSrc}
+                      alt=""
+                      aria-hidden="true"
+                      className={styles.cityNodeIcon}
+                    />
                     <span className={styles.cityNodeLevel}>L{node.level}</span>
                     <strong className={styles.cityNodeTitle}>{node.label}</strong>
                     <span className={styles.cityNodeHint}>{node.hint}</span>

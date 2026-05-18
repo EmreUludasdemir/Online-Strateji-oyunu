@@ -456,6 +456,32 @@
   border-left: 3px solid var(--color-secondary);
 }
 
+.cityNodeIcon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  justify-self: start;
+  margin-bottom: 0.15rem;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
+  transition:
+    transform var(--motion-smooth),
+    filter var(--motion-base);
+}
+
+.cityNode:hover .cityNodeIcon,
+.cityNode:focus-visible .cityNodeIcon {
+  transform: scale(1.08) rotate(-2deg);
+  filter: drop-shadow(0 0 8px rgba(233, 193, 118, 0.4));
+}
+
+.cityNodeSelected .cityNodeIcon {
+  filter: drop-shadow(0 0 10px rgba(233, 193, 118, 0.55));
+}
+
+.cityNodeActive .cityNodeIcon {
+  animation: liftIn 700ms var(--motion-smooth) both;
+}
+
 .cityNodeLevel {
   color: var(--color-outline);
   font-size: 0.625rem;

@@ -310,6 +310,43 @@
   transform: translateY(-1px);
 }
 
+.resourcePill[data-resource="wood"] {
+  border-left-color: #965a3b;
+}
+
+.resourcePill[data-resource="stone"] {
+  border-left-color: #8a9097;
+}
+
+.resourcePill[data-resource="food"] {
+  border-left-color: #d2ae64;
+}
+
+.resourcePill[data-resource="gold"] {
+  border-left-color: #e2c275;
+}
+
+.resourcePillLeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.resourceIcon {
+  width: 22px;
+  height: 22px;
+  display: block;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+  transition: transform var(--motion-fast), filter var(--motion-base);
+}
+
+.resourcePill:hover .resourceIcon {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 6px rgba(233, 193, 118, 0.35));
+}
+
 .resourceLabel {
   color: var(--color-on-secondary-container);
   font-size: 0.75rem;
