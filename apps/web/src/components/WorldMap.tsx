@@ -162,6 +162,18 @@ interface ScoutTrailEntity {
   lastTrailAt: number;
 }
 
+interface AmbientMoteEntity {
+  glow: Phaser.GameObjects.Arc;
+  body: Phaser.GameObjects.Arc;
+  baseX: number;
+  baseY: number;
+  driftX: number;
+  driftY: number;
+  radius: number;
+  seed: number;
+  speed: number;
+}
+
 interface BaseStaticGraphicBundle {
   kind: "alliance-marker" | "report" | "poi-camp" | "poi-node" | "city";
   container: Phaser.GameObjects.Container;
@@ -367,6 +379,7 @@ class FrontierMapScene extends Phaser.Scene {
   private onCameraChange: (state: MapCameraState) => void = () => undefined;
 
   private terrainLayer?: Phaser.GameObjects.Layer;
+  private ambientLayer?: Phaser.GameObjects.Layer;
   private objectLayer?: Phaser.GameObjects.Layer;
   private routeLayer?: Phaser.GameObjects.Layer;
   private unitLayer?: Phaser.GameObjects.Layer;
@@ -382,11 +395,13 @@ class FrontierMapScene extends Phaser.Scene {
   private reportLookup = new Map<string, PointLookup<MapReportMarkerView>>();
   private staticLabelCache = new Map<string, Phaser.GameObjects.Text>();
   private staticGraphicCache = new Map<string, StaticGraphicBundle>();
+  private ambientMotes: AmbientMoteEntity[] = [];
   private marchEntities = new Map<string, AnimatedMarchEntity>();
   private scoutEntities = new Map<string, ScoutTrailEntity>();
   private selectionObjects: Phaser.GameObjects.GameObject[] = [];
   private selectionDetailObjects: Phaser.GameObjects.GameObject[] = [];
   private lastCameraState: MapCameraState | null = null;
+  private lastAmbientSignature: string | null = null;
   private lastObjectLayerSignature: string | null = null;
   private lastRouteSnapshot: RouteLayerSnapshot | null = null;
   private lastSelectionDetailSignature: string | null = null;
@@ -419,6 +434,7 @@ class FrontierMapScene extends Phaser.Scene {
         : false;
     this.input.mouse?.disableContextMenu();
     this.terrainLayer = this.add.layer();
+    this.ambientLayer = this.add.layer();
     this.objectLayer = this.add.layer();
     this.routeLayer = this.add.layer();
     this.unitLayer = this.add.layer();
@@ -458,6 +474,7 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     this.updateRouteLayer();
+    this.updateAmbientMotes();
     this.updateMarchEntities();
     this.updateScoutTrails();
     this.updateSelectionFxPosition();
@@ -859,6 +876,97 @@ class FrontierMapScene extends Phaser.Scene {
       this.gridGraphics.lineStyle(2, 0xf4d79c, 0.12);
       this.gridGraphics.lineBetween(halfWorld, 0, halfWorld, this.worldPixelSize);
       this.gridGraphics.lineBetween(0, halfWorld, this.worldPixelSize, halfWorld);
+    }
+
+    this.syncAmbientMotes();
+  }
+
+  private syncAmbientMotes() {
+    const signature = [
+      this.currentDetailLevel,
+      this.worldSize,
+      this.tiles.map((tile) => `${tile.x},${tile.y},${tile.state}`).join("|"),
+    ].join(";");
+
+    if (signature === this.lastAmbientSignature) {
+      return;
+    }
+
+    this.lastAmbientSignature = signature;
+    this.clearAmbientMotes();
+
+    if (!this.ambientLayer || this.reducedMotion || this.currentDetailLevel === "far") {
+      return;
+    }
+
+    const maxMotes = this.currentDetailLevel === "near" ? 38 : 24;
+    const candidates = this.tiles
+      .filter((tile) => tile.state !== "HIDDEN")
+      .map((tile) => ({
+        tile,
+        score: hashCoordinate(tile.x + 17, tile.y + 29),
+      }))
+      .filter(({ score }) => score % 3 !== 0)
+      .sort((left, right) => left.score - right.score)
+      .slice(0, maxMotes);
+
+    for (const { tile, score } of candidates) {
+      const localRange = MAP_TILE_WORLD_SIZE - 36;
+      const baseX = tile.x * MAP_TILE_WORLD_SIZE + 18 + (score % localRange);
+      const baseY = tile.y * MAP_TILE_WORLD_SIZE + 18 + (Math.floor(score / 97) % localRange);
+      const radius = tile.state === "VISIBLE" ? 2.2 + (score % 3) * 0.45 : 1.8;
+      const color =
+        tile.state === "VISIBLE"
+          ? score % 5 === 0
+            ? MAP_COLOR_NEUTRAL
+            : score % 2 === 0
+              ? MAP_COLOR_ALLIED
+              : 0x83b982
+          : 0x5f7169;
+      const glow = this.add.circle(baseX, baseY, radius * 4.2, color, tile.state === "VISIBLE" ? 0.06 : 0.035);
+      const body = this.add.circle(baseX, baseY, radius, color, tile.state === "VISIBLE" ? 0.36 : 0.22);
+      this.ambientLayer.add([glow, body]);
+      this.ambientMotes.push({
+        glow,
+        body,
+        baseX,
+        baseY,
+        driftX: 5 + (score % 7),
+        driftY: 4 + (Math.floor(score / 11) % 6),
+        radius,
+        seed: score % 1000,
+        speed: 980 + (score % 900),
+      });
+    }
+  }
+
+  private clearAmbientMotes() {
+    for (const mote of this.ambientMotes) {
+      mote.glow.destroy();
+      mote.body.destroy();
+    }
+    this.ambientMotes = [];
+  }
+
+  private updateAmbientMotes() {
+    if (this.ambientMotes.length === 0 || this.reducedMotion) {
+      return;
+    }
+
+    for (const mote of this.ambientMotes) {
+      const phase = this.time.now / mote.speed + mote.seed;
+      const x = mote.baseX + Math.sin(phase) * mote.driftX;
+      const y = mote.baseY + Math.cos(phase * 0.78) * mote.driftY;
+      const shimmer = 0.5 + Math.sin(phase * 1.7) * 0.5;
+      const bodyAlpha = 0.18 + shimmer * 0.28;
+      const glowAlpha = 0.025 + shimmer * 0.055;
+      const scale = 0.82 + shimmer * 0.42;
+      mote.body.setPosition(x, y);
+      mote.glow.setPosition(x, y);
+      mote.body.setAlpha(bodyAlpha);
+      mote.glow.setAlpha(glowAlpha);
+      mote.body.setScale(scale);
+      mote.glow.setScale(0.9 + shimmer * 0.38);
     }
   }
 

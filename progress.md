@@ -232,3 +232,9 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - A direct Playwright map pass loaded `/app/map`, focused a visible POI, triggered wheel zoom and right-click field-command interaction, confirmed `render_game_to_text()` reported `readyPhase: "loaded"`, and checked the raw Phaser canvas pixels were nonblank.
   - `corepack pnpm smoke:e2e` is currently blocked before the map by stale smoke expectations: the scenario waits for exactly `6` research rows on dashboard, while current live state exposes `11` research entries. Server/API calls returned 200 and this did not point to the animation changes.
 - TODO: Update `scripts/smoke_kingdom_core.mjs` dashboard readiness to match the expanded research catalog before using full `smoke:e2e` as a release gate again.
+- 2026-05-18: Continued the animation pass after the follow-up prompt `geliştirmelere devam`. Added a dedicated Phaser ambient layer between terrain and objects, with deterministic low-density motes over discovered/visible map tiles. The motes drift and shimmer at near/mid detail, stay behind cities/POIs/labels, and are disabled for far zoom or reduced-motion users.
+- 2026-05-18: Validation after the ambient map layer:
+  - `corepack pnpm --filter @frontier/web build` passed.
+  - `corepack pnpm --filter @frontier/web test` passed.
+  - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/web-game-animation-pass-2` passed during local verification, then generated artifacts were cleaned.
+  - A direct Playwright map pass loaded `/app/map`, focused the map near a POI, triggered wheel zoom, confirmed `readyPhase: "loaded"`, probed the raw Phaser canvas as nonblank, and visually checked the raw canvas render before cleanup.
