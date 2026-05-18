@@ -1,7 +1,7 @@
 export const MAP_TILE_WORLD_SIZE = 128;
 export const MAP_CAMERA_DEFAULT_ZOOM = 0.9;
-export const MAP_CAMERA_MIN_ZOOM = 0.45;
-export const MAP_CAMERA_MAX_ZOOM = 1.8;
+export const MAP_CAMERA_MIN_ZOOM = 0.28;
+export const MAP_CAMERA_MAX_ZOOM = 2.55;
 
 export type MapDetailLevel = "far" | "mid" | "near";
 
@@ -35,10 +35,10 @@ export interface ScoutTrailView {
 }
 
 export function getMapDetailLevel(zoom: number): MapDetailLevel {
-  if (zoom <= 0.84) {
+  if (zoom <= 0.72) {
     return "far";
   }
-  if (zoom <= 1.26) {
+  if (zoom <= 1.32) {
     return "mid";
   }
   return "near";

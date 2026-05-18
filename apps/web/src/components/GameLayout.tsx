@@ -104,6 +104,24 @@ declare global {
       fieldCommandLabel: string | null;
       fieldCommandOpenSource: "canvas" | "automation-hook" | null;
     } | null;
+    frontierMapKingdom?: {
+      currentTier: {
+        id: string;
+        label: string;
+        shortLabel: string;
+        description: string;
+      };
+      passCount: number;
+      sanctuaryCount: number;
+      nearestPasses: Array<{
+        id: string;
+        label: string;
+        tier: string;
+        x: number;
+        y: number;
+        distance: number;
+      }>;
+    } | null;
     focus_map_target?: (command: {
       kind?: "TILE" | "CITY" | "POI";
       label?: string;
@@ -619,6 +637,7 @@ export function GameLayout() {
       const cameraView = window.frontierMapCamera ?? null;
       const fieldCommand = window.frontierMapFieldCommand ?? null;
       const mapUi = window.frontierMapUi ?? null;
+      const mapKingdom = window.frontierMapKingdom ?? null;
       const mapDiagnostics = window.frontierMapDiagnostics ?? null;
       const lastError = window.frontierLastError ?? null;
 
@@ -674,6 +693,7 @@ export function GameLayout() {
           camera: cameraView,
           fieldCommand,
           ui: mapUi,
+          kingdom: mapKingdom,
           diagnostics: mapDiagnostics,
           lastError,
           center: worldChunk?.center,

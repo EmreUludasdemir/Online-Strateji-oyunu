@@ -45,6 +45,37 @@
   animation: liftIn 420ms var(--motion-smooth) both;
 }
 
+.hero::after,
+.mapFrame::after,
+.targetCard::after,
+.marchCard::after,
+.summaryCard::after,
+.commandCard::after,
+.campaignCard::after {
+  content: "";
+  position: absolute;
+  inset: -42% auto -42% -24%;
+  width: 18%;
+  background: linear-gradient(90deg, transparent, rgba(244, 220, 166, 0.16), rgba(114, 206, 209, 0.08), transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-160%) skewX(-17deg);
+}
+
+.hero:hover::after,
+.mapFrame:hover::after,
+.targetCard:hover::after,
+.marchCard:hover::after,
+.summaryCard:hover::after,
+.commandCard:hover::after,
+.campaignCard:hover::after,
+.targetCard:focus-within::after,
+.marchCard:focus-within::after,
+.commandCard:focus-within::after,
+.campaignCard:focus-within::after {
+  animation: tacticalSweep 1150ms var(--motion-smooth);
+}
+
 .hero,
 .mapFrame {
   padding: 1rem;
@@ -117,7 +148,7 @@
 }
 
 .summaryGrid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .campaignDeck {
@@ -1150,6 +1181,10 @@
     grid-template-columns: 1fr;
   }
 
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .cameraRail {
     top: 10.9rem;
     width: min(680px, calc(100% - 2rem));
@@ -1254,5 +1289,31 @@
   100% {
     opacity: 0;
     transform: scale(1.5);
+  }
+}
+
+@keyframes tacticalSweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-160%) skewX(-17deg);
+  }
+  35% {
+    opacity: 0.44;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(760%) skewX(-17deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::after,
+  .mapFrame::after,
+  .targetCard::after,
+  .marchCard::after,
+  .summaryCard::after,
+  .commandCard::after,
+  .campaignCard::after {
+    animation: none !important;
   }
 }

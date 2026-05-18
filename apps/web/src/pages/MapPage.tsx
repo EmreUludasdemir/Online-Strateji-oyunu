@@ -24,6 +24,7 @@ import { Button } from "../components/ui/Button";
 import { SummaryMetricGrid } from "../components/ui/PageHero";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
+import { getKingdomPasses, getKingdomRingRadii, getKingdomSanctuaries, getKingdomTier } from "../components/kingdomMap";
 import { buildChunkPrefetchRequests, mergeWorldChunks } from "../components/worldMapData";
 import { getWorldRegions } from "../components/worldRegions";
 import {
@@ -64,9 +65,9 @@ const BASE_MARCH_SECONDS_PER_TILE = 20;
 const MIN_MARCH_SECONDS = 15;
 
 const detailGuideSteps: Array<{ id: MapDetailLevel; label: string; hint: string }> = [
-  { id: "far", label: "Far Scan", hint: "Regional labels and banner lanes" },
-  { id: "mid", label: "Frontier Read", hint: "Balanced routes, targets, and reports" },
-  { id: "near", label: "Siege Focus", hint: "Tactical tiles, rings, and pathing" },
+  { id: "far", label: "Kingdom Scan", hint: "Tier rings, passes, and alliance lanes" },
+  { id: "mid", label: "Frontier Read", hint: "Fog blocks, routes, targets, and reports" },
+  { id: "near", label: "Siege Focus", hint: "Tactical tiles, scout trails, and gates" },
 ];
 
 function createTroopPayload(stateTroops: Array<{ type: TroopType; quantity: number }>): TroopStock {
@@ -900,6 +901,51 @@ export function MapPage() {
   const [minimapPing, setMinimapPing] = useState<{ x: number; y: number } | null>(null);
   const minimapWorldSize = worldChunk?.size ?? 64;
   const minimapTiles = worldChunk?.tiles ?? [];
+  const currentTier = useMemo(
+    () => getKingdomTier(cameraView.centerTileX, cameraView.centerTileY, minimapWorldSize),
+    [cameraView.centerTileX, cameraView.centerTileY, minimapWorldSize],
+  );
+  const kingdomPasses = useMemo(() => getKingdomPasses(minimapWorldSize), [minimapWorldSize]);
+  const kingdomSanctuaries = useMemo(() => getKingdomSanctuaries(minimapWorldSize), [minimapWorldSize]);
+  const kingdomRingRadii = useMemo(() => getKingdomRingRadii(minimapWorldSize), [minimapWorldSize]);
+  const nearbyKingdomPasses = useMemo(
+    () =>
+      kingdomPasses
+        .map((pass) => ({
+          ...pass,
+          distance: Math.hypot(pass.x - cameraView.centerTileX, pass.y - cameraView.centerTileY),
+        }))
+        .sort((left, right) => left.distance - right.distance)
+        .slice(0, 3),
+    [cameraView.centerTileX, cameraView.centerTileY, kingdomPasses],
+  );
+  const kingdomMapState = useMemo(
+    () => ({
+      currentTier: {
+        id: currentTier.id,
+        label: currentTier.label,
+        shortLabel: currentTier.shortLabel,
+        description: currentTier.description,
+      },
+      passCount: kingdomPasses.length,
+      sanctuaryCount: kingdomSanctuaries.length,
+      nearestPasses: nearbyKingdomPasses.map((pass) => ({
+        id: pass.id,
+        label: pass.label,
+        tier: pass.tier,
+        x: pass.x,
+        y: pass.y,
+        distance: Number(pass.distance.toFixed(1)),
+      })),
+    }),
+    [currentTier, kingdomPasses.length, kingdomSanctuaries.length, nearbyKingdomPasses],
+  );
+  useEffect(() => {
+    window.frontierMapKingdom = kingdomMapState;
+    return () => {
+      window.frontierMapKingdom = null;
+    };
+  }, [kingdomMapState]);
   const minimapStep = useMemo(() => Math.max(1, Math.ceil(minimapWorldSize / 32)), [minimapWorldSize]);
   const minimapCells = useMemo(() => {
     const tileMap = new Map(minimapTiles.map((tile) => [`${tile.x}:${tile.y}`, tile.state] as const));
@@ -931,17 +977,6 @@ export function MapPage() {
   const worldRegions = useMemo(() => getWorldRegions(minimapWorldSize), [minimapWorldSize]);
   const visibleAllianceMarkers = useMemo(() => allianceMarkers.slice(0, 4), [allianceMarkers]);
   const recentAllianceMarkers = useMemo(() => allianceMarkers.slice(0, 6), [allianceMarkers]);
-  const currentRegion = useMemo(
-    () =>
-      worldRegions.find(
-        (region) =>
-          cameraView.centerTileX >= region.x0 &&
-          cameraView.centerTileX <= region.x1 &&
-          cameraView.centerTileY >= region.y0 &&
-          cameraView.centerTileY <= region.y1,
-      ) ?? null,
-    [cameraView.centerTileX, cameraView.centerTileY, worldRegions],
-  );
   const selectedMarkerTarget = useMemo(() => {
     if (selectedCity && !selectedCity.isCurrentPlayer) {
       return {
@@ -1211,7 +1246,7 @@ export function MapPage() {
         ? "Tracked columns keep timing, cargo, and retarget decisions anchored while the battlefield keeps moving underneath."
         : selectedTargetName
           ? "Selection lock keeps the target readable while zoom layering strips away the noise the map does not need yet."
-          : "Drag to pan, wheel to zoom, and right-click the world to open fast field commands without leaving the map stage.";
+          : "Drag to pan, use the wider smooth zoom ladder, and scout through fog before committing around passes or tier borders.";
   const interactionTone = composerMode ? "warning" : selectedMarch ? "info" : fieldCommand ? "success" : "info";
   const tacticalObjectiveLabel = selectedMarch
     ? getMarchObjectiveLabel(selectedMarch.objective)
@@ -1925,7 +1960,7 @@ export function MapPage() {
             <p className={styles.muted}>{copy.map.title}</p>
             <h2 className={styles.heroTitle}>Frontier Theater</h2>
             <p className={styles.heroLead}>
-              A premium command view for the frontier: sweep the kingdom with drag navigation, read the field in layered HUD lanes, and launch scouts or armies from a cleaner tactical flow.
+              Sweep a fog-covered kingdom with wide zoom, tier rings, mountain passes, scout trails, and cleaner tactical launch flow.
             </p>
           </div>
           <Badge tone="info">
@@ -1945,18 +1980,22 @@ export function MapPage() {
             <span className={styles.muted}>{copy.map.activeMarches}</span>
             <strong className={styles.summaryValue}>{formatNumber(activeMarchCount)}</strong>
           </article>
+          <article className={styles.summaryCard}>
+            <span className={styles.muted}>Kingdom tier</span>
+            <strong className={styles.summaryValue}>{currentTier.shortLabel}</strong>
+          </article>
         </div>
         <div className={styles.campaignDeck}>
           <article className={styles.campaignCard}>
             <div className={styles.campaignHeader}>
               <div>
                 <p className={styles.campaignEyebrow}>Theater Directive</p>
-                <strong className={styles.campaignValue}>{currentRegion?.label ?? "Outer frontier"}</strong>
+                <strong className={styles.campaignValue}>{currentTier.label}</strong>
               </div>
               <Badge tone={theaterStatusTone}>{theaterStatusLabel}</Badge>
             </div>
             <p className={styles.campaignCopy}>
-              Camera anchor sits at {cameraView.centerTileX},{cameraView.centerTileY}. Drag the world to scout cleanly, then lean on zoom layering to surface labels only when the map can carry them.
+              Camera anchor sits at {cameraView.centerTileX},{cameraView.centerTileY}. Scout through fog, read the ring you are in, then use passes to plan movement between mountain-bounded zones.
             </p>
             <div className={styles.campaignMetaGrid}>
               <article className={styles.campaignMetaCard}>
@@ -1966,6 +2005,14 @@ export function MapPage() {
               <article className={styles.campaignMetaCard}>
                 <span className={styles.campaignMetaLabel}>Chunk radius</span>
                 <strong className={styles.campaignMetaValue}>{formatNumber(chunkRequest.radius)}</strong>
+              </article>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Pass network</span>
+                <strong className={styles.campaignMetaValue}>{formatNumber(kingdomPasses.length)}</strong>
+              </article>
+              <article className={styles.campaignMetaCard}>
+                <span className={styles.campaignMetaLabel}>Nearest pass</span>
+                <strong className={styles.campaignMetaValue}>{nearbyKingdomPasses[0]?.label ?? "-"}</strong>
               </article>
             </div>
           </article>
@@ -2171,6 +2218,24 @@ export function MapPage() {
                       fill={getMinimapStateColor(cell.state)}
                     />
                   ))}
+                  <circle
+                    cx={minimapWorldSize / 2}
+                    cy={minimapWorldSize / 2}
+                    r={kingdomRingRadii.inner}
+                    fill="none"
+                    stroke="#a888d8"
+                    strokeOpacity="0.42"
+                    strokeWidth="0.7"
+                  />
+                  <circle
+                    cx={minimapWorldSize / 2}
+                    cy={minimapWorldSize / 2}
+                    r={kingdomRingRadii.outer}
+                    fill="none"
+                    stroke="#6ca7d8"
+                    strokeOpacity="0.34"
+                    strokeWidth="0.7"
+                  />
                   {worldRegions.map((region) => (
                     <g key={region.id}>
                       <rect
@@ -2194,6 +2259,33 @@ export function MapPage() {
                       >
                         {region.label}
                       </text>
+                    </g>
+                  ))}
+                  {kingdomPasses.map((pass) => (
+                    <g key={pass.id}>
+                      <rect
+                        x={pass.x - 0.55}
+                        y={pass.y - 0.2}
+                        width="1.1"
+                        height="0.4"
+                        rx="0.2"
+                        fill={pass.tier === "TIER_3" ? "#d7b4ff" : "#9fd2ff"}
+                        opacity="0.86"
+                        transform={`rotate(${(pass.angle * 180) / Math.PI} ${pass.x} ${pass.y})`}
+                      />
+                      <title>{pass.label}</title>
+                    </g>
+                  ))}
+                  {kingdomSanctuaries.map((sanctuary) => (
+                    <g key={sanctuary.id}>
+                      <polygon
+                        points={`${sanctuary.x},${sanctuary.y - 0.85} ${sanctuary.x + 0.75},${sanctuary.y} ${sanctuary.x},${sanctuary.y + 0.85} ${sanctuary.x - 0.75},${sanctuary.y}`}
+                        fill={sanctuary.color}
+                        fillOpacity={sanctuary.id === "crown-temple" ? "0.95" : "0.72"}
+                        stroke="#f8f0dd"
+                        strokeWidth="0.18"
+                      />
+                      <title>{sanctuary.label}</title>
                     </g>
                   ))}
                   {worldChunk.pois.map((poi) => (
@@ -2278,7 +2370,9 @@ export function MapPage() {
                   onClick={handleMinimapClick}
                 />
               </div>
-              <p className={styles.minimapHint}>Click the minimap to re-center the camera and bounce the battlefield focus.</p>
+              <p className={styles.minimapHint}>
+                Click to re-center. Rings show tier zones; bright gates mark pass corridors through the mountain bands.
+              </p>
               {visibleAllianceMarkers.length > 0 ? (
                 <div className={styles.minimapMarkerRow}>
                   {visibleAllianceMarkers.map((marker) => (
@@ -2297,7 +2391,7 @@ export function MapPage() {
             <div className={styles.mapDock}>
               <article className={styles.dockCard}>
                 <span className={styles.dockEyebrow}>Field Lens</span>
-                <strong className={styles.dockStrong}>{currentRegion?.label ?? cameraView.detailLevel.toUpperCase()}</strong>
+                <strong className={styles.dockStrong}>{currentTier.shortLabel}</strong>
                 <p className={styles.dockCopy}>Detail {cameraView.detailLevel} / radius {chunkRequest.radius} / center {cameraView.centerTileX},{cameraView.centerTileY}</p>
               </article>
               <article className={styles.dockCard}>

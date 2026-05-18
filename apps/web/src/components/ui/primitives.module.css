@@ -91,7 +91,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #ffe6ba, var(--color-primary-fixed));
+  background: linear-gradient(180deg, var(--color-primary-fixed-dim), var(--color-primary-fixed));
   box-shadow: var(--shadow-gold-soft);
 }
 

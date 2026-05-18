@@ -4,6 +4,14 @@ import { type MutableRefObject, useEffect, useRef, useState } from "react";
 import Phaser from "./phaserRuntime";
 import styles from "./WorldMap.module.css";
 import {
+  getKingdomPasses,
+  getKingdomRingRadii,
+  getKingdomSanctuaries,
+  getKingdomTier,
+  getNearestKingdomPass,
+  isKingdomMountainTile,
+} from "./kingdomMap";
+import {
   MAP_CAMERA_DEFAULT_ZOOM,
   MAP_CAMERA_MAX_ZOOM,
   MAP_CAMERA_MIN_ZOOM,
@@ -35,6 +43,10 @@ const MAP_COLOR_GATHER = 0x63b5b2;
 const MAP_COLOR_HOME = 0xe2c275;
 const MAP_COLOR_REPORT = 0xf7edd9;
 const MAP_COLOR_ALLIED_TERRITORY = 0x2b8f98;
+const MAP_COLOR_MOUNTAIN = 0x6f6254;
+const MAP_COLOR_MOUNTAIN_SHADOW = 0x262522;
+const MAP_COLOR_PASS = 0xf4d79c;
+const MAP_COLOR_TEMPLE = 0xd7b4ff;
 
 export interface MapReportMarkerView {
   id: string;
@@ -289,15 +301,34 @@ function hashCoordinate(x: number, y: number): number {
   return ((x * 73856093) ^ (y * 19349663)) >>> 0;
 }
 
-function getTerrainFill(tile: FogTileView): number {
+function getTerrainFill(tile: FogTileView, worldSize: number): number {
   const hash = hashCoordinate(tile.x, tile.y) % 4;
+  const tier = getKingdomTier(tile.x, tile.y, worldSize).id;
   if (tile.state === "HIDDEN") {
-    return [0x111112, 0x141416, 0x121214, 0x0f0f10][hash];
+    if (tier === "TIER_3") {
+      return [0x15121c, 0x171420, 0x12101a, 0x191620][hash];
+    }
+    if (tier === "TIER_2") {
+      return [0x111920, 0x121b23, 0x10171e, 0x151d24][hash];
+    }
+    return [0x101612, 0x121915, 0x0f1411, 0x141a16][hash];
   }
   if (tile.state === "DISCOVERED") {
-    return [0x1e1f1c, 0x222320, 0x20211e, 0x1c1d1a][hash];
+    if (tier === "TIER_3") {
+      return [0x2c2438, 0x30283e, 0x292333, 0x342a41][hash];
+    }
+    if (tier === "TIER_2") {
+      return [0x243344, 0x27384a, 0x22303e, 0x2a3a49][hash];
+    }
+    return [0x223129, 0x26362d, 0x202d26, 0x29382f][hash];
   }
-  return [0x2a2c28, 0x2e302b, 0x282a26, 0x31332c][hash];
+  if (tier === "TIER_3") {
+    return [0x403252, 0x47395a, 0x3a2e4c, 0x4a3a5a][hash];
+  }
+  if (tier === "TIER_2") {
+    return [0x2f4960, 0x34516a, 0x2b4358, 0x38566c][hash];
+  }
+  return [0x2e4a3b, 0x345241, 0x2a4336, 0x385743][hash];
 }
 
 function getMarchColor(objective: MarchView["objective"]): number {
@@ -544,14 +575,14 @@ class FrontierMapScene extends Phaser.Scene {
     if (!this.isCameraReady()) {
       return;
     }
-    this.zoomAroundViewportCenter(this.cameras.main.zoom + 0.18);
+    this.zoomAroundViewportCenter(this.cameras.main.zoom * 1.18);
   }
 
   zoomOut() {
     if (!this.isCameraReady()) {
       return;
     }
-    this.zoomAroundViewportCenter(this.cameras.main.zoom - 0.18);
+    this.zoomAroundViewportCenter(this.cameras.main.zoom / 1.18);
   }
 
   focusCity(cityId: string) {
@@ -721,7 +752,7 @@ class FrontierMapScene extends Phaser.Scene {
     });
 
     this.input.on("wheel", (pointer: Phaser.Input.Pointer, _gameObjects: Phaser.GameObjects.GameObject[], _dx: number, dy: number) => {
-      this.zoomAroundScreenPoint(pointer.x, pointer.y, this.cameras.main.zoom - dy * 0.001);
+      this.zoomAroundScreenPoint(pointer.x, pointer.y, this.cameras.main.zoom * Math.pow(1.0018, -dy));
     });
   }
 
@@ -846,21 +877,45 @@ class FrontierMapScene extends Phaser.Scene {
 
     this.terrainGraphics.clear();
     this.gridGraphics.clear();
-    this.terrainGraphics.fillStyle(0x161618, 1);
+    this.terrainGraphics.fillStyle(0x101216, 1);
     this.terrainGraphics.fillRect(0, 0, this.worldPixelSize, this.worldPixelSize);
+    const sanctuaryTiles = new Set(getKingdomSanctuaries(this.worldSize).map((entry) => `${entry.x}:${entry.y}`));
 
     for (const tile of this.tiles) {
       const x = tile.x * MAP_TILE_WORLD_SIZE;
       const y = tile.y * MAP_TILE_WORLD_SIZE;
-      this.terrainGraphics.fillStyle(getTerrainFill(tile), tile.state === "VISIBLE" ? 0.96 : tile.state === "DISCOVERED" ? 0.92 : 1);
+      const terrainAlpha = tile.state === "VISIBLE" ? 0.98 : tile.state === "DISCOVERED" ? 0.92 : 1;
+      this.terrainGraphics.fillStyle(getTerrainFill(tile, this.worldSize), terrainAlpha);
       this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
 
       const decoration = hashCoordinate(tile.x, tile.y) % 5;
       if (tile.state !== "HIDDEN" && decoration <= 2) {
-        this.terrainGraphics.fillStyle(tile.state === "VISIBLE" ? 0x4b6c5f : 0x3b4a43, 0.11);
+        const tier = getKingdomTier(tile.x, tile.y, this.worldSize);
+        this.terrainGraphics.fillStyle(tier.fill, tile.state === "VISIBLE" ? 0.2 : 0.11);
         this.terrainGraphics.fillCircle(x + 28 + decoration * 10, y + 26 + decoration * 8, 8 + decoration * 2);
       }
+
+      if (tile.state === "HIDDEN") {
+        const fogHash = hashCoordinate(tile.x + 5, tile.y + 13);
+        this.terrainGraphics.fillStyle(0x9aa6a8, 0.035);
+        this.terrainGraphics.fillCircle(x + 30 + (fogHash % 58), y + 22 + (Math.floor(fogHash / 17) % 70), 24);
+        this.terrainGraphics.fillStyle(0x000000, 0.18);
+        this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
+      }
+
+      const pass = getNearestKingdomPass(tile.x, tile.y, this.worldSize, 0.72);
+      if (pass) {
+        this.drawPassTile(tile, pass.x, pass.y);
+      } else if (isKingdomMountainTile(tile.x, tile.y, this.worldSize)) {
+        this.drawMountainTile(tile);
+      }
+
+      if (sanctuaryTiles.has(`${tile.x}:${tile.y}`)) {
+        this.drawSanctuaryTile(tile);
+      }
     }
+
+    this.drawKingdomBoundaryRings();
 
     if (this.currentDetailLevel === "near") {
       this.gridGraphics.lineStyle(1, 0xf6e7c3, 0.08);
@@ -879,6 +934,88 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     this.syncAmbientMotes();
+  }
+
+  private drawMountainTile(tile: FogTileView) {
+    if (!this.terrainGraphics) {
+      return;
+    }
+
+    const x = tile.x * MAP_TILE_WORLD_SIZE;
+    const y = tile.y * MAP_TILE_WORLD_SIZE;
+    const hash = hashCoordinate(tile.x + 29, tile.y + 47);
+    const alpha = tile.state === "HIDDEN" ? 0.32 : tile.state === "DISCOVERED" ? 0.58 : 0.78;
+    const ridgeColor = tile.state === "HIDDEN" ? 0x3d4142 : MAP_COLOR_MOUNTAIN;
+    const peakA = 36 + (hash % 10);
+    const peakB = 76 + (Math.floor(hash / 13) % 12);
+
+    this.terrainGraphics.fillStyle(MAP_COLOR_MOUNTAIN_SHADOW, alpha * 0.42);
+    this.terrainGraphics.fillTriangle(x + 18, y + 94, x + peakA + 7, y + 40, x + 76, y + 98);
+    this.terrainGraphics.fillTriangle(x + 54, y + 96, x + peakB, y + 32, x + 112, y + 98);
+    this.terrainGraphics.fillStyle(ridgeColor, alpha);
+    this.terrainGraphics.fillTriangle(x + 12, y + 88, x + peakA, y + 30, x + 72, y + 88);
+    this.terrainGraphics.fillTriangle(x + 48, y + 90, x + peakB, y + 24, x + 116, y + 90);
+    this.terrainGraphics.fillStyle(MAP_COLOR_REPORT, alpha * 0.18);
+    this.terrainGraphics.fillTriangle(x + peakA - 5, y + 40, x + peakA, y + 30, x + peakA + 7, y + 42);
+    this.terrainGraphics.fillTriangle(x + peakB - 6, y + 36, x + peakB, y + 24, x + peakB + 8, y + 38);
+  }
+
+  private drawPassTile(tile: FogTileView, passX: number, passY: number) {
+    if (!this.terrainGraphics) {
+      return;
+    }
+
+    const x = tile.x * MAP_TILE_WORLD_SIZE;
+    const y = tile.y * MAP_TILE_WORLD_SIZE;
+    const alpha = tile.state === "HIDDEN" ? 0.22 : tile.state === "DISCOVERED" ? 0.55 : 0.82;
+    const isCenter = tile.x === passX && tile.y === passY;
+
+    this.terrainGraphics.fillStyle(0x18110c, alpha * 0.66);
+    this.terrainGraphics.fillRect(x + 18, y + 50, 92, 28);
+    this.terrainGraphics.fillStyle(MAP_COLOR_PASS, alpha);
+    this.terrainGraphics.fillRect(x + 24, y + 58, 80, 12);
+    this.terrainGraphics.fillCircle(x + 24, y + 64, 6);
+    this.terrainGraphics.fillCircle(x + 104, y + 64, 6);
+    if (isCenter && this.currentDetailLevel !== "far") {
+      this.terrainGraphics.lineStyle(2, MAP_COLOR_PASS, alpha * 0.72);
+      this.terrainGraphics.strokeRect(x + 28, y + 40, 72, 48);
+    }
+  }
+
+  private drawSanctuaryTile(tile: FogTileView) {
+    if (!this.terrainGraphics) {
+      return;
+    }
+
+    const x = tile.x * MAP_TILE_WORLD_SIZE;
+    const y = tile.y * MAP_TILE_WORLD_SIZE;
+    const alpha = tile.state === "HIDDEN" ? 0.18 : tile.state === "DISCOVERED" ? 0.5 : 0.78;
+
+    this.terrainGraphics.fillStyle(MAP_COLOR_TEMPLE, alpha * 0.16);
+    this.terrainGraphics.fillCircle(x + 64, y + 64, 48);
+    this.terrainGraphics.lineStyle(2, MAP_COLOR_TEMPLE, alpha * 0.58);
+    this.terrainGraphics.strokeCircle(x + 64, y + 64, 34);
+    this.terrainGraphics.fillStyle(MAP_COLOR_PASS, alpha);
+    this.terrainGraphics.fillTriangle(x + 64, y + 30, x + 42, y + 78, x + 86, y + 78);
+    this.terrainGraphics.fillStyle(0x23170f, alpha * 0.72);
+    this.terrainGraphics.fillRect(x + 52, y + 70, 24, 22);
+  }
+
+  private drawKingdomBoundaryRings() {
+    if (!this.gridGraphics) {
+      return;
+    }
+
+    const center = (this.worldSize * MAP_TILE_WORLD_SIZE) / 2;
+    const radii = getKingdomRingRadii(this.worldSize);
+    const innerRadius = radii.inner * MAP_TILE_WORLD_SIZE;
+    const outerRadius = radii.outer * MAP_TILE_WORLD_SIZE;
+    const alpha = this.currentDetailLevel === "near" ? 0.18 : this.currentDetailLevel === "mid" ? 0.24 : 0.3;
+
+    this.gridGraphics.lineStyle(3, 0xa888d8, alpha);
+    this.gridGraphics.strokeCircle(center, center, innerRadius);
+    this.gridGraphics.lineStyle(3, 0x6ca7d8, alpha * 0.9);
+    this.gridGraphics.strokeCircle(center, center, outerRadius);
   }
 
   private syncAmbientMotes() {
@@ -1012,6 +1149,8 @@ class FrontierMapScene extends Phaser.Scene {
         regionLabel.setAlpha(this.currentDetailLevel === "far" ? 0.18 : 0.24);
       }
     }
+
+    this.syncKingdomStrategicLabels(showLabels, showNearDetail);
 
     for (const marker of this.allianceMarkers) {
       const point = tileToWorld(marker.x, marker.y);
@@ -1282,6 +1421,131 @@ class FrontierMapScene extends Phaser.Scene {
         );
         this.addLabelFloat(label, point.y - 30, hashCoordinate(city.x, city.y));
       }
+    }
+  }
+
+  private syncKingdomStrategicLabels(showLabels: boolean, showNearDetail: boolean) {
+    const centerTile = Math.floor(this.worldSize / 2);
+    const tierLabels = [
+      {
+        id: "tier-3",
+        label: "TIER 3\nCROWN CORE",
+        x: centerTile,
+        y: Math.max(2, centerTile - 9),
+        color: "#d7b4ff",
+        alpha: this.currentDetailLevel === "far" ? 0.24 : 0.38,
+      },
+      {
+        id: "tier-2",
+        label: "TIER 2\nGATE BELT",
+        x: centerTile,
+        y: Math.max(2, centerTile - 19),
+        color: "#9fd2ff",
+        alpha: this.currentDetailLevel === "far" ? 0.2 : 0.32,
+      },
+      {
+        id: "tier-1",
+        label: "TIER 1\nOUTER PROVINCES",
+        x: Math.max(3, Math.floor(this.worldSize * 0.22)),
+        y: Math.max(3, Math.floor(this.worldSize * 0.16)),
+        color: "#9eddb0",
+        alpha: this.currentDetailLevel === "far" ? 0.2 : 0.28,
+      },
+    ];
+
+    for (const tier of tierLabels) {
+      const point = tileToWorld(tier.x, tier.y);
+      const label = this.getOrCreateStaticLabel(
+        `kingdom-tier:${tier.id}`,
+        point.x,
+        point.y,
+        tier.label,
+        {
+          color: tier.color,
+          fontFamily: "'Cinzel', 'Palatino Linotype', serif",
+          fontSize: this.currentDetailLevel === "far" ? "16px" : "19px",
+          fontStyle: "700",
+          align: "center",
+          stroke: "#120b08",
+          strokeThickness: 4,
+        },
+        0.5,
+        0.5,
+      );
+      label.setAlpha(tier.alpha);
+    }
+
+    const sanctuaries = getKingdomSanctuaries(this.worldSize);
+    for (const sanctuary of sanctuaries) {
+      if (!showLabels && sanctuary.id !== "crown-temple") {
+        continue;
+      }
+      const point = tileToWorld(sanctuary.x, sanctuary.y);
+      const glyph = this.getOrCreateStaticLabel(
+        `sanctuary-glyph:${sanctuary.id}`,
+        point.x,
+        point.y - 10,
+        sanctuary.id === "crown-temple" ? "C" : "A",
+        {
+          color: sanctuary.color,
+          fontFamily: "'Cinzel', 'Palatino Linotype', serif",
+          fontSize: showNearDetail ? "17px" : "13px",
+          fontStyle: "700",
+          backgroundColor: "rgba(20, 13, 11, 0.58)",
+          padding: { x: 5, y: 2 },
+        },
+        0.5,
+        0.5,
+      );
+      glyph.setAlpha(showLabels ? 0.92 : 0.38);
+
+      if (showLabels) {
+        const label = this.getOrCreateStaticLabel(
+          `sanctuary-label:${sanctuary.id}`,
+          point.x,
+          point.y + 24,
+          sanctuary.label,
+          {
+            color: "#f8f0dd",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: showNearDetail ? "11px" : "10px",
+            backgroundColor: "rgba(20, 13, 11, 0.5)",
+            padding: { x: 5, y: 3 },
+          },
+          0.5,
+          0,
+        );
+        label.setAlpha(sanctuary.id === "crown-temple" ? 0.98 : 0.82);
+      }
+    }
+
+    if (!showLabels) {
+      return;
+    }
+
+    for (const pass of getKingdomPasses(this.worldSize)) {
+      if (!showNearDetail && pass.tier === "TIER_2" && hashCoordinate(pass.x, pass.y) % 2 === 0) {
+        continue;
+      }
+
+      const point = tileToWorld(pass.x, pass.y);
+      const passColor = pass.tier === "TIER_3" ? "#d7b4ff" : "#9fd2ff";
+      const label = this.getOrCreateStaticLabel(
+        `kingdom-pass:${pass.id}`,
+        point.x,
+        point.y - 38,
+        pass.tier === "TIER_3" ? "Crown Pass" : "Gate Pass",
+        {
+          color: passColor,
+          fontFamily: "'Inter', sans-serif",
+          fontSize: showNearDetail ? "10px" : "9px",
+          backgroundColor: "rgba(11, 14, 18, 0.62)",
+          padding: { x: 5, y: 2 },
+        },
+        0.5,
+        1,
+      );
+      label.setAlpha(pass.tier === "TIER_3" ? 0.9 : 0.72);
     }
   }
 
@@ -2187,8 +2451,23 @@ class FrontierMapScene extends Phaser.Scene {
     const sweep = this.add.arc(0, 0, radius + 7, 285, 350, false, color, 0);
     sweep.setStrokeStyle(4, color, 0.9);
     const core = this.add.circle(0, 0, Math.max(3, radius * 0.24), color, 0.28);
+    const fragments: Phaser.GameObjects.Rectangle[] = [];
 
-    container.add([halo, outer, sweep, core]);
+    for (let index = 0; index < 6; index += 1) {
+      const angle = (Math.PI * 2 * index) / 6 + Math.PI / 6;
+      const fragment = this.add.rectangle(
+        Math.cos(angle) * radius * 0.62,
+        Math.sin(angle) * radius * 0.62,
+        4,
+        4,
+        color,
+        0.86,
+      );
+      fragment.setRotation(Math.PI / 4 + angle * 0.18);
+      fragments.push(fragment);
+    }
+
+    container.add([halo, outer, sweep, core, ...fragments]);
     this.fxLayer.add(container);
 
     if (this.reducedMotion) {
@@ -2225,6 +2504,20 @@ class FrontierMapScene extends Phaser.Scene {
       duration: 420,
       ease: "Sine.easeOut",
     });
+    for (let index = 0; index < fragments.length; index += 1) {
+      const fragment = fragments[index];
+      const angle = (Math.PI * 2 * index) / fragments.length + Math.PI / 6;
+      this.tweens.add({
+        targets: fragment,
+        x: Math.cos(angle) * (radius + 18),
+        y: Math.sin(angle) * (radius + 18),
+        rotation: fragment.rotation + Math.PI * 0.9,
+        scale: 0.34,
+        alpha: 0,
+        duration: 460 + index * 32,
+        ease: "Cubic.easeOut",
+      });
+    }
     this.time.delayedCall(780, () => container.destroy(true));
   }
 
