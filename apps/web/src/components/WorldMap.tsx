@@ -404,6 +404,7 @@ class FrontierMapScene extends Phaser.Scene {
     velocityY: 0,
   };
   private cameraDrift = { x: 0, y: 0 };
+  private cameraZoomTweenTarget: { zoom: number; scrollX: number; scrollY: number } | null = null;
   private reducedMotion = false;
 
   constructor() {
@@ -571,7 +572,7 @@ class FrontierMapScene extends Phaser.Scene {
     const point = tileToWorld(x, y);
     this.cameraDrift.x = 0;
     this.cameraDrift.y = 0;
-    this.spawnPulse(point.x, point.y, 0xf4d79c, 16);
+    this.spawnFocusBeacon(point.x, point.y, 0xf4d79c, 18);
     this.cameras.main.pan(point.x, point.y, duration, "Cubic.easeOut", true);
   }
 
@@ -720,14 +721,67 @@ class FrontierMapScene extends Phaser.Scene {
     }
     const camera = this.cameras.main;
     const clampedZoom = clampNumber(nextZoom, MAP_CAMERA_MIN_ZOOM, MAP_CAMERA_MAX_ZOOM);
+    if (Math.abs(clampedZoom - camera.zoom) < 0.001) {
+      return;
+    }
+
     const worldBefore = camera.getWorldPoint(screenX, screenY);
-    camera.setZoom(clampedZoom);
-    const worldAfter = camera.getWorldPoint(screenX, screenY);
-    this.clampAndSetCameraScroll(
-      camera.scrollX + (worldBefore.x - worldAfter.x),
-      camera.scrollY + (worldBefore.y - worldAfter.y),
+    const targetScroll = this.getBoundedScrollForZoom(
+      worldBefore.x - screenX / clampedZoom,
+      worldBefore.y - screenY / clampedZoom,
+      clampedZoom,
     );
-    this.emitCameraState(true);
+
+    this.cameraDrift.x = 0;
+    this.cameraDrift.y = 0;
+    this.animateCameraZoom(camera, clampedZoom, targetScroll.x, targetScroll.y);
+  }
+
+  private animateCameraZoom(
+    camera: Phaser.Cameras.Scene2D.Camera,
+    targetZoom: number,
+    targetScrollX: number,
+    targetScrollY: number,
+  ) {
+    if (this.cameraZoomTweenTarget) {
+      this.tweens.killTweensOf(this.cameraZoomTweenTarget);
+      this.cameraZoomTweenTarget = null;
+    }
+
+    if (this.reducedMotion) {
+      camera.setZoom(targetZoom);
+      this.clampAndSetCameraScroll(targetScrollX, targetScrollY);
+      this.emitCameraState(true);
+      return;
+    }
+
+    const tweenTarget = {
+      zoom: camera.zoom,
+      scrollX: camera.scrollX,
+      scrollY: camera.scrollY,
+    };
+    this.cameraZoomTweenTarget = tweenTarget;
+
+    this.tweens.add({
+      targets: tweenTarget,
+      zoom: targetZoom,
+      scrollX: targetScrollX,
+      scrollY: targetScrollY,
+      duration: 220,
+      ease: "Cubic.easeOut",
+      onUpdate: () => {
+        camera.setZoom(tweenTarget.zoom);
+        this.clampAndSetCameraScroll(tweenTarget.scrollX, tweenTarget.scrollY);
+      },
+      onComplete: () => {
+        camera.setZoom(targetZoom);
+        this.clampAndSetCameraScroll(targetScrollX, targetScrollY);
+        if (this.cameraZoomTweenTarget === tweenTarget) {
+          this.cameraZoomTweenTarget = null;
+        }
+        this.emitCameraState(true);
+      },
+    });
   }
 
   private applyCameraInertia() {
@@ -753,14 +807,19 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     const camera = this.cameras.main;
-    const visibleWidth = this.scale.width / camera.zoom;
-    const visibleHeight = this.scale.height / camera.zoom;
+    const { x, y } = this.getBoundedScrollForZoom(nextScrollX, nextScrollY, camera.zoom);
+    camera.setScroll(x, y);
+  }
+
+  private getBoundedScrollForZoom(nextScrollX: number, nextScrollY: number, zoom: number) {
+    const visibleWidth = this.scale.width / zoom;
+    const visibleHeight = this.scale.height / zoom;
     const maxScrollX = Math.max(0, this.worldPixelSize - visibleWidth);
     const maxScrollY = Math.max(0, this.worldPixelSize - visibleHeight);
-    camera.setScroll(
-      clampNumber(nextScrollX, 0, maxScrollX),
-      clampNumber(nextScrollY, 0, maxScrollY),
-    );
+    return {
+      x: clampNumber(nextScrollX, 0, maxScrollX),
+      y: clampNumber(nextScrollY, 0, maxScrollY),
+    };
   }
 
   private syncTerrainLayer() {
@@ -852,6 +911,7 @@ class FrontierMapScene extends Phaser.Scene {
         this.getOrCreateAllianceMarkerGraphicBundle(`alliance-marker-graphics:${marker.id}`),
         point.x,
         point.y,
+        hashCoordinate(marker.x, marker.y),
       );
       markerBundle.beacon.setRadius(this.currentDetailLevel === "far" ? 18 : 24);
       markerBundle.pin.setY(-4);
@@ -894,6 +954,7 @@ class FrontierMapScene extends Phaser.Scene {
           this.getOrCreateReportGraphicBundle(`report-graphics:${report.id}`),
           point.x,
           point.y,
+          hashCoordinate(report.x, report.y),
         );
         reportBundle.bubble.setRadius(this.currentDetailLevel === "far" ? 10 : 12);
         reportBundle.bubble.setFillStyle(bubbleColor, 0.92);
@@ -973,6 +1034,7 @@ class FrontierMapScene extends Phaser.Scene {
           this.getOrCreatePoiCampGraphicBundle(`poi-graphics:${poi.id}:${poi.kind}`),
           point.x,
           point.y,
+          hashCoordinate(poi.x, poi.y),
         );
         poiBundle.aura.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
         poiBundle.fortOuter.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.95 : 0.55);
@@ -996,6 +1058,7 @@ class FrontierMapScene extends Phaser.Scene {
           this.getOrCreatePoiNodeGraphicBundle(`poi-graphics:${poi.id}:${poi.kind}`),
           point.x,
           point.y,
+          hashCoordinate(poi.x, poi.y),
         );
         poiBundle.aura.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.14 : 0.08);
         poiBundle.marker.setFillStyle(baseColor, poi.state === "ACTIVE" ? 0.96 : 0.62);
@@ -1060,6 +1123,7 @@ class FrontierMapScene extends Phaser.Scene {
         this.getOrCreateCityGraphicBundle(`city-graphics:${city.cityId}`),
         point.x,
         point.y,
+        hashCoordinate(city.x, city.y),
       );
       cityBundle.territory.setVisible(allied);
       cityBundle.territory.setActive(allied);
@@ -1127,16 +1191,37 @@ class FrontierMapScene extends Phaser.Scene {
     }
   }
 
-  private activateStaticBundle<T extends StaticGraphicBundle>(bundle: T, x: number, y: number) {
+  private activateStaticBundle<T extends StaticGraphicBundle>(bundle: T, x: number, y: number, revealHash = 0) {
     bundle.container.setPosition(x, y);
     bundle.container.setVisible(true);
     bundle.container.setActive(true);
+    bundle.container.setAlpha(1);
+    bundle.container.setScale(1);
     for (const child of bundle.container.list) {
       const toggleableChild = child as ToggleableGameObject;
       toggleableChild.setVisible(true);
       toggleableChild.setActive(true);
     }
+    this.animateStaticReveal(bundle.container, revealHash);
     return bundle;
+  }
+
+  private animateStaticReveal(container: Phaser.GameObjects.Container, revealHash: number) {
+    if (this.reducedMotion || this.currentDetailLevel === "far") {
+      return;
+    }
+
+    const delay = (revealHash % 7) * 24;
+    container.setAlpha(0);
+    container.setScale(0.82);
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      scale: 1,
+      delay,
+      duration: 360,
+      ease: "Back.easeOut",
+    });
   }
 
   private getOrCreateAllianceMarkerGraphicBundle(key: string) {
@@ -1633,7 +1718,10 @@ class FrontierMapScene extends Phaser.Scene {
       this.marchEntities.set(march.id, entity);
 
       container.setPosition(origin.x, origin.y);
-      this.spawnPulse(origin.x, origin.y, color, 20);
+      this.spawnFocusBeacon(origin.x, origin.y, color, 18);
+      if (this.currentDetailLevel !== "far") {
+        this.spawnSparkBurst(origin.x, origin.y, color, 4, 20, 360);
+      }
     }
 
     this.updateMarchEntities();
@@ -1697,7 +1785,7 @@ class FrontierMapScene extends Phaser.Scene {
         lastTrailAt: 0,
       });
 
-      this.spawnPulse(from.x, from.y, MAP_COLOR_SCOUT, 18);
+      this.spawnFocusBeacon(from.x, from.y, MAP_COLOR_SCOUT, 16);
     }
   }
 
@@ -1979,6 +2067,59 @@ class FrontierMapScene extends Phaser.Scene {
     });
   }
 
+  private spawnFocusBeacon(x: number, y: number, color: number, radius: number) {
+    if (!this.fxLayer) {
+      return;
+    }
+
+    const container = this.add.container(x, y);
+    const halo = this.add.circle(0, 0, radius + 12, color, 0.08);
+    const outer = this.add.circle(0, 0, radius, 0x000000, 0);
+    outer.setStrokeStyle(3, color, 0.82);
+    const sweep = this.add.arc(0, 0, radius + 7, 285, 350, false, color, 0);
+    sweep.setStrokeStyle(4, color, 0.9);
+    const core = this.add.circle(0, 0, Math.max(3, radius * 0.24), color, 0.28);
+
+    container.add([halo, outer, sweep, core]);
+    this.fxLayer.add(container);
+
+    if (this.reducedMotion) {
+      container.setAlpha(0.42);
+      this.time.delayedCall(180, () => container.destroy(true));
+      return;
+    }
+
+    this.tweens.add({
+      targets: halo,
+      scale: 2.05,
+      alpha: 0,
+      duration: 620,
+      ease: "Sine.easeOut",
+    });
+    this.tweens.add({
+      targets: outer,
+      scale: 1.32,
+      alpha: 0,
+      duration: 560,
+      ease: "Cubic.easeOut",
+    });
+    this.tweens.add({
+      targets: sweep,
+      rotation: Math.PI * 2,
+      alpha: 0,
+      duration: 760,
+      ease: "Cubic.easeOut",
+    });
+    this.tweens.add({
+      targets: core,
+      scale: 1.8,
+      alpha: 0,
+      duration: 420,
+      ease: "Sine.easeOut",
+    });
+    this.time.delayedCall(780, () => container.destroy(true));
+  }
+
   private spawnMarchResolutionFx(entity: AnimatedMarchEntity) {
     const { container, objective, lastPhase, targetWorldX, targetWorldY } = entity;
     const x = container.x;
@@ -2157,23 +2298,30 @@ class FrontierMapScene extends Phaser.Scene {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const report = this.showReports ? this.findNearestReport(worldPoint.x, worldPoint.y) : null;
     if (report) {
+      this.spawnFocusBeacon(report.worldX, report.worldY - 18, MAP_COLOR_REPORT, 12);
       this.onOpenReport(report.data.id);
       return;
     }
     const marchId = this.findNearestMarch(worldPoint.x, worldPoint.y);
     if (marchId) {
+      const march = this.marchEntities.get(marchId);
+      if (march) {
+        this.spawnFocusBeacon(march.container.x, march.container.y, getMarchColor(march.objective), 14);
+      }
       this.onSelectMarch(marchId);
       return;
     }
 
     const poi = this.findNearestPoi(worldPoint.x, worldPoint.y);
     if (poi) {
+      this.spawnFocusBeacon(poi.worldX, poi.worldY, poi.data.kind === "BARBARIAN_CAMP" ? MAP_COLOR_HOSTILE : MAP_COLOR_GATHER, 14);
       this.onSelectPoi(poi.data.id);
       return;
     }
 
     const city = this.findNearestCity(worldPoint.x, worldPoint.y);
     if (city) {
+      this.spawnFocusBeacon(city.worldX, city.worldY, city.data.isCurrentPlayer ? MAP_COLOR_HOME : MAP_COLOR_NEUTRAL, 16);
       this.onSelectCity(city.data.cityId);
     }
   }
@@ -2186,7 +2334,7 @@ class FrontierMapScene extends Phaser.Scene {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const poi = this.findNearestPoi(worldPoint.x, worldPoint.y);
     if (poi) {
-      this.spawnPulse(poi.worldX, poi.worldY, MAP_COLOR_ALLIED, 14);
+      this.spawnFocusBeacon(poi.worldX, poi.worldY, MAP_COLOR_ALLIED, 14);
       this.onOpenFieldCommand({
         kind: "POI",
         label: poi.data.label,
@@ -2199,7 +2347,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     const city = this.findNearestCity(worldPoint.x, worldPoint.y);
     if (city) {
-      this.spawnPulse(city.worldX, city.worldY, city.data.isCurrentPlayer ? MAP_COLOR_ALLIED : MAP_COLOR_NEUTRAL, 14);
+      this.spawnFocusBeacon(city.worldX, city.worldY, city.data.isCurrentPlayer ? MAP_COLOR_ALLIED : MAP_COLOR_NEUTRAL, 14);
       this.onOpenFieldCommand({
         kind: "CITY",
         label: city.data.cityName,
@@ -2212,7 +2360,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     const tile = worldToTile(worldPoint.x, worldPoint.y, this.worldSize);
     const point = tileToWorld(tile.x, tile.y);
-    this.spawnPulse(point.x, point.y, MAP_COLOR_NEUTRAL, 12);
+    this.spawnFocusBeacon(point.x, point.y, MAP_COLOR_NEUTRAL, 12);
     this.onOpenFieldCommand({
       kind: "TILE",
       label: `Frontier ${tile.x},${tile.y}`,
