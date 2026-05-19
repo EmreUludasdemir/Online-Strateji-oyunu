@@ -20,20 +20,28 @@ export function ResourcePill({
   label,
   value,
   kind,
+  compact = false,
 }: {
   label: string;
   value: number;
   kind?: ResourceKind;
+  compact?: boolean;
 }) {
   const resolvedKind = resolveKind(label, kind);
   const iconSrc = resolvedKind ? RESOURCE_ICONS[resolvedKind] : undefined;
   return (
-    <div className={styles.resourcePill} data-resource={resolvedKind}>
+    <div
+      className={[styles.resourcePill, compact ? styles.resourcePillCompact : ""].filter(Boolean).join(" ")}
+      data-resource={resolvedKind}
+      aria-label={`${label}: ${formatNumber(value)}`}
+    >
       <div className={styles.resourcePillLeading}>
         {iconSrc ? (
           <img src={iconSrc} alt="" aria-hidden="true" className={styles.resourceIcon} />
         ) : null}
-        <span className={styles.resourceLabel}>{label}</span>
+        <span className={styles.resourceLabel} aria-hidden={compact}>
+          {label}
+        </span>
       </div>
       <strong className={styles.resourceValue}>{formatNumber(value)}</strong>
     </div>

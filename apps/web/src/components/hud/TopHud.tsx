@@ -25,7 +25,7 @@ export function TopHud({
       {brand && <div className={styles.topBrand}>{brand}</div>}
       <div className={styles.resourceRow}>
         {resources.map((resource) => (
-          <ResourcePill key={resource.label} label={resource.label} value={resource.value} />
+          <ResourcePill key={resource.label} label={resource.label} value={resource.value} compact />
         ))}
       </div>
       <div className={styles.quickActions}>{actions}</div>

@@ -310,6 +310,31 @@
   transform: translateY(-1px);
 }
 
+.resourcePillCompact {
+  gap: 0.45rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.resourcePillCompact .resourcePillLeading {
+  flex: 0 0 auto;
+  gap: 0.35rem;
+}
+
+.resourcePillCompact .resourceLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.resourcePillCompact .resourceValue {
+  min-width: 0;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
 .resourcePill[data-resource="wood"] {
   border-left-color: #965a3b;
 }

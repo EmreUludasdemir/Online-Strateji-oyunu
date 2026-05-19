@@ -7,8 +7,7 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { FeedCardShell, PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
-import { ResourcePill } from "../components/ui/ResourcePill";
+import { FeedCardShell, PanelStatGrid, SectionHeaderBlock, type PanelStatItem } from "../components/ui/CommandSurface";
 import { buildingIcon } from "../components/ui/buildingIcons";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
@@ -21,6 +20,28 @@ import { buildDashboardBriefing } from "./dashboardBriefing";
 import styles from "./DashboardPage.module.css";
 
 type DistrictStageTone = "core" | "war" | "economy" | "support";
+type DashboardInfoPanelId = "overview" | "queues" | "briefing" | "district";
+type DashboardPanelButtonVariant = "primary" | "secondary" | "ghost";
+type DashboardTone = "info" | "success" | "warning" | "danger";
+
+interface DashboardPanelAction {
+  label: string;
+  onClick: () => void;
+  variant?: DashboardPanelButtonVariant;
+  disabled?: boolean;
+}
+
+interface DashboardInfoPanel {
+  id: DashboardInfoPanelId;
+  label: string;
+  value: string;
+  kicker: string;
+  title: string;
+  badgeTone: DashboardTone;
+  badgeLabel: string;
+  stats: PanelStatItem[];
+  actions: DashboardPanelAction[];
+}
 
 interface DistrictStageLayoutEntry {
   x: number;
@@ -43,6 +64,23 @@ const districtStageLayout: Record<BuildingType, DistrictStageLayoutEntry> = {
   FORGE: { x: 78, y: 46, tone: "war" },
 };
 
+function formatCompactMetric(value: number) {
+  if (value >= 1_000_000) {
+    const compact = value / 1_000_000;
+    return `${compact >= 10 ? compact.toFixed(0) : compact.toFixed(1)}M`;
+  }
+
+  if (value >= 10_000) {
+    return `${(value / 1_000).toFixed(0)}K`;
+  }
+
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1)}K`;
+  }
+
+  return formatNumber(value);
+}
+
 export function DashboardPage() {
   const now = useNow();
   const navigate = useNavigate();
@@ -60,6 +98,7 @@ export function DashboardPage() {
   } = useGameLayoutContext();
   const [selectedTroopType, setSelectedTroopType] = useState<TroopType>("INFANTRY");
   const [trainingQuantity, setTrainingQuantity] = useState(12);
+  const [activeDashboardPanel, setActiveDashboardPanel] = useState<DashboardInfoPanelId>("overview");
 
   const tasksQuery = useQuery({ queryKey: ["tasks"], queryFn: api.tasks });
   const inventoryQuery = useQuery({ queryKey: ["inventory"], queryFn: api.inventory });
@@ -129,6 +168,15 @@ export function DashboardPage() {
   );
   const allianceLabel = state.alliance ? `[${state.alliance.tag}] ${state.alliance.name}` : "Independent province";
   const provinceStatus = state.city.peaceShieldUntil ? "Peace shield active" : "Battle ready";
+  const allTasks = [...tutorialTasks, ...dailyTasks];
+  const claimableCount =
+    allTasks.filter((task) => task.isCompleted && !task.isClaimed).length +
+    mailboxEntries.filter((entry) => entry.canClaim).length;
+  const idleQueueCount = Number(!activeUpgrade) + Number(!activeTraining) + Number(!activeResearch);
+  const woundedTotal =
+    state.city.woundedTroops.INFANTRY +
+    state.city.woundedTroops.ARCHER +
+    state.city.woundedTroops.CAVALRY;
   const queueLedger = [
     {
       id: "build",
@@ -222,14 +270,10 @@ export function DashboardPage() {
     },
   ] as const;
   const cityAdvisorBrief = activeUpgrade
-    ? `${activeUpgrade.buildingType.replaceAll("_", " ")} is consuming the master build queue. Keep the war board synchronized before opening another district order.`
+    ? `${activeUpgrade.buildingType.replaceAll("_", " ")} -> L${activeUpgrade.toLevel}`
     : activeResearch
-      ? `${activeResearchLabel} is active inside the academy. Pair it with a field march so the city deck keeps compounding in the background.`
-      : `${state.city.cityName} is stable. Use the district atlas to pick the next upgrade lane without losing sight of marches, research, or dispatches.`;
-  const woundedTotal =
-    state.city.woundedTroops.INFANTRY +
-    state.city.woundedTroops.ARCHER +
-    state.city.woundedTroops.CAVALRY;
+      ? `${activeResearchLabel} active`
+      : `${state.city.cityName}: stable`;
   const getBuildingBonusStat = (type: BuildingType, level: number) => {
     if (type === "HOSPITAL")
       return { id: "bonus", label: "Heal capacity", value: `${state.city.hospitalHealingCapacity}/tick`, note: "Wounded troops recovered per reconcile" };
@@ -322,6 +366,129 @@ export function DashboardPage() {
     }
   };
 
+  const firstBriefingAction = dashboardBriefing.actions[0] ?? null;
+  const dashboardInfoPanels: Record<DashboardInfoPanelId, DashboardInfoPanel> = {
+    overview: {
+      id: "overview",
+      label: "Overview",
+      value: formatCompactMetric(totalStores),
+      kicker: "Province",
+      title: `${state.city.cityName} at ${state.city.coordinates.x}, ${state.city.coordinates.y}`,
+      badgeTone: state.city.peaceShieldUntil ? "info" : "warning",
+      badgeLabel: provinceStatus,
+      stats: [
+        { id: "attack", label: "Attack", value: formatNumber(state.city.attackPower), note: "Field strike power", tone: "warning" },
+        { id: "defense", label: "Defense", value: formatNumber(state.city.defensePower), note: "City shield value", tone: "info" },
+        { id: "stock", label: "Stock", value: formatNumber(totalStores), note: "All resources", tone: "success" },
+      ],
+      actions: [
+        { label: "Map", onClick: () => navigate("/app/map"), variant: "primary" },
+        { label: "Messages", onClick: () => navigate("/app/messages"), variant: "secondary" },
+      ],
+    },
+    queues: {
+      id: "queues",
+      label: "Queues",
+      value: `${idleQueueCount}/3`,
+      kicker: "Build / Train / Research",
+      title: idleQueueCount > 0 ? "Fill idle lanes" : "All lanes moving",
+      badgeTone: idleQueueCount > 0 ? "warning" : "success",
+      badgeLabel: idleQueueCount > 0 ? "Needs order" : "In motion",
+      stats: queueLedger.map((entry) => ({
+        id: entry.id,
+        label: entry.label,
+        value: entry.value,
+        note: entry.detail,
+        tone: entry.value === "Idle" || entry.value === "Ready" || entry.value === "Open" ? "warning" : "info",
+      })),
+      actions: [
+        {
+          label: selectedDistrict?.isUpgradeActive ? "Building" : activeUpgrade ? "Locked" : "Upgrade",
+          onClick: () => selectedDistrict && void upgrade(selectedDistrict.type as BuildingType),
+          variant: "primary",
+          disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
+        },
+        {
+          label: state.city.activeTraining ? "Training" : "Train",
+          onClick: () => void train(selectedTroopType, trainingQuantity),
+          variant: "secondary",
+          disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
+        },
+      ],
+    },
+    briefing: {
+      id: "briefing",
+      label: "Briefing",
+      value: formatNumber(dashboardBriefing.actions.length),
+      kicker: "Next tap",
+      title: dashboardBriefing.headline,
+      badgeTone: dashboardBriefing.badgeTone,
+      badgeLabel: dashboardBriefing.badgeLabel,
+      stats: dashboardBriefing.stats,
+      actions: [
+        firstBriefingAction
+          ? {
+              label: firstBriefingAction.ctaLabel,
+              onClick: () => void runBriefingAction(firstBriefingAction),
+              variant: "primary",
+              disabled: isBriefingActionBusy(firstBriefingAction),
+            }
+          : { label: "Open map", onClick: () => navigate("/app/map"), variant: "primary" },
+      ],
+    },
+    district: {
+      id: "district",
+      label: "District",
+      value: selectedDistrict ? `L${selectedDistrict.level}` : "0",
+      kicker: "Selected node",
+      title: selectedDistrict?.label ?? "Select a district",
+      badgeTone: selectedDistrict?.isUpgradeActive ? "warning" : "info",
+      badgeLabel: selectedDistrict ? `Next L${selectedDistrict.nextLevel}` : "No node",
+      stats: selectedDistrictStats,
+      actions: [
+        {
+          label: selectedDistrict?.isUpgradeActive ? "Building" : activeUpgrade ? "Queue locked" : "Upgrade",
+          onClick: () => selectedDistrict && void upgrade(selectedDistrict.type as BuildingType),
+          variant: "primary",
+          disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
+        },
+        { label: "Map", onClick: () => navigate("/app/map"), variant: "secondary" },
+      ],
+    },
+  };
+  const dashboardPanelOrder: DashboardInfoPanelId[] = ["overview", "queues", "briefing", "district"];
+  const activeCommandPanel = dashboardInfoPanels[activeDashboardPanel];
+  const citySceneQuickRoutes = [
+    { id: "map", label: "Map", glyph: "MAP", badge: formatNumber(state.city.openMarchCount), onClick: () => navigate("/app/map") },
+    { id: "war", label: "War", glyph: "WAR", badge: formatNumber(state.city.attackPower), onClick: () => navigate("/app/reports") },
+    { id: "mail", label: "Mail", glyph: "MSG", badge: formatNumber(unreadMailboxCount), onClick: () => navigate("/app/messages") },
+    { id: "alliance", label: "Ally", glyph: "ALLY", badge: state.alliance?.tag ?? "--", onClick: () => navigate("/app/alliance") },
+    { id: "research", label: "Arc", glyph: "ARC", badge: activeResearch ? "Live" : "Open", onClick: () => navigate("/app/research") },
+    { id: "market", label: "Market", glyph: "MKT", badge: formatNumber(inventoryItems.length), onClick: () => navigate("/app/market") },
+  ];
+  const citySceneDockActions: DashboardPanelAction[] = [
+    {
+      label: selectedDistrict?.isUpgradeActive ? "Building" : activeUpgrade ? "Locked" : "Build",
+      onClick: () => selectedDistrict && void upgrade(selectedDistrict.type as BuildingType),
+      variant: "primary",
+      disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
+    },
+    {
+      label: state.city.activeTraining ? "Training" : "Train",
+      onClick: () => void train(selectedTroopType, trainingQuantity),
+      variant: "secondary",
+      disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
+    },
+    {
+      label: activeResearch ? "Researching" : "Research",
+      onClick: () => (suggestedResearch ? void research(suggestedResearch.type as ResearchType) : navigate("/app/research")),
+      variant: "secondary",
+      disabled: isResearching || Boolean(activeResearch) || !suggestedResearch,
+    },
+    { label: "World", onClick: () => navigate("/app/map"), variant: "ghost" },
+    { label: "Alliance", onClick: () => navigate("/app/alliance"), variant: "ghost" },
+  ];
+
   useEffect(() => {
     if (!selectedDistrict && state.city.buildings[0]) {
       setSelectedDistrictType(state.city.buildings[0].type as BuildingType);
@@ -339,139 +506,123 @@ export function DashboardPage() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.statLabel}>{copy.dashboard.title}</p>
-            <h2 className={styles.heroTitle}>{state.city.cityName}</h2>
-            <p className={styles.heroLead}>
-              Coordinates {state.city.coordinates.x}, {state.city.coordinates.y}. Growth, queues, research, and social
-              pressure now sit inside a stronger city hall deck with faster command shortcuts.
-            </p>
+      <header className={styles.cityHome} data-dashboard-city-home="true">
+        <div className={styles.cityHomeScene}>
+          <div className={styles.citySceneTopBar}>
+            <div className={styles.citySceneTitleBlock}>
+              <span className={styles.citySceneKicker}>City</span>
+              <h2 className={styles.citySceneTitle}>{state.city.cityName}</h2>
+              <span className={styles.citySceneCoords}>
+                {state.city.coordinates.x}, {state.city.coordinates.y} | {state.alliance?.tag ?? "Solo"}
+              </span>
+            </div>
+            <div className={styles.citySceneBadges}>
+              {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Idle</Badge>}
+              <Badge tone={idleQueueCount > 0 ? "warning" : "success"}>{idleQueueCount}/3 queues</Badge>
+            </div>
           </div>
-          {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Queue idle</Badge>}
-        </div>
-        <div className={styles.heroSignals}>
-          <article className={styles.signalCard}>
-            <span className={styles.statLabel}>Town Hall</span>
-            <strong className={styles.signalValue}>L{townHall?.level ?? 0}</strong>
-            <span className={styles.stackHint}>Empire tier and district cap.</span>
-          </article>
-          <article className={styles.signalCard}>
-            <span className={styles.statLabel}>Primary Commander</span>
-            <strong className={styles.signalValue}>{primaryCommander?.name ?? "Unassigned"}</strong>
-            <span className={styles.stackHint}>Lead frame for field control.</span>
-          </article>
-          <article className={styles.signalCard}>
-            <span className={styles.statLabel}>Training Queue</span>
-            <strong className={styles.signalValue}>{activeTraining ? activeTrainingLabel : "Open"}</strong>
-            <span className={styles.stackHint}>{activeTraining ? `${activeTraining.quantity} units in progress.` : "Barracks ready for a fresh batch."}</span>
-          </article>
-          <article className={styles.signalCard}>
-            <span className={styles.statLabel}>Research</span>
-            <strong className={styles.signalValue}>{activeResearch ? activeResearchLabel : "Ready"}</strong>
-            <span className={styles.stackHint}>{activeResearch ? "Academy queue is active." : "Open a doctrine lane for the next boost."}</span>
-          </article>
-        </div>
-        <div className={styles.resourceStrip}>
-          <ResourcePill label="Wood" value={state.city.resources.wood} />
-          <ResourcePill label="Stone" value={state.city.resources.stone} />
-          <ResourcePill label="Food" value={state.city.resources.food} />
-          <ResourcePill label="Gold" value={state.city.resources.gold} />
-        </div>
-        <div className={styles.heroStats}>
-          <div className={styles.statCard}><span className={styles.statLabel}>Attack</span><strong className={styles.statValue}>{formatNumber(state.city.attackPower)}</strong></div>
-          <div className={styles.statCard}><span className={styles.statLabel}>Defense</span><strong className={styles.statValue}>{formatNumber(state.city.defensePower)}</strong></div>
-          <div className={styles.statCard}><span className={styles.statLabel}>Open marches</span><strong className={styles.statValue}>{formatNumber(state.city.openMarchCount)}</strong></div>
-          <div className={styles.statCard}><span className={styles.statLabel}>Total stock</span><strong className={styles.statValue}>{formatNumber(totalStores)}</strong></div>
-        </div>
-        <div className={styles.operationsDeck}>
-          <article className={styles.operationsCard}>
-            <div className={styles.operationsHeader}>
-              <div>
-                <p className={styles.operationsEyebrow}>City Hall Record</p>
-                <strong className={styles.operationsValue}>{allianceLabel}</strong>
-              </div>
-              {state.city.peaceShieldUntil ? (
-                <TimerChip endsAt={state.city.peaceShieldUntil} now={now} />
-              ) : (
-                <Badge tone="warning">Battle ready</Badge>
-              )}
-            </div>
-            <p className={styles.operationsBody}>
-              {state.city.cityName} anchors the province at {state.city.coordinates.x}, {state.city.coordinates.y}. {provinceStatus}.
-            </p>
-            <div className={styles.operationsList}>
-              <div className={styles.operationsListItem}>
-                <span className={styles.operationsLabel}>Open marches</span>
-                <strong>{formatNumber(state.city.openMarchCount)}</strong>
-              </div>
-              <div className={styles.operationsListItem}>
-                <span className={styles.operationsLabel}>Field power</span>
-                <strong>{formatNumber(state.city.attackPower + state.city.defensePower)}</strong>
-              </div>
-              <div className={styles.operationsListItem}>
-                <span className={styles.operationsLabel}>Resource stock</span>
-                <strong>{formatNumber(totalStores)}</strong>
-              </div>
-            </div>
-          </article>
 
-          <article className={styles.operationsCard}>
-            <div className={styles.operationsHeader}>
-              <div>
-                <p className={styles.operationsEyebrow}>Queue Ledger</p>
-                <strong className={styles.operationsValue}>Build, train, research</strong>
-              </div>
-              <Badge tone={activeUpgrade || activeTraining || activeResearch ? "info" : "success"}>
-                {activeUpgrade || activeTraining || activeResearch ? "In motion" : "All clear"}
-              </Badge>
+          <div className={[styles.citySceneShortcutRail, styles.citySceneShortcutRailLeft].join(" ")}>
+            {citySceneQuickRoutes.slice(0, 3).map((action) => (
+              <button key={action.id} type="button" className={styles.citySceneShortcut} onClick={action.onClick}>
+                <strong>{action.glyph}</strong>
+                <span>{action.badge}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className={[styles.citySceneShortcutRail, styles.citySceneShortcutRailRight].join(" ")}>
+            {citySceneQuickRoutes.slice(3).map((action) => (
+              <button key={action.id} type="button" className={styles.citySceneShortcut} onClick={action.onClick}>
+                <strong>{action.glyph}</strong>
+                <span>{action.badge}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className={styles.citySceneRoad} />
+          {cityStageNodes.map((node) => (
+            <button
+              key={node.type}
+              type="button"
+              data-city-node={node.type}
+              aria-label={`${node.label} level ${node.level}`}
+              className={[
+                styles.citySceneNode,
+                node.status === "active" ? styles.citySceneNodeActive : "",
+                node.status === "selected" ? styles.citySceneNodeSelected : "",
+                styles[`citySceneNodeTone${node.tone[0].toUpperCase()}${node.tone.slice(1)}` as keyof typeof styles],
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={
+                {
+                  "--node-x": `${node.x}%`,
+                  "--node-y": `${node.y}%`,
+                } as CSSProperties
+              }
+              onClick={() => {
+                setSelectedDistrictType(node.type);
+                setActiveDashboardPanel("district");
+              }}
+            >
+              <span className={styles.citySceneNodeShadow} />
+              <span className={styles.citySceneNodeFrame}>
+                <img src={node.iconSrc} alt="" aria-hidden="true" className={styles.citySceneNodeIcon} />
+              </span>
+              <span className={styles.citySceneNodeLevel}>L{node.level}</span>
+              <strong className={styles.citySceneNodeName}>{node.label}</strong>
+            </button>
+          ))}
+
+          <aside className={styles.cityScenePanel} aria-live="polite">
+            <div>
+              <span className={styles.citySceneKicker}>{activeCommandPanel.kicker}</span>
+              <strong>{activeCommandPanel.title}</strong>
             </div>
-            <p className={styles.operationsBody}>
-              Keep the city board readable at a glance before diving into districts, commanders, or the frontier map.
-            </p>
-            <div className={styles.queueLedger}>
-              {queueLedger.map((entry) => (
-                <div key={entry.id} className={styles.queueLedgerItem}>
-                  <div>
-                    <span className={styles.operationsLabel}>{entry.label}</span>
-                    <strong>{entry.value}</strong>
-                  </div>
-                  <span className={styles.queueLedgerHint}>{entry.detail}</span>
-                </div>
+            <div className={styles.cityScenePanelStats}>
+              {activeCommandPanel.stats.slice(0, 3).map((metric) => (
+                <span key={metric.id}>
+                  {metric.label}: <strong>{metric.value}</strong>
+                </span>
               ))}
             </div>
-          </article>
+          </aside>
 
-          <article className={styles.operationsCard}>
-            <div className={styles.operationsHeader}>
-              <div>
-                <p className={styles.operationsEyebrow}>Quick Orders</p>
-                <strong className={styles.operationsValue}>Command center shortcuts</strong>
-              </div>
-              <Badge tone="info">Mobile-first</Badge>
-            </div>
-            <p className={styles.operationsBody}>
-              One-tap routes keep research, commanders, alliance rooms, and the world map within thumb reach.
-            </p>
-            <div className={styles.quickOrderGrid}>
-              <Button type="button" size="small" onClick={() => navigate("/app/map")}>
-                Sweep Map
+          <div className={styles.cityScenePanelSwitch} aria-label="City information panels">
+            {dashboardPanelOrder.map((panelId) => {
+              const panel = dashboardInfoPanels[panelId];
+              return (
+                <button
+                  key={panel.id}
+                  type="button"
+                  data-dashboard-panel={panel.id}
+                  className={[styles.cityScenePanelButton, activeDashboardPanel === panel.id ? styles.cityScenePanelButtonActive : ""]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={() => setActiveDashboardPanel(panel.id)}
+                >
+                  <span>{panel.label}</span>
+                  <strong>{panel.value}</strong>
+                </button>
+              );
+            })}
+          </div>
+
+          <nav className={styles.citySceneDock} aria-label="Primary city actions">
+            {citySceneDockActions.map((action) => (
+              <Button
+                key={action.label}
+                type="button"
+                size="small"
+                variant={action.variant ?? "secondary"}
+                disabled={action.disabled}
+                onClick={action.onClick}
+              >
+                {action.label}
               </Button>
-              <Button type="button" size="small" variant="secondary" onClick={() => navigate("/app/research")}>
-                Research
-              </Button>
-              <Button type="button" size="small" variant="secondary" onClick={() => openCommanderPanel(primaryCommander?.id)}>
-                Commander
-              </Button>
-              <Button type="button" size="small" variant="ghost" onClick={() => navigate("/app/alliance")}>
-                Alliance
-              </Button>
-              <Button type="button" size="small" variant="ghost" onClick={() => navigate("/app/messages")}>
-                Messages
-              </Button>
-            </div>
-          </article>
+            ))}
+          </nav>
         </div>
       </header>
 
@@ -483,8 +634,8 @@ export function DashboardPage() {
         <div className={styles.briefingLayout}>
           <SectionHeaderBlock
             kicker="Short-session loop"
-            title="Queue, claim, then leave with purpose"
-            lead={dashboardBriefing.lead}
+            title="Action queue"
+            lead={`${formatNumber(dashboardBriefing.actions.length)} actions | ${idleQueueCount}/3 idle queues | ${formatNumber(claimableCount)} claims`}
             className={styles.briefingHeader}
           />
           <PanelStatGrid items={dashboardBriefing.stats} columns={4} className={styles.briefingStats} />
@@ -499,7 +650,6 @@ export function DashboardPage() {
                   <div className={styles.briefingCardBody}>
                     <p className={styles.briefingEyebrow}>{action.eyebrow}</p>
                     <p className={styles.briefingDetail}>{action.detail}</p>
-                    <p className={styles.briefingImpact}>Impact: {action.impact}</p>
                   </div>
                 }
                 footer={
@@ -534,9 +684,7 @@ export function DashboardPage() {
                 <div className={styles.cityStageAtmosphere}>
                   <span className={styles.cityStageLabel}>Frontier city atlas</span>
                   <strong className={styles.cityStageFocus}>{selectedDistrict?.label ?? "District focus"}</strong>
-                  <p className={styles.cityStageCopy}>
-                    Read city growth like a command board: core districts in the center, military lanes above, resource districts below.
-                  </p>
+                  <p className={styles.cityStageCopy}>Tap a node; details move to the rail.</p>
                 </div>
                 <div className={styles.cityStageCompass}>
                   <span>North Watch</span>
@@ -585,9 +733,7 @@ export function DashboardPage() {
                   <article className={styles.cityFooterCard}>
                     <span className={styles.statLabel}>Season</span>
                     <strong className={styles.cityFooterTitle}>Summer campaign</strong>
-                    <p className={styles.stackHint}>
-                      Dispatch tempo stays high when queues, doctrine, and field orders remain aligned inside the same deck.
-                    </p>
+                    <p className={styles.stackHint}>Queues + doctrine + march.</p>
                   </article>
                 </div>
               </div>
@@ -701,7 +847,6 @@ export function DashboardPage() {
                     <strong>{task.title}</strong>
                     <Badge tone={task.isClaimed ? "info" : task.isCompleted ? "success" : "warning"}>{task.progress}/{task.target}</Badge>
                   </div>
-                  <p className={styles.stackHint}>{task.description}</p>
                   <div className={styles.taskActions}>
                     <Button type="button" size="small" disabled={task.isClaimed || !task.isCompleted || claimTaskMutation.isPending} onClick={() => claimTaskMutation.mutate(task.id)}>
                       {task.isClaimed ? "Claimed" : task.isCompleted ? "Claim Reward" : "Pending"}
@@ -826,7 +971,6 @@ export function DashboardPage() {
                     <div><p className={styles.buildingMeta}>{building.label}</p><h3 className={styles.buildingTitle}>Level {building.level}</h3></div>
                     <Badge tone="info">Next {building.nextLevel}</Badge>
                   </div>
-                  <p className={styles.buildingBody}>{building.description}</p>
                   <div className={styles.resourceList}>{Object.entries(building.upgradeCost).map(([resource, amount]) => <span key={resource}>{resource}: {formatNumber(amount)}</span>)}</div>
                   <div className={styles.actionRow}>
                     <Button type="button" disabled={isUpgrading || (Boolean(activeUpgrade) && !building.isUpgradeActive) || building.isUpgradeActive} onClick={() => upgrade(building.type as BuildingType)}>
