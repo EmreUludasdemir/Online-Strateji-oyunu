@@ -896,19 +896,23 @@
 
 .composerGrid {
   margin-top: 0.25rem;
+  gap: 0.75rem;
 }
 
 .composerHero {
   align-items: flex-start;
   justify-content: space-between;
+  gap: 0.7rem;
 }
 
 .composerStats {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .commandActionGrid {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 0.55rem;
 }
 
 .commandPreviewGrid,
@@ -932,7 +936,7 @@
 .commandActionCard,
 .commandPreviewCard,
 .commandStepCard {
-  padding: 1rem;
+  padding: 0.72rem;
 }
 
 .composerStatLabel {
@@ -951,9 +955,9 @@
 
 .composerStatValue {
   display: block;
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
   font-family: var(--font-mono);
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: var(--color-primary-fixed);
 }
 
@@ -962,7 +966,7 @@
 .commandStepCard,
 .commandCueCard {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.42rem;
 }
 
 .commandActionEyebrow,
@@ -984,7 +988,7 @@
 .commandActionTitle,
 .commandPreviewValue,
 .commandCueValue {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--color-on-surface);
 }
 
@@ -997,6 +1001,7 @@
 .commandActionCard button {
   width: 100%;
   justify-content: center;
+  min-height: 2.45rem;
 }
 
 .commandStepCard {
@@ -1021,17 +1026,18 @@
 .commanderCard,
 .sliderCard {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.42rem;
 }
 
 .commanderMeta {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--color-outline);
 }
 
 .troopDeck {
   grid-template-columns: 1fr;
+  gap: 0.55rem;
 }
 
 .sliderLabelRow strong {
@@ -1214,7 +1220,6 @@
   .campaignMetaGrid,
   .commandStrip,
   .rail,
-  .composerStats,
   .commandActionGrid,
   .commandPreviewGrid,
   .commandStepGrid,
@@ -1225,6 +1230,10 @@
   .operationsGrid,
   .intelList {
     grid-template-columns: 1fr;
+  }
+
+  .composerStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .heroTop,

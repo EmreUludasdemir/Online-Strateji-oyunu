@@ -560,6 +560,10 @@
 }
 
 @media (max-width: 1180px) {
+  .shell {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
   .topHud {
     grid-template-columns: 1fr;
     justify-items: start;

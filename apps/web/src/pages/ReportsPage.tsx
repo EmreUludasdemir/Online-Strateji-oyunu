@@ -7,9 +7,8 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
+import { SectionHeaderBlock } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
-import { PageHero, SummaryMetricGrid } from "../components/ui/PageHero";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { trackAnalyticsOnce } from "../lib/analytics";
@@ -107,11 +106,6 @@ export function ReportsPage() {
     queryKey: ["battle-reports"],
     queryFn: api.reports,
   });
-  const mailboxQuery = useQuery({
-    queryKey: ["mailbox"],
-    queryFn: api.mailbox,
-  });
-
   useEffect(() => {
     if (!reportsQuery.data) {
       return;
@@ -130,7 +124,6 @@ export function ReportsPage() {
   }, [reportsQuery.data]);
 
   const reports = reportsQuery.data?.reports ?? [];
-  const mailboxEntries = mailboxQuery.data?.entries ?? [];
   const focusedReportId = searchParams.get("focus");
   const filteredReports = useMemo(() => {
     const now = Date.now();
@@ -180,115 +173,10 @@ export function ReportsPage() {
     return { victories, holds, gatherReturns, movedTotal };
   }, [filteredReports]);
 
-  const claimableDispatches = mailboxEntries.filter((entry) => entry.canClaim).length;
-  const battleDispatches = mailboxEntries.filter(
-    (entry) => entry.kind === "BATTLE_REPORT" || entry.kind === "RALLY_REPORT",
-  ).length;
-  const scoutDispatches = mailboxEntries.filter((entry) => entry.kind === "SCOUT_REPORT").length;
-  const heroMetrics = [
-    {
-      id: "victories",
-      label: "Victories",
-      value: formatNumber(summary.victories),
-      note: "Resolved offensive pushes currently visible in the council stack.",
-    },
-    {
-      id: "holds",
-      label: "Defenses Held",
-      value: formatNumber(summary.holds),
-      note: "Frontline holds and repelled incursions across the current filter set.",
-    },
-    {
-      id: "gather",
-      label: "Gather Returns",
-      value: formatNumber(summary.gatherReturns),
-      note: "Logistics marches that completed their corridor and filed back to court.",
-      tone: "info" as const,
-    },
-    {
-      id: "throughput",
-      label: "Total Throughput",
-      value: formatNumber(summary.movedTotal),
-      note: "Combined loot and cargo moved through the current filter stack.",
-      tone: "success" as const,
-    },
-    {
-      id: "handoffs",
-      label: "Dispatch Handoffs",
-      value: formatNumber(notifications.unreadMailboxCount),
-      note: "Council items still waiting inside the message center archive.",
-      tone: notifications.unreadMailboxCount > 0 ? ("warning" as const) : ("default" as const),
-    },
-    {
-      id: "claimable",
-      label: "Claimable Warrants",
-      value: formatNumber(claimableDispatches),
-      note: "Reward bundles ready to process without leaving the command loop.",
-      tone: claimableDispatches > 0 ? ("warning" as const) : ("info" as const),
-    },
-  ];
-
   const activeReport = useMemo(
     () => reports.find((report) => report.id === focusedReportId) ?? filteredReports[0] ?? null,
     [filteredReports, focusedReportId, reports],
   );
-
-  const adjacentReports = useMemo(() => {
-    if (!activeReport) {
-      return filteredReports.slice(0, 3);
-    }
-
-    return [
-      ...filteredReports.filter((report) => report.id !== activeReport.id && report.kind === activeReport.kind),
-      ...filteredReports.filter((report) => report.id !== activeReport.id && report.kind !== activeReport.kind),
-    ].slice(0, 3);
-  }, [activeReport, filteredReports]);
-  const activeDossierStats = activeReport
-    ? [
-        {
-          id: "theater",
-          label: "Theater",
-          value: getReportTheater(activeReport),
-          note: `${formatNumber(activeReport.location.distance)} tiles from launch to resolution.`,
-        },
-        {
-          id: "resolution",
-          label: "Resolution",
-          value: getReportResolution(activeReport),
-          note: `${getReportRibbon(activeReport)} logged by the council ledger.`,
-          tone: getReportTone(activeReport),
-        },
-        {
-          id: "bridge",
-          label: "Dispatch Bridge",
-          value: formatNumber(notifications.unreadMailboxCount),
-          note: `${formatNumber(claimableDispatches)} warrants and follow-up dispatches waiting in archive.`,
-          tone: notifications.unreadMailboxCount > 0 ? ("warning" as const) : ("info" as const),
-        },
-      ]
-    : [];
-  const activeBridgeStats = [
-    {
-      id: "unread",
-      label: "Unread dispatches",
-      value: formatNumber(notifications.unreadMailboxCount),
-      note: "Current archive backlog",
-      tone: notifications.unreadMailboxCount > 0 ? ("warning" as const) : ("info" as const),
-    },
-    {
-      id: "battle",
-      label: "Battle dispatches",
-      value: formatNumber(battleDispatches),
-      note: "Combat records on file",
-    },
-    {
-      id: "scout",
-      label: "Scout dispatches",
-      value: formatNumber(scoutDispatches),
-      note: "Recon packets preserved",
-      tone: "info" as const,
-    },
-  ];
 
   if (reportsQuery.isPending) {
     return (
@@ -312,12 +200,32 @@ export function ReportsPage() {
 
   return (
     <section className={styles.page}>
-      <PageHero
-        kicker={copy.reports.title}
-        title="War Council"
-        lead="Battle dossiers, resource returns, and attrition ledgers stay in one council rail. Follow-up warrants and scout packets now feed a tighter bridge into the message center."
-        aside={<Badge tone="info">{reports.length} entries</Badge>}
-      >
+      <section className={styles.reportCommandBar}>
+        <div className={styles.reportCommandHead}>
+          <div>
+            <p className={styles.kicker}>{copy.reports.title}</p>
+            <h1 className={styles.railTitle}>War Council</h1>
+          </div>
+          <Badge tone="info">{formatNumber(reports.length)} entries</Badge>
+        </div>
+        <div className={styles.reportQuickStats} aria-label="Report summary">
+          <article className={styles.summaryCard}>
+            <span className={styles.summaryLabel}>Wins</span>
+            <strong className={styles.summaryValue}>{formatNumber(summary.victories)}</strong>
+          </article>
+          <article className={styles.summaryCard}>
+            <span className={styles.summaryLabel}>Holds</span>
+            <strong className={styles.summaryValue}>{formatNumber(summary.holds)}</strong>
+          </article>
+          <article className={styles.summaryCard}>
+            <span className={styles.summaryLabel}>Returns</span>
+            <strong className={styles.summaryValue}>{formatNumber(summary.gatherReturns)}</strong>
+          </article>
+          <article className={styles.summaryCard}>
+            <span className={styles.summaryLabel}>Moved</span>
+            <strong className={styles.summaryValue}>{formatNumber(summary.movedTotal)}</strong>
+          </article>
+        </div>
         <div className={styles.filterRow}>
           <select aria-label="Filter by category" value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)}>
             <option value="ALL">All categories</option>
@@ -338,8 +246,7 @@ export function ReportsPage() {
             <option value="30D">Last 30d</option>
           </select>
         </div>
-        <SummaryMetricGrid items={heroMetrics} />
-      </PageHero>
+      </section>
 
       <div className={styles.layout}>
         <aside className={styles.reportRail}>
@@ -407,41 +314,30 @@ export function ReportsPage() {
                 <h2 className={styles.detailTitle}>{getReportTitle(activeReport)}</h2>
                 <p className={styles.detailSubtitle}>{getReportSubtitle(activeReport)}</p>
                 <div className={styles.dossierStrip}>
-                  <PanelStatGrid items={activeDossierStats} columns={3} />
+                  <article className={styles.dossierCell}>
+                    <span>Theater</span>
+                    <strong>{getReportTheater(activeReport)}</strong>
+                  </article>
+                  <article className={styles.dossierCell}>
+                    <span>Result</span>
+                    <strong>{getReportResolution(activeReport)}</strong>
+                  </article>
+                  <article className={styles.dossierCell}>
+                    <span>Distance</span>
+                    <strong>{formatNumber(activeReport.location.distance)} tiles</strong>
+                  </article>
+                </div>
+                <div className={styles.detailActions}>
+                  <Button type="button" variant="secondary" onClick={() => navigate("/app/map")}>
+                    {getReportRouteCopy(activeReport).label}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => navigate("/app/messages")}>
+                    Message Center
+                  </Button>
                 </div>
               </header>
 
               <div className={styles.detailGrid}>
-                <SectionCard kicker="Engagement Zone" title="Location data">
-                  <div className={styles.coordGrid}>
-                    <article className={styles.statCard}>
-                      <span className={styles.statLabel}>Launch</span>
-                      <strong>{activeReport.location.from.x}, {activeReport.location.from.y}</strong>
-                    </article>
-                    <article className={styles.statCard}>
-                      <span className={styles.statLabel}>Target</span>
-                      <strong>{activeReport.location.to.x}, {activeReport.location.to.y}</strong>
-                    </article>
-                    <article className={styles.statCard}>
-                      <span className={styles.statLabel}>Distance</span>
-                      <strong>{formatNumber(activeReport.location.distance)} tiles</strong>
-                    </article>
-                  </div>
-                </SectionCard>
-
-                <SectionCard kicker="Council Bridge" title="Redeploy and archive">
-                  <PanelStatGrid items={activeBridgeStats} columns={3} className={styles.bridgeGrid} />
-                  <p className={styles.sideText}>{getReportRouteCopy(activeReport).note}</p>
-                  <div className={styles.detailActions}>
-                    <Button type="button" variant="secondary" onClick={() => navigate("/app/map")}>
-                      {getReportRouteCopy(activeReport).label}
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => navigate("/app/messages")}>
-                      Open Message Center
-                    </Button>
-                  </div>
-                </SectionCard>
-
                 {activeReport.kind === "RESOURCE_GATHER" ? (
                   <SectionCard kicker="Cargo Manifest" title="Recovered assets">
                     <div className={styles.lootGrid}>
@@ -543,43 +439,6 @@ export function ReportsPage() {
                   )}
                 </SectionCard>
 
-                <SectionCard kicker="Council Chronicle" title="Adjacent dossiers" aside={<Badge tone="info">{adjacentReports.length} linked</Badge>}>
-                  {adjacentReports.length === 0 ? (
-                    <p className={styles.sideText}>More resolved marches will stack here as the current front evolves.</p>
-                  ) : (
-                    <div className={styles.timelineList}>
-                      {adjacentReports.map((report) => (
-                        <button
-                          key={report.id}
-                          type="button"
-                          className={styles.timelineButton}
-                          onClick={() => setSearchParams({ focus: report.id })}
-                        >
-                          <div className={styles.timelineButtonMeta}>
-                            <span>{getReportTheater(report)}</span>
-                            <span>{formatDateTime(report.createdAt)}</span>
-                          </div>
-                          <strong>{getReportTitle(report)}</strong>
-                          <span>{getReportRibbon(report)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </SectionCard>
-
-                <SectionCard kicker="Reward Relay" title="Result handling" aside={<Badge tone="warning">{notifications.unreadMailboxCount} inbox</Badge>}>
-                  <p className={styles.sideText}>
-                    Reward parcels, commander tomes, and any follow-up dispatches continue into the message center for claiming and review.
-                  </p>
-                  <div className={styles.detailActions}>
-                    <Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>
-                      Open Message Center
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => navigate("/app/map")}>
-                      Review Strategic Map
-                    </Button>
-                  </div>
-                </SectionCard>
               </div>
             </>
           )}

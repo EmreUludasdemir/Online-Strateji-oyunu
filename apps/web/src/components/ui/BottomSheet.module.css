@@ -89,9 +89,9 @@
   left: auto;
   right: 1rem;
   top: 1rem;
-  bottom: 1rem;
+  bottom: auto;
   width: min(540px, calc(100vw - 1.2rem));
-  max-height: none;
+  max-height: calc(100vh - 2rem);
   transform: none;
   border-radius: var(--radius-sm);
   animation: slideInRight 320ms var(--motion-smooth) both;

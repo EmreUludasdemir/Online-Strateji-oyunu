@@ -21,7 +21,6 @@ import type { MapFieldCommand, MapReportMarkerView, WorldMapHandle } from "../co
 import { Badge } from "../components/ui/Badge";
 import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
-import { SummaryMetricGrid } from "../components/ui/PageHero";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { getKingdomPasses, getKingdomRingRadii, getKingdomSanctuaries, getKingdomTier } from "../components/kingdomMap";
@@ -1065,11 +1064,6 @@ export function MapPage() {
       : selectedPoi
         ? ["Send Scout", "Gather Here"]
         : [];
-  const targetWindowLabel = selectedCity?.battleWindowClosesAt
-    ? formatRelativeTimer(selectedCity.battleWindowClosesAt, now)
-    : selectedPoi?.battleWindowClosesAt
-      ? formatRelativeTimer(selectedPoi.battleWindowClosesAt, now)
-      : "No live window";
   const fieldCommandCanOpenTarget = Boolean(
     fieldCommand && ((fieldCommand.kind === "CITY" && fieldCommand.cityId) || (fieldCommand.kind === "POI" && fieldCommand.poiId)),
   );
@@ -1323,45 +1317,6 @@ export function MapPage() {
       tone: activeBattleWindow || selectedCity ? "warning" : latestAllianceMarker ? "success" : "info",
     },
   ] as const;
-  const targetCommandCues =
-    selectedCity || selectedPoi
-      ? [
-          {
-            id: "commander",
-            label: "Commander",
-            value: selectedCommander?.name ?? "Unassigned",
-            note: selectedCommander
-              ? `Spd +${selectedCommander.marchSpeedBonusPct}% | Carry +${selectedCommander.carryBonusPct}%`
-              : "Assign a commander before launch",
-            tone: selectedCommander ? ("success" as const) : ("warning" as const),
-          },
-          {
-            id: "window",
-            label: "Window",
-            value: targetWindowLabel,
-            note: activeBattleWindow
-              ? `${formatNumber(alliedBattleParticipants)} allied banners`
-              : selectedTargetDistance != null
-                ? `${formatNumber(selectedTargetDistance)} tiles from home`
-                : "No live window",
-            tone:
-              activeBattleWindow || (selectedCity && !selectedCity.isCurrentPlayer && !selectedCityIsAllied)
-                ? ("warning" as const)
-                : selectedCityIsAllied
-                  ? ("success" as const)
-                  : ("info" as const),
-          },
-          {
-            id: "signals",
-            label: "Signals",
-            value: latestAllianceMarker ? latestAllianceMarker.label : "Post a new beacon",
-            note: latestVisibleReport
-              ? `Report | ${latestVisibleReport.label}`
-              : "Post a marker or scout report",
-            tone: latestAllianceMarker ? ("success" as const) : ("info" as const),
-          },
-        ]
-      : [];
   const minimapViewport = useMemo(() => {
     const halfSpan = Math.max(3, chunkRequest.radius);
     return {
@@ -2577,7 +2532,11 @@ export function MapPage() {
           ) : undefined
         }
       >
-        <div className={styles.composerGrid}>
+        <div
+          className={styles.composerGrid}
+          data-map-composer={composerMode ?? undefined}
+          data-map-target-tray={composerMode ? undefined : "open"}
+        >
           {composerMode ? (
             <>
               <section className={styles.composerHero}>
@@ -2603,26 +2562,6 @@ export function MapPage() {
                         ? "Rally"
                         : "Attack"}
                 </Badge>
-              </section>
-              <section className={styles.commandStepGrid} aria-label="Command flow">
-                <article className={`${styles.commandStepCard} ${styles.commandStepActive}`}>
-                  <span className={styles.commandStepLabel}>Target lock</span>
-                  <strong className={styles.commandStepValue}>{selectedTargetName ?? "No target"}</strong>
-                </article>
-                <article className={`${styles.commandStepCard} ${styles.commandStepActive}`}>
-                  <span className={styles.commandStepLabel}>Commander frame</span>
-                  <strong className={styles.commandStepValue}>{selectedCommander?.name ?? "Awaiting commander"}</strong>
-                </article>
-                <article className={`${styles.commandStepCard} ${styles.commandStepActive}`}>
-                  <span className={styles.commandStepLabel}>Formation</span>
-                  <strong className={styles.commandStepValue}>
-                    {composerMode === "SCOUT" ? "Recon packet" : `${formatNumber(totalAssignedTroops)} troops committed`}
-                  </strong>
-                </article>
-                <article className={`${styles.commandStepCard} ${styles.commandStepActive}`}>
-                  <span className={styles.commandStepLabel}>Confirm</span>
-                  <strong className={styles.commandStepValue}>{composerActionLabel}</strong>
-                </article>
               </section>
               <div className={styles.composerStats}>
                 <article className={styles.composerStatCard}>
@@ -2654,32 +2593,6 @@ export function MapPage() {
                   </strong>
                 </article>
               </div>
-              <section className={styles.commandPreviewGrid}>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>Command class</span>
-                  <strong className={styles.commandPreviewValue}>
-                    {composerMode === "SCOUT"
-                      ? "Light recon"
-                      : composerMode === "RALLY"
-                        ? "Alliance lead"
-                        : composerMode === "RESOURCE_GATHER"
-                          ? "Harvest route"
-                          : "Shock march"}
-                  </strong>
-                </article>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>Lead commander</span>
-                  <strong className={styles.commandPreviewValue}>
-                    {selectedCommander ? `L${selectedCommander.level} ${selectedCommander.name}` : "Unassigned"}
-                  </strong>
-                </article>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>Formation load</span>
-                  <strong className={styles.commandPreviewValue}>
-                    {composerMode === "SCOUT" ? "No troop cost" : `${formatNumber(totalAssignedTroops)} units`}
-                  </strong>
-                </article>
-              </section>
               {composerMode !== "SCOUT" ? (
                 <>
                   <section className={styles.commanderCard}>
@@ -2706,8 +2619,7 @@ export function MapPage() {
                           <span>
                             <strong>{troop.label}</strong>
                             <span className={styles.sliderMeta}>
-                              Reserve {formatNumber(troop.quantity)} / Speed {troop.speed.toFixed(2)} / Carry{" "}
-                              {formatNumber(troop.carry)}
+                              Reserve {formatNumber(troop.quantity)} / Carry {formatNumber(troop.carry)}
                             </span>
                           </span>
                           <strong>{formatNumber(troopPayload[troop.type])}</strong>
@@ -2734,29 +2646,20 @@ export function MapPage() {
                       </article>
                     ))}
                   </div>
-                  <p className={styles.composerHint}>
-                    {composerMode === "RALLY"
-                      ? "Rally setup uses your selected commander and formation as the lead frame for allied joins."
-                      : composerMode === "RESOURCE_GATHER"
-                        ? "Gathering favors higher carry and shorter routes so your return loop stays efficient."
-                        : "Attack routes pulse on launch and arrival. Adjust composition before committing the march."}
-                  </p>
                 </>
               ) : (
-                <SectionCard kicker="Recon Sweep" title="Scout briefing">
-                  <div className={styles.detailList}>
-                    <p className={styles.muted}>
-                      Scout missions do not carry troops. The result arrives as a detailed inbox report with refreshed
-                      target intel.
-                    </p>
-                    {selectedPoi?.resourceType ? (
-                      <p className={styles.muted}>Resource Type: {copy.poiResources[selectedPoi.resourceType]}</p>
-                    ) : null}
-                    <p className={styles.muted}>
-                      Use recon before a city strike when you want cleaner visibility on defenses and route quality.
-                    </p>
+                <section className={styles.commanderCard}>
+                  <div className={styles.composerRow}>
+                    <span className={styles.muted}>Scout cost</span>
+                    <strong>No troops</strong>
                   </div>
-                </SectionCard>
+                  {selectedPoi?.resourceType ? (
+                    <div className={styles.composerRow}>
+                      <span className={styles.muted}>Resource</span>
+                      <strong>{copy.poiResources[selectedPoi.resourceType]}</strong>
+                    </div>
+                  ) : null}
+                </section>
               )}
             </>
           ) : selectedCity ? (
@@ -2775,9 +2678,6 @@ export function MapPage() {
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Recon Sweep</p>
                   <strong className={styles.commandActionTitle}>Open scout channel</strong>
-                  <p className={styles.commandActionCopy}>
-                    Send a light recon pass first if you want fresher garrison detail before risking a siege commit.
-                  </p>
                   <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
                     {copy.map.scout}
                   </Button>
@@ -2785,9 +2685,6 @@ export function MapPage() {
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Alliance Lead</p>
                   <strong className={styles.commandActionTitle}>Raise a rally banner</strong>
-                  <p className={styles.commandActionCopy}>
-                    Open a lead frame so allied marches can stack into the same target window with cleaner timing.
-                  </p>
                   <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
                     {copy.map.rally}
                   </Button>
@@ -2795,9 +2692,6 @@ export function MapPage() {
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Primary Order</p>
                   <strong className={styles.commandActionTitle}>Commit siege formation</strong>
-                  <p className={styles.commandActionCopy}>
-                    Route preview uses your current commander and reserve defaults before the full composition sheet opens.
-                  </p>
                   <Button type="button" variant="primary" onClick={() => openComposer(targetPrimaryMode)}>
                     {targetPrimaryActionLabel}
                   </Button>
@@ -2815,43 +2709,18 @@ export function MapPage() {
                   </strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Fog State</span>
-                  <strong className={styles.composerStatValue}>{selectedCity.fogState.toLowerCase()}</strong>
-                </article>
-                <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Type</span>
-                  <strong className={styles.composerStatValue}>Player City</strong>
-                </article>
-              </div>
-              <section className={styles.commandPreviewGrid}>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>Battle window</span>
-                  <strong className={styles.commandPreviewValue}>{targetWindowLabel}</strong>
-                </article>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>March preview</span>
-                  <strong className={styles.commandPreviewValue}>
+                  <span className={styles.composerStatLabel}>ETA</span>
+                  <strong className={styles.composerStatValue}>
                     {previewMarchEtaMs != null
                       ? formatTimeRemaining(new Date(now + previewMarchEtaMs).toISOString(), now)
-                      : "Awaiting route"}
+                      : "-"}
                   </strong>
                 </article>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>Power preview</span>
-                  <strong className={styles.commandPreviewValue}>{formatNumber(previewPower)}</strong>
+                <article className={styles.composerStatCard}>
+                  <span className={styles.composerStatLabel}>Power</span>
+                  <strong className={styles.composerStatValue}>{formatNumber(previewPower)}</strong>
                 </article>
-              </section>
-              <SummaryMetricGrid items={targetCommandCues} compact containerDataAttribute="data-command-cues" />
-              <SectionCard kicker="Operational Readout" title="Field intel">
-                <div className={styles.detailList}>
-                  <p className={styles.muted}>
-                    Window strength reacts to commander bonuses and current march weight.
-                  </p>
-                  <p className={styles.muted}>
-                    Scout first if the garrison readout looks stale.
-                  </p>
-                </div>
-              </SectionCard>
+              </div>
             </>
           ) : selectedPoi ? (
             <>
@@ -2869,9 +2738,6 @@ export function MapPage() {
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Recon Sweep</p>
                   <strong className={styles.commandActionTitle}>Read the objective</strong>
-                  <p className={styles.commandActionCopy}>
-                    Scout first to refresh camp or node intel before commit.
-                  </p>
                   <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
                     {copy.map.scout}
                   </Button>
@@ -2880,9 +2746,6 @@ export function MapPage() {
                   <article className={styles.commandActionCard}>
                     <p className={styles.commandActionEyebrow}>Alliance Lead</p>
                     <strong className={styles.commandActionTitle}>Open a rally channel</strong>
-                    <p className={styles.commandActionCopy}>
-                      Use the camp window as the allied timing anchor.
-                    </p>
                     <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
                       {copy.map.rally}
                     </Button>
@@ -2893,11 +2756,6 @@ export function MapPage() {
                   <strong className={styles.commandActionTitle}>
                     {selectedPoi.kind === "BARBARIAN_CAMP" ? "Commit strike package" : "Open harvest formation"}
                   </strong>
-                  <p className={styles.commandActionCopy}>
-                    {selectedPoi.kind === "BARBARIAN_CAMP"
-                      ? "Lead camps with stronger opening power."
-                      : "For nodes, carry and route speed matter more than raw damage."}
-                  </p>
                   <Button type="button" variant="primary" onClick={() => openComposer(targetPrimaryMode)}>
                     {targetPrimaryActionLabel}
                   </Button>
@@ -2925,38 +2783,6 @@ export function MapPage() {
                   </strong>
                 </article>
               </div>
-              <section className={styles.commandPreviewGrid}>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>Battle window</span>
-                  <strong className={styles.commandPreviewValue}>{targetWindowLabel}</strong>
-                </article>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>Route preview</span>
-                  <strong className={styles.commandPreviewValue}>
-                    {previewMarchEtaMs != null
-                      ? formatTimeRemaining(new Date(now + previewMarchEtaMs).toISOString(), now)
-                      : "Awaiting route"}
-                  </strong>
-                </article>
-                <article className={styles.commandPreviewCard}>
-                  <span className={styles.commandPreviewLabel}>
-                    {selectedPoi.kind === "RESOURCE_NODE" ? "Carry preview" : "Power preview"}
-                  </span>
-                  <strong className={styles.commandPreviewValue}>
-                    {selectedPoi.kind === "RESOURCE_NODE" ? formatNumber(previewCarry) : formatNumber(previewPower)}
-                  </strong>
-                </article>
-              </section>
-              <SummaryMetricGrid items={targetCommandCues} compact containerDataAttribute="data-command-cues" />
-              <SectionCard kicker="Operational Readout" title="Field intel">
-                <div className={styles.detailList}>
-                  <p className={styles.muted}>
-                    {selectedPoi.kind === "BARBARIAN_CAMP"
-                      ? "Camps pay best when opened with a stronger commander frame."
-                      : "Nodes reward higher carry and faster return routes."}
-                  </p>
-                </div>
-              </SectionCard>
             </>
           ) : null}
         </div>
