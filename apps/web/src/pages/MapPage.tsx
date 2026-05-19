@@ -1954,160 +1954,45 @@ export function MapPage() {
 
   return (
     <section className={styles.page}>
-      <article className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.muted}>{copy.map.title}</p>
-            <h2 className={styles.heroTitle}>Frontier Theater</h2>
-            <p className={styles.heroLead}>
-              Sweep a fog-covered kingdom with wide zoom, tier rings, mountain passes, scout trails, and cleaner tactical launch flow.
-            </p>
-          </div>
-          <Badge tone="info">
-            Center {cameraView.centerTileX},{cameraView.centerTileY} / zoom {cameraView.zoom.toFixed(2)}
-          </Badge>
-        </div>
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.muted}>{copy.map.visible}</span>
-            <strong className={styles.summaryValue}>{formatNumber(visibleTiles)}</strong>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.muted}>{copy.map.discoverable}</span>
-            <strong className={styles.summaryValue}>{formatNumber(discoveredTiles)}</strong>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.muted}>{copy.map.activeMarches}</span>
-            <strong className={styles.summaryValue}>{formatNumber(activeMarchCount)}</strong>
-          </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.muted}>Kingdom tier</span>
-            <strong className={styles.summaryValue}>{currentTier.shortLabel}</strong>
-          </article>
-        </div>
-        <div className={styles.campaignDeck}>
-          <article className={styles.campaignCard}>
-            <div className={styles.campaignHeader}>
-              <div>
-                <p className={styles.campaignEyebrow}>Theater Directive</p>
-                <strong className={styles.campaignValue}>{currentTier.label}</strong>
-              </div>
-              <Badge tone={theaterStatusTone}>{theaterStatusLabel}</Badge>
-            </div>
-            <p className={styles.campaignCopy}>
-              Camera anchor sits at {cameraView.centerTileX},{cameraView.centerTileY}. Scout through fog, read the ring you are in, then use passes to plan movement between mountain-bounded zones.
-            </p>
-            <div className={styles.campaignMetaGrid}>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Detail</span>
-                <strong className={styles.campaignMetaValue}>{cameraView.detailLevel}</strong>
-              </article>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Chunk radius</span>
-                <strong className={styles.campaignMetaValue}>{formatNumber(chunkRequest.radius)}</strong>
-              </article>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Pass network</span>
-                <strong className={styles.campaignMetaValue}>{formatNumber(kingdomPasses.length)}</strong>
-              </article>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Nearest pass</span>
-                <strong className={styles.campaignMetaValue}>{nearbyKingdomPasses[0]?.label ?? "-"}</strong>
-              </article>
-            </div>
-          </article>
-          <article className={styles.campaignCard}>
-            <div className={styles.campaignHeader}>
-              <div>
-                <p className={styles.campaignEyebrow}>Campaign Pressure</p>
-                <strong className={styles.campaignValue}>
-                  {activeBattleWindow ? `${formatNumber(activeBattleWindow.participantCount)} banners staged` : `${formatNumber(activeMarchCount)} live field orders`}
-                </strong>
-              </div>
-              <Badge tone={activeBattleWindow ? "warning" : reportMarkers.length > 0 ? "info" : "success"}>
-                {activeBattleWindow ? "Battle window" : reportMarkers.length > 0 ? "Recent history" : "Stable line"}
-              </Badge>
-            </div>
-            <p className={styles.campaignCopy}>
-              {activeBattleWindow
-                ? `${activeBattleWindow.label} remains open and ${formatNumber(alliedBattleParticipants)} allied banners are already committed.`
-                : "No battle window is locking the sector right now, so march lanes and report beacons stay easier to parse."}
-            </p>
-            <div className={styles.campaignMetaGrid}>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Allied banners</span>
-                <strong className={styles.campaignMetaValue}>{formatNumber(alliedBattleParticipants)}</strong>
-              </article>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Visible reports</span>
-                <strong className={styles.campaignMetaValue}>{formatNumber(reportMarkers.length)}</strong>
-              </article>
-            </div>
-          </article>
-          <article className={styles.campaignCard}>
-            <div className={styles.campaignHeader}>
-              <div>
-                <p className={styles.campaignEyebrow}>Banner Network</p>
-                <strong className={styles.campaignValue}>{alliance ? `[${alliance.tag}] signal rail` : "Independent signals"}</strong>
-              </div>
-              <Badge tone={allianceMarkers.length > 0 ? "success" : "info"}>{formatNumber(allianceMarkers.length)} markers</Badge>
-            </div>
-            <p className={styles.campaignCopy}>
-              {latestAllianceMarker
-                ? `Latest beacon: ${latestAllianceMarker.label} at ${latestAllianceMarker.x},${latestAllianceMarker.y}.`
-                : selectedTargetName
-                  ? `Target lock is on ${selectedTargetName}. Drop a marker to turn it into alliance-readable field guidance.`
-                  : "Select a city, camp, or resource node to translate reconnaissance into fast action buttons."}
-            </p>
-            <div className={styles.campaignMetaGrid}>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Selected target</span>
-                <strong className={styles.campaignMetaValue}>{selectedTargetName ?? "None"}</strong>
-              </article>
-              <article className={styles.campaignMetaCard}>
-                <span className={styles.campaignMetaLabel}>Recent beacons</span>
-                <strong className={styles.campaignMetaValue}>{formatNumber(recentAllianceMarkers.length)}</strong>
-              </article>
-            </div>
-          </article>
-        </div>
-      </article>
-
       <section className={styles.battlefieldLayout}>
         <div className={styles.mapStage}>
           <article className={styles.mapFrame}>
             <div className={styles.tacticalHud}>
-              <section className={styles.intelPanel}>
-                <div className={styles.intelPanelBody}>
+              {selectedTargetName ? (
+                <section className={styles.intelPanel}>
                   <div className={styles.intelPanelHeader}>
                     <div>
                       <p className={styles.hudEyebrow}>Active Selection</p>
-                      <h3 className={styles.hudTitle}>{selectedTargetName ?? "Sweep the frontier"}</h3>
-                      <p className={styles.hudSubtitle}>{selectedTargetSubtitle}</p>
+                      <h3 className={styles.hudTitle}>{selectedTargetName}</h3>
                     </div>
                     <div className={styles.statusCluster}>
                       <Badge tone={overlaySelectionTone}>{overlaySelectionLabel}</Badge>
-                      <p className={styles.hudMeta}>
-                        {selectedTargetDistance != null
-                          ? `Distance ${formatNumber(selectedTargetDistance)} tiles`
-                          : "Drag to pan / Mousewheel to zoom"}
-                      </p>
+                      {selectedTargetDistance != null ? (
+                        <p className={styles.hudMeta}>{formatNumber(selectedTargetDistance)} tiles</p>
+                      ) : null}
                     </div>
                   </div>
-                  <SummaryMetricGrid
-                    items={tacticalReadouts}
-                    containerDataAttribute="data-map-readouts"
-                    itemDataAttribute="data-map-readout"
-                  />
-                </div>
-              </section>
+                </section>
+              ) : null}
               <div className={styles.controlsDeck}>
                 <div className={styles.controls}>
-                  <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomIn()}>
-                    {copy.map.zoomIn}
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="secondary"
+                    aria-label={copy.map.zoomIn}
+                    onClick={() => mapCommandRef.current?.zoomIn()}
+                  >
+                    +
                   </Button>
-                  <Button type="button" size="small" variant="secondary" onClick={() => mapCommandRef.current?.zoomOut()}>
-                    {copy.map.zoomOut}
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="secondary"
+                    aria-label={copy.map.zoomOut}
+                    onClick={() => mapCommandRef.current?.zoomOut()}
+                  >
+                    −
                   </Button>
                   <Button
                     type="button"
@@ -2153,49 +2038,6 @@ export function MapPage() {
                 </div>
               </div>
             </div>
-            <div className={styles.cameraRail}>
-              <article className={styles.cameraGuideCard}>
-                <div className={styles.cameraGuideHeader}>
-                  <div>
-                    <p className={styles.hudEyebrow}>Camera UX</p>
-                    <strong className={styles.cardTitle}>Drag, zoom, and read the field cleanly</strong>
-                  </div>
-                  <Badge tone={interactionTone}>{mapInteractionMode}</Badge>
-                </div>
-                <p className={styles.cameraGuideCopy}>{mapInteractionHint}</p>
-                <div className={styles.cameraGuideMetrics}>
-                  <article className={styles.cameraMetricCard}>
-                    <span className={styles.cameraMetricLabel}>Zoom</span>
-                    <strong className={styles.cameraMetricValue}>{cameraView.zoom.toFixed(2)}x</strong>
-                  </article>
-                  <article className={styles.cameraMetricCard}>
-                    <span className={styles.cameraMetricLabel}>Chunk pull</span>
-                    <strong className={styles.cameraMetricValue}>{formatNumber(chunkRequest.radius)} tiles</strong>
-                  </article>
-                  <article className={styles.cameraMetricCard}>
-                    <span className={styles.cameraMetricLabel}>Focus</span>
-                    <strong className={styles.cameraMetricValue}>{selectedMarch ? "Live march" : selectedTargetName ?? "Free sweep"}</strong>
-                  </article>
-                </div>
-                <div className={styles.detailScale} aria-label="Detail ladder">
-                  {detailGuideSteps.map((step) => {
-                    const isActive = step.id === cameraView.detailLevel;
-                    return (
-                      <article
-                        key={step.id}
-                        className={[styles.detailScaleItem, isActive ? styles.detailScaleItemActive : ""]
-                          .filter(Boolean)
-                          .join(" ")}
-                      >
-                        <span className={styles.detailScaleLabel}>{step.label}</span>
-                        <strong className={styles.detailScaleValue}>{step.hint}</strong>
-                      </article>
-                    );
-                  })}
-                </div>
-              </article>
-            </div>
-
             <aside className={styles.minimapCard}>
               <div className={styles.minimapHeader}>
                 <strong className={styles.cardTitle}>Frontier Lens</strong>
@@ -2388,31 +2230,6 @@ export function MapPage() {
                 </div>
               ) : null}
             </aside>
-            <div className={styles.mapDock}>
-              <article className={styles.dockCard}>
-                <span className={styles.dockEyebrow}>Field Lens</span>
-                <strong className={styles.dockStrong}>{currentTier.shortLabel}</strong>
-                <p className={styles.dockCopy}>Detail {cameraView.detailLevel} / radius {chunkRequest.radius} / center {cameraView.centerTileX},{cameraView.centerTileY}</p>
-              </article>
-              <article className={styles.dockCard}>
-                <span className={styles.dockEyebrow}>Route Grid</span>
-                <strong className={styles.dockStrong}>{formatNumber(activeMarchCount)} active orders</strong>
-                <p className={styles.dockCopy}>
-                  Paths {showPaths ? "on" : "off"} / scouts {showScoutTrails ? "on" : "off"} / reports {showReports ? "on" : "off"}
-                </p>
-              </article>
-              <article className={styles.dockCard}>
-                <span className={styles.dockEyebrow}>Alliance Signals</span>
-                <strong className={styles.dockStrong}>{alliance ? `[${alliance.tag}] marker network` : "Independent signals"}</strong>
-                <p className={styles.dockCopy}>
-                  {latestAllianceMarker
-                    ? `Latest beacon: ${latestAllianceMarker.label}`
-                    : selectedTargetName
-                      ? `Selected ${selectedTargetName}`
-                      : "Select a city, camp, or node to open command actions."}
-                </p>
-              </article>
-            </div>
             <Suspense fallback={<div className={styles.hero}>Opening map...</div>}>
               <WorldMap
                 worldSize={worldChunk.size}
@@ -2460,29 +2277,6 @@ export function MapPage() {
         </div>
 
         <aside className={styles.sideRail}>
-          <div className={styles.aegisHeader}>
-            <p className={styles.hudEyebrow}>Command Rail</p>
-            <h2 className={styles.aegisTitle}>Aegis Command</h2>
-            <p className={styles.aegisCopy}>
-              Queue rhythm, search, alliance markers, and report beacons stay pinned here while the battlefield camera moves.
-            </p>
-          </div>
-
-          <SectionCard kicker="LIVE FIELD STATUS" title="Operations Board" className={styles.marchSection}>
-            <div className={styles.operationsGrid}>
-              {operationsSummary.map((item) => (
-                <article key={item.id} className={styles.operationCard}>
-                  <div className={styles.operationHead}>
-                    <span className={styles.operationLabel}>{item.label}</span>
-                    <Badge tone={item.tone}>{item.badge}</Badge>
-                  </div>
-                  <strong className={styles.operationValue}>{item.value}</strong>
-                  <p className={styles.operationNote}>{item.note}</p>
-                </article>
-              ))}
-            </div>
-          </SectionCard>
-
           <SectionCard kicker="ACTIVE CONSTRUCTION" title="City Queues" className={styles.marchSection}>
             <div className={styles.queueList}>
               {hud.queueItems.map((item) => (

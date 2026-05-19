@@ -1,0 +1,51 @@
+[    1017ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=16730f25:20102
+[    3615ms] [LOG] %c %c %c %c %c Phaser v3.90.0-FB (Canvas | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:27123
+[    3628ms] [LOG] %c %c %c %c %c Phaser v3.90.0-FB (Canvas | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:27123
+[    3654ms] TypeError: this.load.svg is not a function
+    at FrontierMapScene.preload (http://localhost:5173/src/components/WorldMap.tsx:191:15)
+    at SceneManager2.bootScene (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35030:25)
+    at SceneManager2.start (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35577:14)
+    at SceneManager2.bootQueue (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:34864:16)
+    at EventEmitter.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at Game2.texturesReady (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:45706:21)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at TextureManager2.updatePending (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39006:16)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12959:33)
+    at image.onload (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39115:19)
+[    3655ms] TypeError: this.load.svg is not a function
+    at FrontierMapScene.preload (http://localhost:5173/src/components/WorldMap.tsx:191:15)
+    at SceneManager2.bootScene (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35030:25)
+    at SceneManager2.start (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35577:14)
+    at SceneManager2.bootQueue (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:34864:16)
+    at EventEmitter.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at Game2.texturesReady (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:45706:21)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at TextureManager2.updatePending (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39006:16)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12959:33)
+    at image.onload (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39115:19)
+[   98603ms] [LOG] %c %c %c %c %c Phaser v3.90.0-FB (Canvas | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:27123
+[   98610ms] [LOG] %c %c %c %c %c Phaser v3.90.0-FB (Canvas | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent @ http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:27123
+[   98617ms] TypeError: this.load.svg is not a function
+    at FrontierMapScene.preload (http://localhost:5173/src/components/WorldMap.tsx:191:15)
+    at SceneManager2.bootScene (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35030:25)
+    at SceneManager2.start (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35577:14)
+    at SceneManager2.bootQueue (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:34864:16)
+    at EventEmitter.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at Game2.texturesReady (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:45706:21)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at TextureManager2.updatePending (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39006:16)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12959:33)
+    at image.onload (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39115:19)
+[   98618ms] TypeError: this.load.svg is not a function
+    at FrontierMapScene.preload (http://localhost:5173/src/components/WorldMap.tsx:191:15)
+    at SceneManager2.bootScene (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35030:25)
+    at SceneManager2.start (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:35577:14)
+    at SceneManager2.bootQueue (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:34864:16)
+    at EventEmitter.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at Game2.texturesReady (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:45706:21)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12977:31)
+    at TextureManager2.updatePending (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39006:16)
+    at TextureManager2.emit (http://localhost:5173/node_modules/.vite/deps/chunk-PQ2FKRIU.js?v=16730f25:12959:33)
+    at image.onload (http://localhost:5173/node_modules/.vite/deps/phaser_src_phaser-core__js.js?v=16730f25:39115:19)
+[  134100ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/game/state:0
+[  135119ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/game/state:0

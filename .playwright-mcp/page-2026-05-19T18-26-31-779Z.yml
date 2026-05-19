@@ -1,0 +1,312 @@
+- generic [ref=e40]:
+  - banner [ref=e41]:
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - heading "Frontier Dominion" [level=1] [ref=e45]
+        - paragraph [ref=e46]:
+          - text: Public Build |
+          - generic [ref=e47]: v0.0.1
+      - generic [ref=e49]: Public Build
+    - generic [ref=e50]:
+      - 'generic "Wood: 900" [ref=e51]':
+        - generic [ref=e52]:
+          - img [ref=e53]
+          - generic [ref=e54]: Wood
+        - strong [ref=e55]: "900"
+      - 'generic "Stone: 900" [ref=e56]':
+        - generic [ref=e57]:
+          - img [ref=e58]
+          - generic [ref=e59]: Stone
+        - strong [ref=e60]: "900"
+      - 'generic "Food: 1,000" [ref=e61]':
+        - generic [ref=e62]:
+          - img [ref=e63]
+          - generic [ref=e64]: Food
+        - strong [ref=e65]: 1,000
+      - 'generic "Gold: 600" [ref=e66]':
+        - generic [ref=e67]:
+          - img [ref=e68]
+          - generic [ref=e69]: Gold
+        - strong [ref=e70]: "600"
+    - generic [ref=e71]:
+      - button "Open inbox" [ref=e72] [cursor=pointer]:
+        - img [ref=e73]
+      - button "Open store" [ref=e76] [cursor=pointer]:
+        - img [ref=e77]
+      - button "Commanders" [ref=e80] [cursor=pointer]:
+        - img [ref=e81]
+  - complementary [ref=e84]:
+    - generic [ref=e85]:
+      - generic [ref=e86]:
+        - generic [ref=e87]: FD
+        - generic [ref=e88]:
+          - paragraph [ref=e89]: Sovereign Archive
+          - heading "Frontier Dominion" [level=2] [ref=e90]
+          - generic [ref=e91]:
+            - generic [ref=e92]: Public Build
+            - generic [ref=e93]: v0.0.1
+      - paragraph [ref=e94]: claude_dev Hold command ledger
+    - navigation [ref=e95]:
+      - link "MAP Field Theater Strategic Map" [ref=e96] [cursor=pointer]:
+        - /url: /app/map
+        - generic [ref=e97]: MAP
+        - generic [ref=e98]:
+          - generic [ref=e99]: Field Theater
+          - generic [ref=e100]: Strategic Map
+      - link "ALLY Diplomacy Wing Grand Alliance" [ref=e101] [cursor=pointer]:
+        - /url: /app/alliance
+        - generic [ref=e102]: ALLY
+        - generic [ref=e103]:
+          - generic [ref=e104]: Diplomacy Wing
+          - generic [ref=e105]: Grand Alliance
+      - link "CITY Inner Province City Dashboard" [ref=e106] [cursor=pointer]:
+        - /url: /app/dashboard
+        - generic [ref=e107]: CITY
+        - generic [ref=e108]:
+          - generic [ref=e109]: Inner Province
+          - generic [ref=e110]: City Dashboard
+      - link "WAR Battle Ledger War Council" [ref=e111] [cursor=pointer]:
+        - /url: /app/reports
+        - generic [ref=e112]: WAR
+        - generic [ref=e113]:
+          - generic [ref=e114]: Battle Ledger
+          - generic [ref=e115]: War Council
+    - generic [ref=e116]:
+      - paragraph [ref=e117]: Imperial Rooms
+      - generic [ref=e118]:
+        - link "ARC Academy Wing Imperial Research" [ref=e119] [cursor=pointer]:
+          - /url: /app/research
+          - generic [ref=e120]: ARC
+          - generic [ref=e121]:
+            - generic [ref=e122]: Academy Wing
+            - generic [ref=e123]: Imperial Research
+        - link "RANK Ranking Bureau Imperial Leaderboards" [ref=e124] [cursor=pointer]:
+          - /url: /app/leaderboards
+          - generic [ref=e125]: RANK
+          - generic [ref=e126]:
+            - generic [ref=e127]: Ranking Bureau
+            - generic [ref=e128]: Imperial Leaderboards
+        - link "MSG Dispatch Hall Message Center" [ref=e129] [cursor=pointer]:
+          - /url: /app/messages
+          - generic [ref=e130]: MSG
+          - generic [ref=e131]:
+            - generic [ref=e132]: Dispatch Hall
+            - generic [ref=e133]: Message Center
+        - link "MKT Trade Exchange Imperial Market" [ref=e134] [cursor=pointer]:
+          - /url: /app/market
+          - generic [ref=e135]: MKT
+          - generic [ref=e136]:
+            - generic [ref=e137]: Trade Exchange
+            - generic [ref=e138]: Imperial Market
+    - generic [ref=e139]:
+      - paragraph [ref=e140]: Dominion Signals
+      - heading "Independent Province" [level=3] [ref=e141]
+      - generic [ref=e142]:
+        - generic [ref=e143]:
+          - text: Alliance Banner
+          - generic [ref=e144]: Independent Province
+        - generic [ref=e145]:
+          - text: Open Marches
+          - generic [ref=e146]: "0"
+        - generic [ref=e147]:
+          - text: Unread Dispatches
+          - generic [ref=e148]: "0"
+        - generic [ref=e149]:
+          - text: Province Status
+          - generic [ref=e150]: Battle ready
+    - generic [ref=e151]:
+      - button "Declare War" [ref=e152] [cursor=pointer]
+      - generic [ref=e153]:
+        - generic [ref=e154]: Public Build | v0.0.1
+        - button "Theme Deck" [ref=e155] [cursor=pointer]
+        - button "Log Out" [ref=e156] [cursor=pointer]
+  - main [ref=e158]:
+    - generic [ref=e159]:
+      - generic [ref=e161]:
+        - generic:
+          - generic [ref=e162]:
+            - generic [ref=e163]: City
+            - heading "claude_dev Hold" [level=2] [ref=e164]
+            - generic [ref=e165]: 50, 50 | Solo
+          - generic [ref=e166]:
+            - generic [ref=e167]: Idle
+            - generic [ref=e168]: 3/3 queues
+        - generic [ref=e169]:
+          - button "MAP 0" [ref=e170] [cursor=pointer]:
+            - strong [ref=e171]: MAP
+            - generic [ref=e172]: "0"
+          - button "WAR 2,013" [ref=e173] [cursor=pointer]:
+            - strong [ref=e174]: WAR
+            - generic [ref=e175]: 2,013
+          - button "MSG 0" [ref=e176] [cursor=pointer]:
+            - strong [ref=e177]: MSG
+            - generic [ref=e178]: "0"
+        - generic [ref=e179]:
+          - button "ALLY --" [ref=e180] [cursor=pointer]:
+            - strong [ref=e181]: ALLY
+            - generic [ref=e182]: "--"
+          - button "ARC Open" [ref=e183] [cursor=pointer]:
+            - strong [ref=e184]: ARC
+            - generic [ref=e185]: Open
+          - button "MKT 0" [ref=e186] [cursor=pointer]:
+            - strong [ref=e187]: MKT
+            - generic [ref=e188]: "0"
+        - button "Town Hall level 1" [ref=e190] [cursor=pointer]:
+          - img [ref=e193]
+          - generic [ref=e194]: L1
+          - strong [ref=e195]: Town Hall
+        - button "Watchtower level 1" [ref=e196] [cursor=pointer]:
+          - img [ref=e199]
+          - generic [ref=e200]: L1
+          - strong [ref=e201]: Watchtower
+        - button "Embassy level 1" [ref=e202] [cursor=pointer]:
+          - img [ref=e205]
+          - generic [ref=e206]: L1
+          - strong [ref=e207]: Embassy
+        - button "Academy level 1" [ref=e208] [cursor=pointer]:
+          - img [ref=e211]
+          - generic [ref=e212]: L1
+          - strong [ref=e213]: Academy
+        - button "Barracks level 1" [ref=e214] [cursor=pointer]:
+          - img [ref=e217]
+          - generic [ref=e218]: L1
+          - strong [ref=e219]: Barracks
+        - button "Forge level 1" [ref=e220] [cursor=pointer]:
+          - img [ref=e223]
+          - generic [ref=e224]: L1
+          - strong [ref=e225]: Forge
+        - button "Hospital level 1" [ref=e226] [cursor=pointer]:
+          - img [ref=e229]
+          - generic [ref=e230]: L1
+          - strong [ref=e231]: Hospital
+        - button "Quarry level 1" [ref=e232] [cursor=pointer]:
+          - img [ref=e235]
+          - generic [ref=e236]: L1
+          - strong [ref=e237]: Quarry
+        - button "Farm level 1" [ref=e238] [cursor=pointer]:
+          - img [ref=e241]
+          - generic [ref=e242]: L1
+          - strong [ref=e243]: Farm
+        - button "Lumber Mill level 1" [ref=e244] [cursor=pointer]:
+          - img [ref=e247]
+          - generic [ref=e248]: L1
+          - strong [ref=e249]: Lumber Mill
+        - button "Gold Mine level 1" [ref=e250] [cursor=pointer]:
+          - img [ref=e253]
+          - generic [ref=e254]: L1
+          - strong [ref=e255]: Gold Mine
+        - button "City Wall level 1" [ref=e256] [cursor=pointer]:
+          - img [ref=e259]
+          - generic [ref=e260]: L1
+          - strong [ref=e261]: City Wall
+        - complementary [ref=e262]:
+          - generic [ref=e263]:
+            - generic [ref=e264]: Province
+            - strong [ref=e265]: claude_dev Hold at 50, 50
+          - generic [ref=e266]:
+            - generic [ref=e267]:
+              - text: "Attack:"
+              - strong [ref=e268]: 2,013
+            - generic [ref=e269]:
+              - text: "Defense:"
+              - strong [ref=e270]: 1,829
+            - generic [ref=e271]:
+              - text: "Stock:"
+              - strong [ref=e272]: 3,400
+        - generic "City information panels" [ref=e273]:
+          - button "Overview 3.4K" [ref=e274] [cursor=pointer]:
+            - generic [ref=e275]: Overview
+            - strong [ref=e276]: 3.4K
+          - button "Queues 3/3" [ref=e277] [cursor=pointer]:
+            - generic [ref=e278]: Queues
+            - strong [ref=e279]: 3/3
+          - button "Briefing 4" [ref=e280] [cursor=pointer]:
+            - generic [ref=e281]: Briefing
+            - strong [ref=e282]: "4"
+          - button "District L1" [ref=e283] [cursor=pointer]:
+            - generic [ref=e284]: District
+            - strong [ref=e285]: L1
+        - navigation "Primary city actions" [ref=e286]:
+          - button "Build" [ref=e287] [cursor=pointer]
+          - button "Train" [ref=e288] [cursor=pointer]
+          - button "Research" [ref=e289] [cursor=pointer]
+          - button "World" [ref=e290] [cursor=pointer]
+          - button "Alliance" [ref=e291] [cursor=pointer]
+      - article [ref=e292]:
+        - generic [ref=e293]:
+          - generic [ref=e294]:
+            - paragraph [ref=e295]: Command Briefing
+            - heading "Refill the idle lanes" [level=3] [ref=e296]
+          - generic [ref=e297]: Setup window
+        - generic [ref=e299]:
+          - generic [ref=e301]:
+            - paragraph [ref=e302]: Short-session loop
+            - strong [ref=e303]: Action queue
+            - paragraph [ref=e304]: 4 actions | 3/3 idle queues | 0 claims
+          - generic [ref=e305]:
+            - article [ref=e306]:
+              - generic [ref=e307]: Claimables
+              - strong [ref=e308]: "0"
+              - generic [ref=e309]: 0 task rewards and 0 dispatch rewards are ready.
+            - article [ref=e310]:
+              - generic [ref=e311]: Idle lanes
+              - strong [ref=e312]: 3/3
+              - generic [ref=e313]: Idle queues are the fastest place to lose short-session momentum.
+            - article [ref=e314]:
+              - generic [ref=e315]: Event pace
+              - strong [ref=e316]: 0/3
+              - generic [ref=e317]: 3 points left in Barbarian Hunt.
+            - article [ref=e318]:
+              - generic [ref=e319]: Alliance pulse
+              - strong [ref=e320]: Independent
+              - generic [ref=e321]: Shared vision, chat, and markers are still the strongest retention lever.
+          - generic [ref=e322]:
+            - article [ref=e323]:
+              - generic [ref=e324]:
+                - strong [ref=e325]: Raise Town Hall
+                - generic [ref=e327]: Compounding
+              - generic [ref=e329]:
+                - paragraph [ref=e330]: Growth lane
+                - paragraph [ref=e331]: The build queue is idle. Town Hall can move to L2 right now.
+              - button "Start L2" [ref=e334] [cursor=pointer]
+            - article [ref=e335]:
+              - generic [ref=e336]:
+                - strong [ref=e337]: Queue Infantry
+                - generic [ref=e339]: Queue
+              - generic [ref=e341]:
+                - paragraph [ref=e342]: Barracks tempo
+                - paragraph [ref=e343]: Barracks are open. A fresh 12-unit batch restores passive progress while you step into the frontier or alliance rail.
+              - button "Queue x12" [ref=e346] [cursor=pointer]
+            - article [ref=e347]:
+              - generic [ref=e348]:
+                - strong [ref=e349]: Start Military Drill
+                - generic [ref=e351]: Doctrine
+              - generic [ref=e353]:
+                - paragraph [ref=e354]: Doctrine lane
+                - paragraph [ref=e355]: The academy is quiet. Spend one tap on doctrine so the city keeps converting downtime into leverage.
+              - button "Open doctrine" [ref=e358] [cursor=pointer]
+            - article [ref=e359]:
+              - generic [ref=e360]:
+                - strong [ref=e361]: Barbarian Hunt
+                - generic [ref=e363]: Live
+              - generic [ref=e365]:
+                - paragraph [ref=e366]: Live ops
+                - paragraph [ref=e367]: 3 points remain in the current event track. This is the clearest reason to leave the dashboard and do one short frontier loop.
+              - button "Open frontier map" [ref=e370] [cursor=pointer]
+      - generic [ref=e371]:
+        - article [ref=e372]:
+          - generic [ref=e373]:
+            - generic [ref=e374]:
+              - paragraph [ref=e375]: Command Staff
+              - heading "claude_dev Vanguard Marshal" [level=3] [ref=e376]
+            - generic [ref=e377]: L1
+          - generic [ref=e378]:
+            - paragraph [ref=e379]: XP 0/80 | Stars 1
+            - button "Open Commander Panel" [ref=e381] [cursor=pointer]
+        - article [ref=e382]:
+          - generic [ref=e383]:
+            - generic [ref=e384]:
+              - paragraph [ref=e385]: Inbox
+              - heading "Latest dispatches" [level=3] [ref=e386]
+            - generic [ref=e387]: 0 new
+          - button "Open Message Center" [ref=e390] [cursor=pointer]

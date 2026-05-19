@@ -1,0 +1,66 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - paragraph [ref=e5]: Frontier Dominion
+    - heading "Command the frontier through a closed alpha gate." [level=1] [ref=e6]
+    - paragraph [ref=e7]: This entry layer gives players a fast path into tasks, marches, inbox flow, and alliance coordination without changing the core strategy loop.
+    - generic [ref=e8]:
+      - article [ref=e9]:
+        - text: "01"
+        - strong [ref=e10]: Enter the city
+        - paragraph [ref=e11]: Use a demo banner or a provisioned account to jump directly into a live province.
+      - article [ref=e12]:
+        - text: "02"
+        - strong [ref=e13]: Open the first tasks
+        - paragraph [ref=e14]: The dashboard guides players through their first build, training, and research steps.
+      - article [ref=e15]:
+        - text: "03"
+        - strong [ref=e16]: March onto the map
+        - paragraph [ref=e17]: The command tray keeps scout, gather, and attack confirmation readable on both mobile and desktop.
+    - list [ref=e18]:
+      - listitem [ref=e19]: Invite-only alpha onboarding
+      - listitem [ref=e20]: Mobile-first HUD and bottom navigation
+      - listitem [ref=e21]: March-first strategy flow
+      - listitem [ref=e22]: Inbox and war council bridge
+  - generic [ref=e23]:
+    - generic [ref=e24]:
+      - paragraph [ref=e25]: Login
+      - heading "Enter your command post" [level=2] [ref=e26]
+      - paragraph [ref=e27]: Return to your queues, marches, and active alliance state without losing momentum.
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]: Username
+        - textbox "Username" [ref=e31]:
+          - /placeholder: commander_01
+          - text: commander_01
+      - generic [ref=e32]:
+        - generic [ref=e33]: Password
+        - textbox "Password" [ref=e34]:
+          - /placeholder: At least 8 characters
+          - text: password123
+      - strong [ref=e59]: Invalid username or password.
+      - button "Log in" [ref=e35] [cursor=pointer]
+    - paragraph [ref=e36]:
+      - text: Need a new account?
+      - link "Go to register" [ref=e37] [cursor=pointer]:
+        - /url: /register
+    - generic [ref=e38]:
+      - generic [ref=e39]: Ready demo banners
+      - paragraph [ref=e40]:
+        - text: The shared password for every demo commander is
+        - code [ref=e41]: demo12345
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - strong [ref=e45]: demo_alpha
+            - paragraph [ref=e46]: Opens with seeded city, alliance, and march data.
+          - button "Log in" [ref=e47] [cursor=pointer]
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - strong [ref=e50]: demo_beta
+            - paragraph [ref=e51]: Opens with seeded city, alliance, and march data.
+          - button "Log in" [ref=e52] [cursor=pointer]
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - strong [ref=e55]: demo_gamma
+            - paragraph [ref=e56]: Opens with seeded city, alliance, and march data.
+          - button "Log in" [ref=e57] [cursor=pointer]

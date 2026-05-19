@@ -873,13 +873,15 @@ export function GameLayout() {
           <div className={styles.topBrand}>
             <div>
               <h1 className={styles.brandKicker}>Frontier Dominion</h1>
-              <p className={styles.topReleaseMeta}>
+              <p className={[styles.topReleaseMeta, styles.desktopOnly].join(" ")}>
                 <span data-release-badge>{releaseLabel}</span> | <span data-version-stamp>v{__APP_VERSION__}</span>
               </p>
             </div>
-            <Badge tone="warning">
-              <span data-release-badge>{releaseLabel}</span>
-            </Badge>
+            <span className={styles.desktopOnly}>
+              <Badge tone="warning">
+                <span data-release-badge>{releaseLabel}</span>
+              </Badge>
+            </span>
           </div>
         }
         resources={resources}
