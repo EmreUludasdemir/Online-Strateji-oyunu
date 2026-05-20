@@ -13,6 +13,16 @@ const RESOURCE_ICONS: Record<ResourceKind, string> = {
 function resolveKind(label: string, explicit?: ResourceKind): ResourceKind | undefined {
   if (explicit) return explicit;
   const normalized = label.trim().toLowerCase();
+  const localizedKinds: Record<string, ResourceKind> = {
+    odun: "wood",
+    tas: "stone",
+    taş: "stone",
+    erzak: "food",
+    yiyecek: "food",
+    altin: "gold",
+    altın: "gold",
+  };
+  if (normalized in localizedKinds) return localizedKinds[normalized];
   return normalized in RESOURCE_ICONS ? (normalized as ResourceKind) : undefined;
 }
 

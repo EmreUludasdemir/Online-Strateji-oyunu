@@ -64,6 +64,21 @@ const districtStageLayout: Record<BuildingType, DistrictStageLayoutEntry> = {
   FORGE: { x: 78, y: 46, tone: "war" },
 };
 
+const BUILDING_DISPLAY_LABELS: Partial<Record<BuildingType, string>> = {
+  TOWN_HALL: "Kağan Otağı",
+  BARRACKS: "Kışla",
+  ACADEMY: "Bilge Ocağı",
+  WATCHTOWER: "Gözcü Kulesi",
+  FARM: "Erzak Tarlası",
+  LUMBER_MILL: "Odunluk",
+  QUARRY: "Taş Ocağı",
+  GOLD_MINE: "Altın Madeni",
+  HOSPITAL: "Şifahane",
+  WALL: "Sur",
+  EMBASSY: "Toy Çadırı",
+  FORGE: "Demirci",
+};
+
 function formatCompactMetric(value: number) {
   if (value >= 1_000_000) {
     const compact = value / 1_000_000;
@@ -147,7 +162,7 @@ export function DashboardPage() {
     () => state.city.research.find((entry) => entry.level < entry.maxLevel) ?? null,
     [state.city.research],
   );
-  const provinceStatus = state.city.peaceShieldUntil ? "Peace shield active" : "Battle ready";
+  const provinceStatus = state.city.peaceShieldUntil ? "Kut kalkanı açık" : "Akına hazır";
   const allTasks = [...tutorialTasks, ...dailyTasks];
   const claimableCount =
     allTasks.filter((task) => task.isCompleted && !task.isClaimed).length +
@@ -156,23 +171,23 @@ export function DashboardPage() {
   const queueLedger = [
     {
       id: "build",
-      label: "Build queue",
-      value: activeUpgrade ? `L${activeUpgrade.toLevel}` : "Idle",
+      label: "Yapı kuyruğu",
+      value: activeUpgrade ? `L${activeUpgrade.toLevel}` : "Boş",
       detail: activeUpgrade
-        ? `${activeUpgrade.buildingType.replaceAll("_", " ").toLowerCase()} upgrade is underway.`
-        : "Town planners are waiting for a fresh order.",
+        ? `${activeUpgrade.buildingType.replaceAll("_", " ").toLowerCase()} geliştirmesi sürüyor.`
+        : "Ustalar yeni oba buyruğunu bekliyor.",
     },
     {
       id: "training",
-      label: "Barracks",
-      value: activeTraining ? `${activeTrainingLabel} x${formatNumber(activeTraining.quantity)}` : "Ready",
-      detail: activeTraining ? "Fresh troops are staging inside the drill yard." : "A new unit batch can start immediately.",
+      label: "Kışla",
+      value: activeTraining ? `${activeTrainingLabel} x${formatNumber(activeTraining.quantity)}` : "Hazır",
+      detail: activeTraining ? "Yeni birlikler talim meydanında." : "Yeni birlik buyruğu hemen başlayabilir.",
     },
     {
       id: "research",
-      label: "Academy",
-      value: activeResearch ? activeResearchLabel : "Open",
-      detail: activeResearch ? "Doctrine scribes are processing the active study." : "No doctrine is currently consuming the queue.",
+      label: "Bilge Ocağı",
+      value: activeResearch ? activeResearchLabel : "Açık",
+      detail: activeResearch ? "Bilgeler töre çalışmasını sürdürüyor." : "Araştırma kuyruğu yeni buyruğa açık.",
     },
   ];
   const selectedDistrict =
@@ -188,27 +203,27 @@ export function DashboardPage() {
               ? "selected"
               : "ready";
           const BUILDING_HINTS: Partial<Record<BuildingType, string>> = {
-            TOWN_HALL: "City cap, district ceiling, and command level.",
-            BARRACKS: "Troop throughput and drill cadence.",
-            ACADEMY: "Doctrine depth and logistics research.",
-            WATCHTOWER: "Threat readout and frontier awareness.",
-            FARM: "Food output sustains troop upkeep and training.",
-            LUMBER_MILL: "Timber flow powers district construction.",
-            QUARRY: "Stone pressure feeds defensive upgrades.",
-            GOLD_MINE: "Treasury income funds research and elite actions.",
-            HOSPITAL: "Wounded troop recovery — heals garrison losses over time.",
-            WALL: "Fortification layer — adds heavy structural defense to the city.",
-            EMBASSY: "Diplomatic hub — enables alliance coordination and aid requests.",
-            FORGE: "Weapon craft — sharpens attack power across all garrison troops.",
+            TOWN_HALL: "Oba seviyesi, yapı sınırı ve ana buyruk merkezi.",
+            BARRACKS: "Birlik talimi ve sefer hazırlığı.",
+            ACADEMY: "Töre, lojistik ve bilgelik çalışmaları.",
+            WATCHTOWER: "Sis, tehdit ve sınır gözetimi.",
+            FARM: "Erzak üretimi orduyu ve talimi besler.",
+            LUMBER_MILL: "Odun akışı yapı geliştirmelerini taşır.",
+            QUARRY: "Taş baskısı savunma yapılarını güçlendirir.",
+            GOLD_MINE: "Hazine geliri araştırma ve seçkin emirleri besler.",
+            HOSPITAL: "Yaralı birlikleri zamanla iyileştirir.",
+            WALL: "Obaya ağır savunma katmanı ekler.",
+            EMBASSY: "Toy, yardım ve ittifak koordinasyon merkezi.",
+            FORGE: "Silah işçiliği garnizon saldırısını keskinleştirir.",
           };
           const hint = building.isUpgradeActive
-            ? `Upgrade lane to L${building.nextLevel} is active.`
-            : BUILDING_HINTS[building.type] ?? "Resource flow and empire upkeep.";
+            ? `L${building.nextLevel} geliştirme hattı açık.`
+            : BUILDING_HINTS[building.type] ?? "Oba akışı ve yurt düzeni.";
 
           return {
             ...layout,
             type: building.type,
-            label: building.label,
+            label: BUILDING_DISPLAY_LABELS[building.type] ?? building.label,
             level: building.level,
             nextLevel: building.nextLevel,
             status,

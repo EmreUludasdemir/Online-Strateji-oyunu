@@ -1955,24 +1955,24 @@ export function MapPage() {
                     variant="secondary"
                     onClick={() => mapCommandRef.current?.focusTile(state.city.coordinates.x, state.city.coordinates.y)}
                   >
-                    Recenter
+                    Merkezle
                   </Button>
                 </div>
                 <div className={styles.chipRow}>
                   <Button type="button" size="small" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>
-                    All
+                    Hepsi
                   </Button>
                   <Button type="button" size="small" variant={filter === "CITIES" ? "primary" : "secondary"} onClick={() => setFilter("CITIES")}>
-                    Cities
+                    Şehirler
                   </Button>
                   <Button type="button" size="small" variant={filter === "CAMPS" ? "primary" : "secondary"} onClick={() => setFilter("CAMPS")}>
-                    Camps
+                    Kamplar
                   </Button>
                   <Button type="button" size="small" variant={filter === "NODES" ? "primary" : "secondary"} onClick={() => setFilter("NODES")}>
-                    Nodes
+                    Bereketler
                   </Button>
                   <Button type="button" size="small" variant={showPaths ? "primary" : "secondary"} onClick={() => setShowPaths((current) => !current)}>
-                    Paths
+                    Yollar
                   </Button>
                   <Button
                     type="button"
@@ -1980,7 +1980,7 @@ export function MapPage() {
                     variant={showScoutTrails ? "primary" : "secondary"}
                     onClick={() => setShowScoutTrails((current) => !current)}
                   >
-                    Scouts
+                    Keşifçiler
                   </Button>
                   <Button
                     type="button"
@@ -1988,14 +1988,14 @@ export function MapPage() {
                     variant={showReports ? "primary" : "secondary"}
                     onClick={() => setShowReports((current) => !current)}
                   >
-                    Reports
+                    Akınlar
                   </Button>
                 </div>
               </div>
             </div>
             <aside className={styles.minimapCard}>
               <div className={styles.minimapHeader}>
-                <strong className={styles.cardTitle}>Frontier Lens</strong>
+                <strong className={styles.cardTitle}>Bozkır Merceği</strong>
                 <Badge tone="info">{cameraView.detailLevel}</Badge>
               </div>
               <div className={styles.minimapFrame}>
@@ -2232,7 +2232,7 @@ export function MapPage() {
         </div>
 
         <aside className={styles.sideRail}>
-          <SectionCard kicker="ACTIVE CONSTRUCTION" title="City Queues" className={styles.marchSection}>
+          <SectionCard kicker="OBA TEZGAHLARI" title="Oba Kuyrukları" className={styles.marchSection}>
             <div className={styles.queueList}>
               {hud.queueItems.map((item) => (
                 <article key={item.id} className={styles.queueCard}>
@@ -2248,7 +2248,7 @@ export function MapPage() {
             </div>
           </SectionCard>
 
-          <SectionCard kicker={copy.map.activeMarches} title="MILITARY EVENTS" className={styles.marchSection}>
+          <SectionCard kicker={copy.map.activeMarches} title="Sefer Defteri" className={styles.marchSection}>
             <div className={styles.marchList}>
               {state.city.activeMarches.length === 0 ? (
                 <p className={styles.commandHint}>No active military operations.</p>
@@ -2330,7 +2330,7 @@ export function MapPage() {
           <section className={styles.commandStrip}>
             <article className={styles.commandCard}>
               <div className={styles.commandHeader}>
-                <strong className={styles.cardTitle}>Command Search</strong>
+                <strong className={styles.cardTitle}>Bozkır Arama</strong>
                 <Badge tone="info">{searchResults.length} matches</Badge>
               </div>
               <input
@@ -2364,7 +2364,7 @@ export function MapPage() {
             </article>
             <article className={styles.commandCard}>
               <div className={styles.commandHeader}>
-                <strong className={styles.cardTitle}>Alliance Markers</strong>
+                <strong className={styles.cardTitle}>Toy Sancakları</strong>
                 <Badge tone={alliance ? "success" : "warning"}>{alliance ? alliance.tag : "No alliance"}</Badge>
               </div>
               <input

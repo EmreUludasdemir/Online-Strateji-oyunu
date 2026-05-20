@@ -6,9 +6,8 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { PanelStatGrid, SectionHeaderBlock } from "../components/ui/CommandSurface";
+import { SectionHeaderBlock } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
-import { PageHero, SummaryMetricGrid } from "../components/ui/PageHero";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { formatDateTime, formatNumber } from "../lib/formatters";
@@ -123,104 +122,6 @@ export function MessageCenterPage() {
   const claimableCount = entries.filter((entry) => entry.canClaim).length;
   const scoutCount = entries.filter((entry) => entry.kind === "SCOUT_REPORT").length;
   const battleCount = entries.filter((entry) => entry.kind === "BATTLE_REPORT" || entry.kind === "RALLY_REPORT").length;
-  const groupSummaries = useMemo(
-    () =>
-      groupedEntries.map(([groupLabel, groupEntries]) => {
-        const openCount = groupEntries.filter((entry) => !entry.claimedAt).length;
-        const claimable = groupEntries.filter((entry) => entry.canClaim).length;
-        const route = getDispatchRoute(groupEntries[0], bootstrap.storeEnabled);
-
-        return {
-          label: groupLabel,
-          total: groupEntries.length,
-          openCount,
-          claimable,
-          route,
-        };
-      }),
-    [groupedEntries],
-  );
-  const heroMetrics = [
-    {
-      id: "unread",
-      label: "Unread dispatches",
-      value: formatNumber(unreadCount),
-      note: "Priority records still waiting for review.",
-      tone: unreadCount > 0 ? ("warning" as const) : ("info" as const),
-    },
-    {
-      id: "claimable",
-      label: "Claimable warrants",
-      value: formatNumber(claimableCount),
-      note: "Rewards and system grants ready to process.",
-      tone: claimableCount > 0 ? ("success" as const) : ("default" as const),
-    },
-    {
-      id: "scout",
-      label: "Scout dispatches",
-      value: formatNumber(scoutCount),
-      note: "Recon intel and node reports on file.",
-      tone: "info" as const,
-    },
-    {
-      id: "battle",
-      label: "Battle alerts",
-      value: formatNumber(battleCount),
-      note: "Combat and rally reports preserved in the archive.",
-      tone: battleCount > 0 ? ("warning" as const) : ("default" as const),
-    },
-  ];
-  const dispatchBoardItems = selectedEntry
-    ? [
-        {
-          id: "primary",
-          label: "Primary route",
-          value: getDispatchRoute(selectedEntry, bootstrap.storeEnabled).label,
-          note: getDispatchRoute(selectedEntry, bootstrap.storeEnabled).note,
-          tone: "info" as const,
-        },
-        {
-          id: "reward",
-          label: "Reward state",
-          value: selectedEntry.canClaim ? "Ready to claim" : selectedRewards.length > 0 ? "Filed with parcel" : "No parcel attached",
-          note: selectedRewards.length > 0 ? `${selectedRewards.length} reward lines attached to this dispatch.` : "This dispatch is informational only.",
-          tone: selectedEntry.canClaim ? ("success" as const) : ("default" as const),
-        },
-        {
-          id: "archive",
-          label: "Archive posture",
-          value: formatNumber(unreadCount),
-          note: `${formatNumber(claimableCount)} claimable and ${formatNumber(entries.length)} total records in the hall.`,
-          tone: unreadCount > 0 ? ("warning" as const) : ("default" as const),
-        },
-      ]
-    : [];
-  const routeBridgeItems = selectedEntry
-    ? [
-        {
-          id: "open",
-          label: "Open records",
-          value: formatNumber(unreadCount),
-          note: "Unread dispatches on file",
-          tone: unreadCount > 0 ? ("warning" as const) : ("default" as const),
-        },
-        {
-          id: "claimable",
-          label: "Claimable",
-          value: formatNumber(claimableCount),
-          note: "Rewards ready to process",
-          tone: claimableCount > 0 ? ("success" as const) : ("default" as const),
-        },
-        {
-          id: "lane",
-          label: "Archive lane",
-          value: getMailboxSectionLabel(selectedEntry),
-          note: "Current dispatch category",
-          tone: "info" as const,
-        },
-      ]
-    : [];
-
   if (mailboxQuery.isPending) {
     return (
       <section className={styles.page}>
@@ -243,28 +144,36 @@ export function MessageCenterPage() {
 
   return (
     <section className={styles.page}>
-      <PageHero
-        kicker="Imperial Message Center"
-        title="Dispatch archive and reward manifest"
-        lead="Reports, scout returns, and claimable warrants now live in a full archive surface with a clearer bridge back into War Council, Market, and the Strategic Map."
-        aside={<Badge tone="warning">{formatNumber(unreadCount)} unread</Badge>}
-      >
-        <SummaryMetricGrid items={heroMetrics} />
-        {groupSummaries.length > 0 ? (
-          <div className={styles.boardGrid}>
-            {groupSummaries.map((group) => (
-              <article key={group.label} className={styles.boardCard}>
-                <div className={styles.boardHead}>
-                  <span className={styles.summaryLabel}>{group.label}</span>
-                  <span className={styles.boardMeta}>{formatNumber(group.total)} total</span>
-                </div>
-                <strong className={styles.boardValue}>{formatNumber(group.openCount)} open</strong>
-                <p className={styles.boardCopy}>{group.claimable > 0 ? `${formatNumber(group.claimable)} claimable in queue.` : group.route.note}</p>
-              </article>
-            ))}
+      <header className={styles.commandBar}>
+        <div className={styles.commandIdentity}>
+          <p className={styles.kicker}>Imperial Message Center</p>
+          <h2 className={styles.commandTitle}>Dispatch archive</h2>
+          <div className={styles.commandMeta}>
+            <Badge tone={unreadCount > 0 ? "warning" : "info"}>{formatNumber(unreadCount)} unread</Badge>
+            <span>{formatNumber(entries.length)} records</span>
+            <span>{selectedEntry ? getMailboxSectionLabel(selectedEntry) : "No selection"}</span>
           </div>
-        ) : null}
-      </PageHero>
+        </div>
+
+        <div className={styles.commandStats} aria-label="Dispatch command summary">
+          <article>
+            <span>Unread</span>
+            <strong>{formatNumber(unreadCount)}</strong>
+          </article>
+          <article>
+            <span>Claim</span>
+            <strong>{formatNumber(claimableCount)}</strong>
+          </article>
+          <article>
+            <span>Scout</span>
+            <strong>{formatNumber(scoutCount)}</strong>
+          </article>
+          <article>
+            <span>Battle</span>
+            <strong>{formatNumber(battleCount)}</strong>
+          </article>
+        </div>
+      </header>
 
       {entries.length === 0 || !selectedEntry ? (
         <SectionCard kicker="Archive" title="No dispatches on file">
@@ -341,7 +250,18 @@ export function MessageCenterPage() {
                 </div>
               </div>
               <div className={styles.dispatchBoard}>
-                <PanelStatGrid items={dispatchBoardItems} columns={3} />
+                <article className={styles.dispatchCell}>
+                  <span>Route</span>
+                  <strong>{getDispatchRoute(selectedEntry, bootstrap.storeEnabled).label}</strong>
+                </article>
+                <article className={styles.dispatchCell}>
+                  <span>Reward</span>
+                  <strong>{selectedEntry.canClaim ? "Claim ready" : selectedRewards.length > 0 ? "Filed" : "None"}</strong>
+                </article>
+                <article className={styles.dispatchCell}>
+                  <span>Archive</span>
+                  <strong>{formatNumber(entries.length)}</strong>
+                </article>
               </div>
             </header>
 
@@ -386,7 +306,6 @@ export function MessageCenterPage() {
             ) : null}
 
             <SectionCard kicker="Operations Bridge" title="Route this dispatch">
-              <PanelStatGrid items={routeBridgeItems} columns={3} className={styles.routeGrid} />
               <p className={styles.routeNote}>{getDispatchRoute(selectedEntry, bootstrap.storeEnabled).note}</p>
               <div className={styles.actionRow}>
                 <Button type="button" variant="secondary" onClick={() => navigate(getDispatchRoute(selectedEntry, bootstrap.storeEnabled).to)}>

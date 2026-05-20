@@ -299,3 +299,10 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
   - A direct Playwright pass logged in with `demo_alpha`, opened `/app/commanders` and `/app/research`, captured desktop/mobile screenshots for both, and reported zero console/page errors.
   - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/web-game-commander-research-cleanup` passed; generated screenshot/state were inspected.
+- 2026-05-20: Applied the same compact command-surface direction to `/app/market` and `/app/messages`. Market now opens with a four-number exchange command bar instead of the hero + explanatory summary cards, and featured bundle/caravan cards no longer repeat long catalog copy before the reward lines. Message Center now opens with a compact dispatch command bar, removing PageHero/SummaryMetricGrid and the separate group summary board; selected dispatch details use three small route/reward/archive chips instead of PanelStatGrid blocks, and the empty archive state no longer stretches the top command bar across the viewport.
+- 2026-05-20: Validation after the Market/Message Center cleanup:
+  - `corepack pnpm --filter @frontier/web exec tsc -p tsconfig.json --noEmit` passed.
+  - `corepack pnpm --filter @frontier/web test` passed: 8 files, 13 tests.
+  - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
+  - A direct Playwright pass logged in with `demo_alpha`, opened `/app/market` and `/app/messages`, captured desktop/mobile screenshots for both, and reported zero console/page errors.
+  - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/web-game-market-message-cleanup` passed; generated screenshot/state were inspected.

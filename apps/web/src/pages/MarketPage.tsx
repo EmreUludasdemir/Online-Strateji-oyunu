@@ -76,38 +76,33 @@ export function MarketPage() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroTop}>
-          <div>
-            <p className={styles.kicker}>Imperial Market</p>
-            <h2 className={styles.heroTitle}>Exchange floor and warrant ledger</h2>
-            <p className={styles.heroLead}>
-              Commerce now sits on a dedicated surface with featured bundles, live caravan rotations, and entitlement history.
-            </p>
+      <header className={styles.commandBar}>
+        <div className={styles.commandIdentity}>
+          <p className={styles.kicker}>Imperial Market</p>
+          <h2 className={styles.commandTitle}>Exchange floor</h2>
+          <div className={styles.commandMeta}>
+            <Badge tone="warning">Catalog preview</Badge>
+            <span>{formatNumber(featuredProducts.length)} bundles</span>
+            <span>{formatNumber(activeOffers.length)} live caravans</span>
           </div>
-          <Badge tone="warning">Catalog preview</Badge>
         </div>
 
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Featured bundles</span>
-            <strong className={styles.summaryValue}>{formatNumber(featuredProducts.length)}</strong>
-            <span className={styles.summaryMeta}>Highlighted market entries on the floor.</span>
+        <div className={styles.commandStats} aria-label="Market command summary">
+          <article>
+            <span>Bundles</span>
+            <strong>{formatNumber(featuredProducts.length)}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Trade caravans</span>
-            <strong className={styles.summaryValue}>{formatNumber(offers.length)}</strong>
-            <span className={styles.summaryMeta}>Rotating offers and product clusters.</span>
+          <article>
+            <span>Caravans</span>
+            <strong>{formatNumber(offers.length)}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Issued warrants</span>
-            <strong className={styles.summaryValue}>{formatNumber(entitlements.length)}</strong>
-            <span className={styles.summaryMeta}>Commerce records already attached to this ruler.</span>
+          <article>
+            <span>Warrants</span>
+            <strong>{formatNumber(entitlements.length)}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Treasury gold</span>
-            <strong className={styles.summaryValue}>{formatNumber(state.city.resources.gold)}</strong>
-            <span className={styles.summaryMeta}>Current city reserve exposed to commerce view.</span>
+          <article>
+            <span>Gold</span>
+            <strong>{formatNumber(state.city.resources.gold)}</strong>
           </article>
         </div>
       </header>
@@ -130,7 +125,6 @@ export function MarketPage() {
                         </div>
                         <Badge tone="warning">{product.priceLabel}</Badge>
                       </div>
-                      <p className={styles.cardBody}>{product.description}</p>
                       <div className={styles.rewardList}>
                         {rewardLines.map((line) => (
                           <span key={line}>{line}</span>
@@ -153,7 +147,6 @@ export function MarketPage() {
                     <div className={styles.offerHead}>
                       <div>
                         <strong>{offer.title}</strong>
-                        <p className={styles.cardBody}>{offer.description}</p>
                       </div>
                       <Badge tone="info">{offer.productIds.length} products</Badge>
                     </div>

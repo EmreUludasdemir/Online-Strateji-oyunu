@@ -1,6 +1,5 @@
 ﻿.page,
 .layout,
-.summaryGrid,
 .productGrid,
 .offerList,
 .rewardList,
@@ -14,21 +13,87 @@
 }
 
 .page {
+  align-content: start;
   animation: fadeSlideUp 400ms var(--motion-smooth) both;
 }
 
-.hero {
-  position: relative;
-  overflow: hidden;
-  padding: 1.5rem;
+.commandBar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.8fr);
+  gap: 1rem;
+  align-items: stretch;
+  padding: 1rem;
   border-radius: var(--radius-sm);
-  background: var(--surface-glass);
+  background: var(--surface-hero-panel);
+  box-shadow: var(--shadow-soft);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-soft);
 }
 
-.heroTop,
+.commandIdentity {
+  display: grid;
+  align-content: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.commandTitle {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-primary-fixed);
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 3vw, 2.35rem);
+  font-style: italic;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commandMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  color: var(--color-outline);
+  font-size: 0.75rem;
+}
+
+.commandStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.commandStats article {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border-radius: var(--radius-xs);
+  background: var(--surface-card-panel);
+}
+
+.commandStats span {
+  overflow: hidden;
+  color: var(--color-outline);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.commandStats strong {
+  overflow: hidden;
+  color: var(--color-primary-fixed);
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .productHead,
 .offerHead,
 .warrantRow {
@@ -39,7 +104,6 @@
 }
 
 .kicker,
-.summaryLabel,
 .cardLabel {
   color: var(--color-outline);
   font-size: 0.625rem;
@@ -48,37 +112,18 @@
   text-transform: uppercase;
 }
 
-.heroTitle,
-.summaryValue,
 .cardTitle {
   font-family: var(--font-display);
   color: var(--color-primary-fixed);
   font-style: italic;
 }
 
-.heroTitle {
-  font-size: clamp(1.75rem, 1.5rem + 1vw, 2.5rem);
-}
-
-.heroLead,
-.summaryMeta,
 .cardBody,
 .offerMeta span,
 .feedback {
   color: var(--color-on-surface-variant);
 }
 
-.heroLead {
-  margin-top: 0.5rem;
-  max-width: 74ch;
-}
-
-.summaryGrid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.summaryCard,
 .productCard,
 .offerCard,
 .warrantRow {
@@ -87,14 +132,6 @@
   padding: 1rem;
   border-radius: var(--radius-sm);
   background: var(--color-surface-container-high);
-}
-
-.summaryValue {
-  display: block;
-  margin-top: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 1.25rem;
-  font-style: normal;
 }
 
 .layout {
@@ -213,9 +250,9 @@
 }
 
 @media (max-width: 1180px) {
-  .summaryGrid,
+  .commandBar,
   .productGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .layout {
@@ -224,7 +261,28 @@
 }
 
 @media (max-width: 720px) {
-  .heroTop,
+  .commandTitle {
+    white-space: normal;
+  }
+
+  .commandStats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .commandStats article {
+    padding: 0.55rem 0.45rem;
+  }
+
+  .commandStats span {
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+  }
+
+  .commandStats strong {
+    font-size: 0.95rem;
+  }
+
   .productHead,
   .offerHead,
   .warrantRow {
@@ -232,7 +290,6 @@
     align-items: flex-start;
   }
 
-  .summaryGrid,
   .productGrid,
   .offerMeta,
   .resourceGrid {

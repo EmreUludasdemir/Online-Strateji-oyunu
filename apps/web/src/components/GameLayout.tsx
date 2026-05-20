@@ -211,41 +211,41 @@ function createQueueItems(state: GameStateResponse["city"]): QueueSummaryItem[] 
     state.activeUpgrade
       ? {
           id: "upgrade",
-          label: "Build",
+          label: "Yapı",
           value: `L${state.activeUpgrade.toLevel}`,
-          hint: `${state.activeUpgrade.buildingType.replaceAll("_", " ")} upgrade running`,
+          hint: `${state.activeUpgrade.buildingType.replaceAll("_", " ")} geliştirmesi sürüyor`,
         }
       : {
           id: "upgrade",
-          label: "Build",
+          label: "Yapı",
           value: "Idle",
-          hint: "Ready for the next district upgrade",
+          hint: "Yeni oba buyruğuna hazır",
         },
     state.activeTraining
       ? {
           id: "training",
-          label: "Barracks",
+          label: "Ordu",
           value: `${formatNumber(state.activeTraining.quantity)}`,
-          hint: `${state.activeTraining.troopType.toLowerCase()} training`,
+          hint: `${state.activeTraining.troopType.toLowerCase()} talimi sürüyor`,
         }
       : {
           id: "training",
-          label: "Barracks",
+          label: "Ordu",
           value: "Ready",
-          hint: "Open for a new training order",
+          hint: "Yeni talim buyruğuna hazır",
         },
     state.activeResearch
       ? {
           id: "research",
-          label: "Academy",
+          label: "Bilge",
           value: `L${state.activeResearch.toLevel}`,
           hint: state.activeResearch.researchType.replaceAll("_", " ").toLowerCase(),
         }
       : {
           id: "research",
-          label: "Marches",
+          label: "Sefer",
           value: formatNumber(state.openMarchCount),
-          hint: "Open march count",
+          hint: "Açık sefer kolu",
         },
   ];
 }
@@ -835,32 +835,32 @@ export function GameLayout() {
   const entitlements = entitlementsQuery.data?.entitlements ?? [];
   const allianceLabel = contextValue.state.alliance
     ? `[${contextValue.state.alliance.tag}] ${contextValue.state.alliance.name}`
-    : "Independent Province";
-  const provinceStatus = contextValue.state.city.peaceShieldUntil ? "Peace shield active" : "Battle ready";
+    : "Bağımsız Oba";
+  const provinceStatus = contextValue.state.city.peaceShieldUntil ? "Kut kalkanı açık" : "Akına hazır";
   const woundedTotal =
     contextValue.state.city.woundedTroops.INFANTRY +
     contextValue.state.city.woundedTroops.ARCHER +
     contextValue.state.city.woundedTroops.CAVALRY;
   const sidebarSummary = [
-    { label: "Alliance Banner", value: allianceLabel },
-    { label: "Open Marches", value: formatNumber(contextValue.state.city.openMarchCount) },
-    { label: "Unread Dispatches", value: formatNumber(mailboxQuery.data?.unreadCount ?? 0) },
-    { label: "Province Status", value: provinceStatus },
+    { label: "Toy Sancağı", value: allianceLabel },
+    { label: "Sefer Kolu", value: formatNumber(contextValue.state.city.openMarchCount) },
+    { label: "Okunmamış Ulak", value: formatNumber(mailboxQuery.data?.unreadCount ?? 0) },
+    { label: "Oba Durumu", value: provinceStatus },
     ...(woundedTotal > 0
-      ? [{ label: "Wounded Recovery", value: `${formatNumber(woundedTotal)} in hospital` }]
+      ? [{ label: "Yaralı İyileşmesi", value: `${formatNumber(woundedTotal)} şifahane` }]
       : []),
   ];
   const navigationItems = [
-    { id: "map", to: "/app/map", eyebrow: "Field Theater", label: "Strategic Map", code: "MAP" },
-    { id: "alliance", to: "/app/alliance", eyebrow: "Diplomacy Wing", label: "Grand Alliance", code: "ALLY" },
-    { id: "dashboard", to: "/app/dashboard", eyebrow: "Inner Province", label: "City Dashboard", code: "CITY" },
-    { id: "reports", to: "/app/reports", eyebrow: "Battle Ledger", label: "War Council", code: "WAR" },
+    { id: "map", to: "/app/map", eyebrow: "Bozkır Sahası", label: "Sefer Haritası", code: "MAP" },
+    { id: "alliance", to: "/app/alliance", eyebrow: "Toy Divanı", label: "Toy Meclisi", code: "TOY" },
+    { id: "dashboard", to: "/app/dashboard", eyebrow: "Oba Yurdu", label: "Oba Merkezi", code: "OBA" },
+    { id: "reports", to: "/app/reports", eyebrow: "Akın Defteri", label: "Savaş Divanı", code: "AKN" },
   ] as const;
   const archiveItems = [
-    { id: "research", to: "/app/research", eyebrow: "Academy Wing", label: "Imperial Research", code: "ARC" },
-    { id: "leaderboards", to: "/app/leaderboards", eyebrow: "Ranking Bureau", label: "Imperial Leaderboards", code: "RANK" },
-    { id: "messages", to: "/app/messages", eyebrow: "Dispatch Hall", label: "Message Center", code: "MSG" },
-    ...(storeEnabled ? [{ id: "market", to: "/app/market", eyebrow: "Trade Exchange", label: "Imperial Market", code: "MKT" }] : []),
+    { id: "research", to: "/app/research", eyebrow: "Bilge Otağı", label: "Töre Araştırması", code: "BIL" },
+    { id: "leaderboards", to: "/app/leaderboards", eyebrow: "Kut Divanı", label: "Kut Sıralaması", code: "KUT" },
+    { id: "messages", to: "/app/messages", eyebrow: "Ulak Hattı", label: "Ulak Odası", code: "ULK" },
+    ...(storeEnabled ? [{ id: "market", to: "/app/market", eyebrow: "Kervan Yolu", label: "Kervan Pazarı", code: "KRV" }] : []),
   ] as const;
   const commanders = contextValue.state.city.commanders;
   const focusedCommander =
@@ -872,9 +872,9 @@ export function GameLayout() {
         brand={
           <div className={styles.topBrand}>
             <div>
-              <h1 className={styles.brandKicker}>Frontier Dominion</h1>
+              <h1 className={styles.brandKicker}>Bozkır Kağanlığı</h1>
               <p className={[styles.topReleaseMeta, styles.desktopOnly].join(" ")}>
-                <span data-release-badge>{releaseLabel}</span> | <span data-version-stamp>v{__APP_VERSION__}</span>
+                Frontier Dominion | <span data-release-badge>{releaseLabel}</span> | <span data-version-stamp>v{__APP_VERSION__}</span>
               </p>
             </div>
             <span className={styles.desktopOnly}>
@@ -898,10 +898,10 @@ export function GameLayout() {
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
           <div className={styles.brandFrame}>
-            <span className={styles.brandMonogram}>FD</span>
+            <span className={styles.brandMonogram}>BK</span>
             <div className={styles.brandCopy}>
-              <p className={styles.brandEyebrow}>Sovereign Archive</p>
-              <h2 className={styles.brandTitle}>Frontier Dominion</h2>
+              <p className={styles.brandEyebrow}>Kağanlık Arşivi</p>
+              <h2 className={styles.brandTitle}>Bozkır Kağanlığı</h2>
               <div className={styles.releaseRow}>
                 <span className={styles.releaseBadge} data-release-badge>
                   {releaseLabel}
@@ -912,7 +912,7 @@ export function GameLayout() {
               </div>
             </div>
           </div>
-          <p className={styles.brandMeta}>{contextValue.state.city.cityName} command ledger</p>
+          <p className={styles.brandMeta}>{contextValue.state.city.cityName} oba defteri</p>
         </div>
 
         <nav className={styles.nav}>
@@ -933,7 +933,7 @@ export function GameLayout() {
         </nav>
 
         <section className={styles.utilitySection}>
-          <p className={styles.utilityHeading}>Imperial Rooms</p>
+          <p className={styles.utilityHeading}>İç Otağlar</p>
           <div className={styles.utilityGrid}>
             {archiveItems.map((item) => (
               <NavLink
@@ -953,7 +953,7 @@ export function GameLayout() {
         </section>
 
         <section className={styles.summaryCard}>
-          <p className={styles.summaryKicker}>Dominion Signals</p>
+          <p className={styles.summaryKicker}>Kağanlık İşaretleri</p>
           <h3 className={styles.summaryHeadline}>{allianceLabel}</h3>
           <div className={styles.summaryList}>
             {sidebarSummary.map((entry) => (
@@ -967,7 +967,7 @@ export function GameLayout() {
 
         <div className={styles.sidebarFooter}>
           <Button type="button" variant="primary" className={styles.declareWarBtn}>
-            Declare War
+            Akın Aç
           </Button>
           <div className={styles.supportActions}>
             <span className={styles.versionLine}>{releaseLabel} | v{__APP_VERSION__}</span>
@@ -978,7 +978,7 @@ export function GameLayout() {
               className={styles.footerAction}
               onClick={() => setThemeSheetOpen(true)}
             >
-              Theme Deck
+              Tema Destesi
             </Button>
             <Button
               type="button"
@@ -987,7 +987,7 @@ export function GameLayout() {
               className={styles.footerAction}
               onClick={() => logoutMutation.mutate()}
             >
-              Log Out
+              Çıkış
             </Button>
           </div>
         </div>
@@ -1012,16 +1012,16 @@ export function GameLayout() {
 
       <BottomSheet
         open={commanderPanelOpen}
-        title="Command Staff"
+        title="Başbuğlar"
         mode="aside"
         onClose={() => setCommanderPanelOpen(false)}
       >
         <div className={styles.sheetGrid}>
           {focusedCommander ? (
             <SectionCard
-              kicker="Selected Commander"
+              kicker="Seçili Başbuğ"
               title={`${focusedCommander.name} L${focusedCommander.level}`}
-              aside={<Badge tone="warning">{focusedCommander.starLevel} stars</Badge>}
+              aside={<Badge tone="warning">{focusedCommander.starLevel} yıldız</Badge>}
             >
               <div className={styles.sheetList}>
                 <div className={styles.sheetRow}>
@@ -1038,7 +1038,7 @@ export function GameLayout() {
           {commanders.map((commander) => (
             <SectionCard
               key={commander.id}
-              kicker={commander.isPrimary ? "Primary Commander" : "Reserve Officer"}
+              kicker={commander.isPrimary ? "Baş Başbuğ" : "Yedek Başbuğ"}
               title={`${commander.name} L${commander.level}`}
               aside={<Badge tone="info">{commander.talentTrack.toLowerCase()}</Badge>}
             >
@@ -1177,7 +1177,7 @@ export function GameLayout() {
                 navigate("/app/market");
               }}
             >
-              Open Market
+              Kervan Pazarı
             </Button>
           </div>
         </div>

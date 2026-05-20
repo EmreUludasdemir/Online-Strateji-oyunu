@@ -59,11 +59,11 @@ export function AuthPage({ mode }: AuthPageProps) {
       <main className={styles.shell}>
         <section className={styles.hero}>
           <p className={styles.kicker}>{copy.auth.brand}</p>
-          <h1 className={styles.title}>Loading access gate</h1>
-          <p className={styles.subtitle}>Checking session and launch flags before opening the alpha entry.</p>
+          <h1 className={styles.title}>Otağ kapısı açılıyor</h1>
+          <p className={styles.subtitle}>Oturum ve sefer işaretleri okunuyor, alpha kapısı hazırlanıyor.</p>
         </section>
         <section className={styles.card}>
-          <p className={styles.helperText}>Preparing login surface...</p>
+          <p className={styles.helperText}>Giriş otağı hazırlanıyor...</p>
         </section>
       </main>
     );
@@ -73,63 +73,63 @@ export function AuthPage({ mode }: AuthPageProps) {
     <main className={styles.shell}>
       <section className={styles.hero}>
         <p className={styles.kicker}>{copy.auth.brand}</p>
-        <h1 className={styles.title}>Command the frontier through a closed alpha gate.</h1>
+        <h1 className={styles.title}>Kapalı alpha kapısından bozkırı yönet.</h1>
         <p className={styles.subtitle}>
           {registrationClosed
-            ? "Access is provisioned by operators. Returning commanders can sign in, but public account creation stays locked during this alpha wave."
-            : "This entry layer gives players a fast path into tasks, marches, inbox flow, and alliance coordination without changing the core strategy loop."}
+            ? "Erişim kağan kâtipleri tarafından verilir. Eski başbuğlar geri dönebilir, ama yeni hesap bu dalga süresince kilitli kalır."
+            : "Bu giriş katmanı oyuncuya buyruk zinciri, sefer, ulak hattı ve toy düzenine hızlı yol açar; ana strateji halkasını değiştirmez."}
         </p>
 
         {isClosedAlpha ? (
           <div className={styles.noticeBox}>
-            <strong>Closed Alpha</strong>
-            <span>Invite-only access, single-node live testing, and same-origin realtime are enabled for this build.</span>
+            <strong>Kapalı Alpha</strong>
+            <span>Davetli erişim, tek düğüm canlı sınama ve aynı kökende anlık iletişim bu sürümde açık.</span>
           </div>
         ) : null}
 
         <div className={styles.journey}>
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>01</span>
-            <strong>Enter the city</strong>
-            <p>{isClosedAlpha ? "Use the provisioned alpha credentials from the operator packet to enter the live province." : "Use a demo banner or a provisioned account to jump directly into a live province."}</p>
+            <strong>Oba'ya gir</strong>
+            <p>{isClosedAlpha ? "Operatör paketinden gelen alpha kimliğiyle canlı obaya gir." : "Demo sancağı veya verilmiş hesapla canlı obaya doğrudan atla."}</p>
           </article>
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>02</span>
-            <strong>Open the first tasks</strong>
-            <p>The dashboard guides players through their first build, training, and research steps.</p>
+            <strong>İlk buyrukları aç</strong>
+            <p>Oba merkezi oyuncuyu ilk yapı, talim ve töre adımlarına götürür.</p>
           </article>
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>03</span>
-            <strong>March onto the map</strong>
-            <p>The command tray keeps scout, gather, and attack confirmation readable on both mobile and desktop.</p>
+            <strong>Bozkıra sefer aç</strong>
+            <p>Komut tepsisi keşif, yağma ve akın onayını mobil ile masaüstünde okunur tutar.</p>
           </article>
         </div>
 
         <ul className={styles.highlights}>
-          <li>Invite-only alpha onboarding</li>
-          <li>Mobile-first HUD and bottom navigation</li>
-          <li>March-first strategy flow</li>
-          <li>Inbox and war council bridge</li>
+          <li>Davetli alpha açılışı</li>
+          <li>Mobil-öncelikli HUD ve alt navigasyon</li>
+          <li>Sefer-odaklı strateji halkası</li>
+          <li>Ulak odası ile savaş divanı köprüsü</li>
         </ul>
       </section>
 
       <section className={styles.card}>
         <div className={styles.cardHeader}>
-          <p className={styles.modeBadge}>{isLogin ? "Login" : "Register"}</p>
+          <p className={styles.modeBadge}>{isLogin ? "Giriş" : "Kayıt"}</p>
           <h2 className={styles.cardTitle}>{isLogin ? copy.auth.loginTitle : copy.auth.registerTitle}</h2>
           <p className={styles.cardIntro}>
             {isLogin
               ? registrationClosed
-                ? "Sign in with a provisioned alpha account to restore queues, marches, and alliance state."
-                : "Return to your queues, marches, and active alliance state without losing momentum."
-              : "Create a new account and open the first city operations through the tutorial chain."}
+                ? "Verilmiş bir alpha hesabıyla gir; kuyruklar, seferler ve toy durumu yerine döner."
+                : "Kuyruklarına, seferlerine ve toy durumuna momentum kaybetmeden geri dön."
+              : "Yeni bir hesap kur ve ilk oba buyruklarını rehber zincirinden aç."}
           </p>
         </div>
 
         {registrationClosed ? (
           <div className={styles.noticeBox}>
-            <strong>Access Policy</strong>
-            <span>Public signup is disabled. New commanders must be provisioned through the alpha operator workflow.</span>
+            <strong>Kapı Töresi</strong>
+            <span>Açık kayıt kapalı. Yeni başbuğlar alpha operatör akışıyla atanır.</span>
           </div>
         ) : null}
 
@@ -182,30 +182,30 @@ export function AuthPage({ mode }: AuthPageProps) {
           ) : null}
 
           <button className={styles.submitButton} type="submit" disabled={authMutation.isPending || Boolean(bootstrapError)}>
-            {authMutation.isPending ? "Working..." : isLogin ? copy.auth.login : copy.auth.register}
+            {authMutation.isPending ? "İşleniyor..." : isLogin ? copy.auth.login : copy.auth.register}
           </button>
         </form>
 
         {registrationClosed ? (
-          <p className={styles.switchText}>Access is provisioned by operators during the current alpha wave.</p>
+          <p className={styles.switchText}>Bu alpha dalgasında erişim operatörler tarafından verilir.</p>
         ) : (
           <p className={styles.switchText}>
-            {isLogin ? "Need a new account?" : "Already registered?"}{" "}
-            <Link to={isLogin ? "/register" : "/login"}>{isLogin ? "Go to register" : "Back to login"}</Link>
+            {isLogin ? "Yeni hesap mı?" : "Zaten kayıtlı mısın?"}{" "}
+            <Link to={isLogin ? "/register" : "/login"}>{isLogin ? "Kayıt ekranına geç" : "Giriş ekranına dön"}</Link>
           </p>
         )}
         {showDemoAccess ? (
           <div className={styles.demoBox}>
-            <span className={styles.demoTitle}>Ready demo banners</span>
+            <span className={styles.demoTitle}>Hazır demo sancakları</span>
             <p className={styles.helperText}>
-              The shared password for every demo commander is <code>demo12345</code>
+              Tüm demo başbuğlarının ortak parolası <code>demo12345</code>
             </p>
             <div className={styles.demoList}>
               {demoUsers.map((demoUser) => (
                 <div key={demoUser} className={styles.demoRow}>
                   <div>
                     <strong>{demoUser}</strong>
-                    <p>Opens with seeded city, alliance, and march data.</p>
+                    <p>Ekilmiş oba, toy ve sefer verisiyle açılır.</p>
                   </div>
                   <button
                     className={styles.demoButton}
@@ -219,7 +219,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                       })
                     }
                   >
-                    Log in
+                    {copy.auth.login}
                   </button>
                 </div>
               ))}
@@ -227,9 +227,9 @@ export function AuthPage({ mode }: AuthPageProps) {
           </div>
         ) : isClosedAlpha ? (
           <div className={styles.demoBox}>
-            <span className={styles.demoTitle}>Operator-provisioned access</span>
+            <span className={styles.demoTitle}>Operatör destekli erişim</span>
             <p className={styles.helperText}>
-              Closed alpha accounts are created through the provisioning CLI and distributed out of band. Use the username and temporary password provided by the operator packet.
+              Kapalı alpha hesapları sağlama CLI'ı üzerinden açılır ve operatör paketleriyle dağıtılır. Pakette gelen kullanıcı adı ve geçici parolayı kullan.
             </p>
           </div>
         ) : null}
