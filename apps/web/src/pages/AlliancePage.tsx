@@ -7,7 +7,7 @@ import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { FeedCardShell, PanelStatGrid, type PanelStatItem } from "../components/ui/CommandSurface";
+import { FeedCardShell } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -191,109 +191,7 @@ export function AlliancePage() {
   );
   const treasuryTotal = alliance ? Object.values(alliance.treasury).reduce((sum, value) => sum + value, 0) : 0;
   const latestDonation = alliance?.donations[0] ?? null;
-  const treasuryStats: PanelStatItem[] = alliance
-    ? [
-        {
-          id: "reserve",
-          label: "Reserve",
-          value: formatNumber(treasuryTotal),
-          note: "shared war stock",
-          tone: "success",
-        },
-        {
-          id: "city-stock",
-          label: "City Stock",
-          value: formatNumber(state.city.resources[donationResource]),
-          note: formatResourceLabel(donationResource),
-          tone: "info",
-        },
-        {
-          id: "latest-convoy",
-          label: "Latest Convoy",
-          value: latestDonation ? latestDonation.username : "Pending",
-          note: latestDonation ? `${formatNumber(latestDonation.totalValue)} value` : "awaiting first ledger entry",
-          tone: "warning",
-        },
-        {
-          id: "support-queue",
-          label: "Support Queue",
-          value: formatNumber(alliance.helpRequests.length),
-          note: "open accelerations",
-        },
-      ]
-    : [];
-  const contributionStats: PanelStatItem[] = alliance
-    ? [
-        {
-          id: "top-score",
-          label: "Lead Score",
-          value: formatNumber(alliance.contributions[0]?.points ?? 0),
-          note: alliance.contributions[0]?.username ?? "No scorer yet",
-          tone: "warning",
-        },
-        {
-          id: "active-donors",
-          label: "Active Donors",
-          value: formatNumber(alliance.contributions.length),
-          note: "members on the ledger",
-          tone: "info",
-        },
-      ]
-    : [];
-  const markerStats: PanelStatItem[] = alliance
-    ? [
-        {
-          id: "pins",
-          label: "Pins",
-          value: formatNumber(alliance.markers.length),
-          note: "live map directives",
-          tone: "info",
-        },
-        {
-          id: "expiring-pins",
-          label: "Expiring",
-          value: formatNumber(alliance.markers.filter((marker) => marker.expiresAt != null).length),
-          note: "timed beacons",
-          tone: "warning",
-        },
-      ]
-    : [];
-  const chronicleStats: PanelStatItem[] = alliance
-    ? [
-        {
-          id: "entries",
-          label: "Entries",
-          value: formatNumber(alliance.logs.length),
-          note: "recent alliance events",
-          tone: "info",
-        },
-        {
-          id: "latest-kind",
-          label: "Latest",
-          value: alliance.logs[0]?.kind.replaceAll("_", " ") ?? "Quiet",
-          note: alliance.logs[0] ? formatDateTime(alliance.logs[0].createdAt) : "awaiting first chronicle entry",
-          tone: "success",
-        },
-      ]
-    : [];
-  const supportStats: PanelStatItem[] = alliance
-    ? [
-        {
-          id: "open-help",
-          label: "Open",
-          value: formatNumber(alliance.helpRequests.filter((request) => request.isOpen).length),
-          note: "requests awaiting aid",
-          tone: "warning",
-        },
-        {
-          id: "closed-help",
-          label: "Resolved",
-          value: formatNumber(alliance.helpRequests.filter((request) => !request.isOpen).length),
-          note: "support cycles closed",
-          tone: "success",
-        },
-      ]
-    : [];
+  const openHelpCount = alliance?.helpRequests.filter((request) => request.isOpen).length ?? 0;
 
   useEffect(() => {
     if (!alliance) {
@@ -331,61 +229,39 @@ export function AlliancePage() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroPanel}>
-          <div className={styles.heroLeadBlock}>
-            <p className={styles.kicker}>Grand Alliance</p>
-            <h2 className={styles.heroTitle}>{alliance ? alliance.name : "Open Diplomacy"}</h2>
-            <div className={styles.heroMeta}>
-              <Badge tone={alliance ? getRoleTone(alliance.role) : "info"}>{alliance ? alliance.role : "Seeking Banner"}</Badge>
-              {alliance ? <span className={styles.heroMetaItem}>[{alliance.tag}]</span> : null}
-              <span className={styles.heroMetaItem}>{alliance ? `${alliance.memberCount} sworn banners` : "Create or join a house"}</span>
-            </div>
-            <p className={styles.heroLead}>
-              {alliance
-                ? alliance.description ?? "Shared war doctrine, logistics, and member rhythm live in this chamber."
-                : "Create a new alliance house or join an open banner to unlock treasury, help, and live coordination."}
-            </p>
+      <header className={styles.commandBar}>
+        <div className={styles.commandIdentity}>
+          <p className={styles.kicker}>Grand Alliance</p>
+          <h2 className={styles.commandTitle}>{alliance ? alliance.name : "Open Diplomacy"}</h2>
+          <div className={styles.commandMeta}>
+            <Badge tone={alliance ? getRoleTone(alliance.role) : "info"}>{alliance ? alliance.role : "Seeking Banner"}</Badge>
+            {alliance ? <span>[{alliance.tag}]</span> : null}
+            <span>{notice ?? (alliance ? "Directives online" : "Create or join a house")}</span>
           </div>
-
-          <aside className={styles.noticeCard}>
-            <span className={styles.noticeEyebrow}>Command Signal</span>
-            <strong className={styles.noticeTitle}>{alliance ? "Alliance directives online" : "Banner search open"}</strong>
-            <p className={styles.noticeBody}>
-              {notice ??
-                (alliance
-                  ? "Announcements, support requests, map pins, and treasury actions are staged from one organized surface."
-                  : "No alliance active. Create a banner or review open houses below.")}
-            </p>
-          </aside>
         </div>
 
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Members</span>
-            <strong className={styles.summaryValue}>{formatNumber(alliance?.memberCount ?? publicAlliances.length)}</strong>
-            <span className={styles.summaryHint}>sworn banners</span>
+        <div className={styles.commandStats} aria-label="Alliance command summary">
+          <article>
+            <span>Members</span>
+            <strong>{formatNumber(alliance?.memberCount ?? publicAlliances.length)}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Support Queue</span>
-            <strong className={styles.summaryValue}>{formatNumber(alliance?.helpRequests.length ?? 0)}</strong>
-            <span className={styles.summaryHint}>open accelerations</span>
+          <article>
+            <span>Help</span>
+            <strong>{formatNumber(openHelpCount)}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Field Dispatches</span>
-            <strong className={styles.summaryValue}>{formatNumber(alliance?.chatMessages.length ?? 0)}</strong>
-            <span className={styles.summaryHint}>live channel notes</span>
+          <article>
+            <span>Pins</span>
+            <strong>{formatNumber(alliance?.markers.length ?? 0)}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Treasury Reserve</span>
-            <strong className={styles.summaryValue}>{formatNumber(treasuryTotal)}</strong>
-            <span className={styles.summaryHint}>shared strategic stock</span>
+          <article>
+            <span>Reserve</span>
+            <strong>{formatNumber(treasuryTotal)}</strong>
           </article>
         </div>
       </header>
 
       {alliance ? (
-        <div className={styles.layout}>
+        <div className={styles.allianceDashboard}>
           <div className={styles.mainColumn}>
             <SectionCard
               kicker="Vanguard Roster"
@@ -521,8 +397,10 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Support Queue" title="Acceleration and aid">
-              <PanelStatGrid items={supportStats} columns={2} compact className={styles.railStats} />
+          </div>
+
+          <div className={styles.opsGrid}>
+            <SectionCard kicker="Support Queue" title="Acceleration and aid" aside={<Badge tone={openHelpCount > 0 ? "warning" : "success"}>{openHelpCount} open</Badge>}>
               <div className={styles.helpGrid}>
                 {requestableHelp.map((entry) => (
                   <Button
@@ -538,12 +416,9 @@ export function AlliancePage() {
               </div>
               <div className={styles.feedList}>
                 {alliance.helpRequests.length === 0 ? (
-                  <EmptyState
-                    title="No Open Requests"
-                    body="When a build, training, or research queue is active, help orders appear here."
-                  />
+                  <EmptyState title="No Open Requests" body="Active build, training, or research queues can request help here." />
                 ) : (
-                  alliance.helpRequests.map((request) => (
+                  alliance.helpRequests.slice(0, 4).map((request) => (
                     <FeedCardShell
                       key={request.id}
                       title={request.label}
@@ -568,7 +443,7 @@ export function AlliancePage() {
               </div>
             </SectionCard>
 
-            <SectionCard kicker="Alliance Channel" title="Field dispatch" aside={<Badge tone="info">Live</Badge>}>
+            <SectionCard kicker="Alliance Channel" title="Field dispatch" aside={<Badge tone="info">{alliance.chatMessages.length} notes</Badge>}>
               <div className={styles.inlineComposer}>
                 <input
                   className={styles.textField}
@@ -589,7 +464,7 @@ export function AlliancePage() {
                 {alliance.chatMessages.length === 0 ? (
                   <EmptyState title="Quiet Channel" body="Write the first order and set the field rhythm from here." />
                 ) : (
-                  alliance.chatMessages.map((message) => (
+                  alliance.chatMessages.slice(0, 4).map((message) => (
                     <FeedCardShell
                       key={message.id}
                       title={message.username}
@@ -601,11 +476,8 @@ export function AlliancePage() {
                 )}
               </div>
             </SectionCard>
-          </div>
 
-          <aside className={styles.sideColumn}>
-            <SectionCard kicker="Strategic Treasury" title="Shared reserve" aside={<Badge tone="success">Active</Badge>}>
-              <PanelStatGrid items={treasuryStats} columns={2} compact className={styles.railStats} />
+            <SectionCard kicker="Strategic Treasury" title="Shared reserve" aside={<Badge tone="success">{formatNumber(treasuryTotal)}</Badge>}>
               <div className={styles.treasuryTotal}>
                 <span>Total reserve</span>
                 <strong>{formatNumber(treasuryTotal)}</strong>
@@ -650,54 +522,7 @@ export function AlliancePage() {
               </Button>
             </SectionCard>
 
-            <SectionCard kicker="Contribution Rank" title="Top contributors">
-              <PanelStatGrid items={contributionStats} columns={2} compact className={styles.railStats} />
-              <div className={styles.feedList}>
-                {alliance.contributions.length === 0 ? (
-                  <EmptyState title="No Score Yet" body="Donation and aid actions fill the contribution table." />
-                ) : (
-                  alliance.contributions.slice(0, 6).map((entry, index) => (
-                    <FeedCardShell
-                      key={entry.userId}
-                      title={`#${index + 1} ${entry.username}`}
-                      meta={`${formatNumber(entry.points)} points`}
-                      tone={index === 0 ? "warning" : "info"}
-                    />
-                  ))
-                )}
-              </div>
-            </SectionCard>
-
-            {(() => {
-              const embassy = state.city.buildings.find((building) => building.type === "EMBASSY");
-              if (!embassy) return null;
-              const helpSlots = Math.max(3, embassy.level + 2);
-              const maxMembers = Math.min(12, 8 + embassy.level);
-              return (
-                <SectionCard
-                  kicker="Embassy"
-                  title="Diplomatic standing"
-                  aside={<Badge tone="info">L{embassy.level}</Badge>}
-                >
-                  <div>
-                    <div className={styles.embassyStatRow}>
-                      <span className={styles.mutedText}>Aid request slots</span>
-                      <strong>{helpSlots}</strong>
-                    </div>
-                    <div className={styles.embassyStatRow}>
-                      <span className={styles.mutedText}>Max alliance members</span>
-                      <strong>{maxMembers}</strong>
-                    </div>
-                    <p className={styles.mutedText}>
-                      Upgrade the Embassy to unlock more aid slots and expand the alliance roster capacity.
-                    </p>
-                  </div>
-                </SectionCard>
-              );
-            })()}
-
-            <SectionCard kicker="War Markers" title="Active pins">
-              <PanelStatGrid items={markerStats} columns={2} compact className={styles.railStats} />
+            <SectionCard kicker="War Markers" title="Active pins" aside={<Badge tone="info">{alliance.markers.length} pins</Badge>}>
               <div className={styles.feedList}>
                 {alliance.markers.length === 0 ? (
                   <EmptyState title="No Markers" body="Lock rally, defense, and target points here." />
@@ -732,26 +557,7 @@ export function AlliancePage() {
                 )}
               </div>
             </SectionCard>
-
-            <SectionCard kicker="Chronicle" title="Recent events" aside={<Badge tone="info">{alliance.logs.length} entries</Badge>}>
-              <PanelStatGrid items={chronicleStats} columns={2} compact className={styles.railStats} />
-              <div className={styles.feedList}>
-                {alliance.logs.length === 0 ? (
-                  <EmptyState title="Log Empty" body="New aid, donation, and diplomacy actions will land here." />
-                ) : (
-                  alliance.logs.slice(0, 6).map((entry) => (
-                    <FeedCardShell
-                      key={entry.id}
-                      title={entry.kind.replaceAll("_", " ")}
-                      meta={formatDateTime(entry.createdAt)}
-                      body={entry.body}
-                      tone="info"
-                    />
-                  ))
-                )}
-              </div>
-            </SectionCard>
-          </aside>
+          </div>
         </div>
       ) : (
         <div className={styles.emptyLayout}>
@@ -823,4 +629,3 @@ export function AlliancePage() {
     </section>
   );
 }
-

@@ -386,6 +386,28 @@
   color: var(--color-primary-fixed);
 }
 
+@media (max-width: 768px) {
+  .resourcePillCompact {
+    gap: 0.18rem;
+    padding: 0.45rem 0.28rem;
+  }
+
+  .resourcePillCompact .resourcePillLeading {
+    gap: 0.18rem;
+  }
+
+  .resourcePillCompact .resourceIcon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .resourcePillCompact .resourceValue {
+    overflow: hidden;
+    font-size: 0.65rem;
+    text-overflow: ellipsis;
+  }
+}
+
 .emptyState {
   padding: 1.25rem;
   border-radius: var(--radius-sm);

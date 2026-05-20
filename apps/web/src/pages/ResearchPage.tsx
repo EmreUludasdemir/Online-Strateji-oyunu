@@ -25,7 +25,6 @@ import { useGameLayoutContext } from "../components/GameLayout";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
-import { PageHero, SummaryMetricGrid } from "../components/ui/PageHero";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
@@ -191,52 +190,39 @@ export function ResearchPage() {
     selectedResearch.level < selectedResearch.maxLevel &&
     !Boolean(state.city.activeResearch) &&
     !isResearching;
-  const heroMetrics = [
-    {
-      id: "academy",
-      label: "Academy Tier",
-      value: `L${academy?.level ?? 0}`,
-      note: "Capacity for deeper doctrine.",
-      tone: "info" as const,
-    },
-    {
-      id: "depth",
-      label: "Archive Depth",
-      value: `${formatNumber(totalDoctrineLevels)}/${formatNumber(availableDoctrineTiers)}`,
-      note: "Total doctrine ranks recorded.",
-    },
-    {
-      id: "completed",
-      label: "Completed Lanes",
-      value: formatNumber(completedDoctrines),
-      note: "Doctrines already capped.",
-      tone: completedDoctrines > 0 ? ("success" as const) : ("default" as const),
-    },
-    {
-      id: "active",
-      label: "Active Project",
-      value: activeResearchLabel,
-      note: state.city.activeResearch ? `Tier ${state.city.activeResearch.toLevel} in progress.` : "Queue currently open.",
-      tone: state.city.activeResearch ? ("warning" as const) : ("info" as const),
-    },
-  ];
 
   return (
     <section className={styles.page}>
-      <PageHero
-        kicker="Imperial Research"
-        title="Sovereign archive of doctrine"
-        lead="The academy is now framed as a strategic archive instead of a flat checklist. Every lane exposes field leverage, city pressure, and the next tier worth funding."
-        aside={
-          state.city.activeResearch ? (
-            <TimerChip endsAt={state.city.activeResearch.completesAt} now={now} />
-          ) : (
-            <Badge tone="info">Academy ready</Badge>
-          )
-        }
-      >
-        <SummaryMetricGrid items={heroMetrics} />
-      </PageHero>
+      <header className={styles.commandBar}>
+        <div className={styles.commandIdentity}>
+          <p className={styles.kicker}>Imperial Research</p>
+          <h2 className={styles.commandTitle}>{selectedResearch.label}</h2>
+          <div className={styles.commandMeta}>
+            {state.city.activeResearch ? <TimerChip endsAt={state.city.activeResearch.completesAt} now={now} /> : <Badge tone="info">Academy ready</Badge>}
+            <span>{brief.chapter}</span>
+            <span>{state.city.activeResearch ? activeResearchLabel : "Queue open"}</span>
+          </div>
+        </div>
+
+        <div className={styles.commandStats} aria-label="Research command summary">
+          <article>
+            <span>Academy</span>
+            <strong>L{academy?.level ?? 0}</strong>
+          </article>
+          <article>
+            <span>Depth</span>
+            <strong>{formatNumber(totalDoctrineLevels)}/{formatNumber(availableDoctrineTiers)}</strong>
+          </article>
+          <article>
+            <span>Done</span>
+            <strong>{formatNumber(completedDoctrines)}</strong>
+          </article>
+          <article>
+            <span>Tier</span>
+            <strong>{selectedResearch.level}/{selectedResearch.maxLevel}</strong>
+          </article>
+        </div>
+      </header>
 
       <div className={styles.layout}>
         <div className={styles.boardColumn}>
@@ -295,7 +281,6 @@ export function ResearchPage() {
                           <span className={styles.nodeMeta}>
                             Level {entry.level}/{entry.maxLevel}
                           </span>
-                          <span className={styles.nodeHint}>{RESEARCH_BRIEFS[entry.type].effect}</span>
                           <span className={styles.nodeProgress}>
                             <span style={{ width: `${progressPercent}%` }} />
                           </span>
@@ -305,30 +290,6 @@ export function ResearchPage() {
                   </div>
                 </section>
               ))}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            kicker="Empire leverage"
-            title="What current doctrine is already doing"
-            aside={<Badge tone="success">{formatNumber(state.city.openMarchCount)} marches</Badge>}
-          >
-            <div className={styles.metricsGrid}>
-              <article className={styles.metricCard}>
-                <span className={styles.metricLabel}>Attack pressure</span>
-                <strong className={styles.metricValue}>{formatNumber(state.city.attackPower)}</strong>
-                <span className={styles.metricHint}>Driven by troop stock, commanders, and war doctrine.</span>
-              </article>
-              <article className={styles.metricCard}>
-                <span className={styles.metricLabel}>Defense pressure</span>
-                <strong className={styles.metricValue}>{formatNumber(state.city.defensePower)}</strong>
-                <span className={styles.metricHint}>Bolstered by masonry and watch discipline.</span>
-              </article>
-              <article className={styles.metricCard}>
-                <span className={styles.metricLabel}>Vision radius</span>
-                <strong className={styles.metricValue}>{formatNumber(state.city.visionRadius)}</strong>
-                <span className={styles.metricHint}>Scouting expands map readability and target discovery.</span>
-              </article>
             </div>
           </SectionCard>
         </div>

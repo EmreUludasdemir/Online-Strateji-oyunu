@@ -283,3 +283,19 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
   - A direct Playwright pass opened `/app/reports` on desktop and mobile, captured the compact command-bar layout, and reported zero console/page errors.
   - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/web-game-reports-cleanup` passed; generated artifacts were inspected and removed.
+- 2026-05-20: Applied the same low-information-density cleanup to `/app/alliance`. The old full hero, four summary cards, and five-card side rail were replaced by one compact alliance command bar plus a two-band layout: roster/directives first, then support/chat/treasury/markers as short operations cards. Contribution rank, embassy explanation, and chronicle logs were removed from the first-screen surface to keep the alliance page closer to a strategy-game command room than a dashboard wall.
+- 2026-05-20: Tightened the mobile resource HUD after the alliance pass. Compact resource pills now use smaller mobile icon/value sizing so four high-value resources fit on a 390px viewport without clipping or hiding the final Gold number.
+- 2026-05-20: Validation after the Alliance cleanup:
+  - `corepack pnpm --filter @frontier/web exec tsc -p tsconfig.json --noEmit` passed.
+  - `corepack pnpm --filter @frontier/web test` passed: 8 files, 13 tests.
+  - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
+  - A direct Playwright pass logged in with `demo_alpha`, opened `/app/alliance`, captured desktop and mobile screenshots, and reported zero console/page errors.
+  - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/web-game-alliance-cleanup` passed; the generated screenshot/state were inspected.
+- 2026-05-20: Continued the low-information-density pass on `/app/commanders` and `/app/research`. Commander now opens with a compact command bar instead of a full hero + four summary cards, and the roster sidebar uses two small numeric chips instead of another stat grid. Research now opens with a compact doctrine command bar, the PageHero/SummaryMetricGrid stack is gone, the separate "Empire leverage" metric card row was removed, and research node cards only show tier/name/level/progress while detailed effects stay in the selected doctrine panel.
+- 2026-05-20: Visual polish after the Commander/Research pass fixed default button borders on commander roster cards and research doctrine nodes so they read as game panels instead of browser controls.
+- 2026-05-20: Validation after the Commander/Research cleanup:
+  - `corepack pnpm --filter @frontier/web exec tsc -p tsconfig.json --noEmit` passed.
+  - `corepack pnpm --filter @frontier/web test` passed: 8 files, 13 tests.
+  - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
+  - A direct Playwright pass logged in with `demo_alpha`, opened `/app/commanders` and `/app/research`, captured desktop/mobile screenshots for both, and reported zero console/page errors.
+  - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/web-game-commander-research-cleanup` passed; generated screenshot/state were inspected.

@@ -6,7 +6,7 @@ import { api } from "../api";
 import { CommanderSkillTree } from "../components/commanders/CommanderSkillTree";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { DetailList, PanelStatGrid, SectionHeaderBlock, type DetailListItem, type PanelStatItem } from "../components/ui/CommandSurface";
+import { DetailList, SectionHeaderBlock, type DetailListItem } from "../components/ui/CommandSurface";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -133,94 +133,38 @@ export function CommanderPage() {
     { id: "reserve", label: "Talent Reserve", value: `${selectedCommander.talentPointsAvailable} ready` },
     { id: "status", label: "Command Status", value: selectedCommander.isPrimary ? "Primary banner" : "Reserve wing" },
   ];
-  const attributeCards = [
-    { label: "Attack", value: selectedCommander.attackBonusPct },
-    { label: "Defense", value: selectedCommander.defenseBonusPct },
-    { label: "Speed", value: selectedCommander.marchSpeedBonusPct },
-    { label: "Carry", value: selectedCommander.carryBonusPct },
-  ];
-  const attributeStats: PanelStatItem[] = attributeCards.map((card) => ({
-    id: card.label.toLowerCase(),
-    label: card.label,
-    value: `+${card.value}%`,
-    note:
-      card.label === "Attack"
-        ? "frontline pressure"
-        : card.label === "Defense"
-          ? "wall discipline"
-          : card.label === "Speed"
-            ? "field tempo"
-            : "supply lift",
-    tone: card.label === "Defense" ? "info" : card.label === "Carry" ? "success" : "warning",
-  }));
-  const selectedCommanderRailStats: PanelStatItem[] = [
-    {
-      id: "level",
-      label: "Level",
-      value: `L${selectedCommander.level}`,
-      note: `${selectedCommander.starLevel} stars`,
-      tone: selectedCommander.isPrimary ? "success" : "info",
-    },
-    {
-      id: "power",
-      label: "Power",
-      value: formatNumber(selectedCommander.totalPowerScore),
-      note: selectedCommander.skillTree.trackLabel,
-      tone: "warning",
-    },
-    {
-      id: "xp",
-      label: "XP to next",
-      value: formatNumber(selectedCommander.xpToNextLevel),
-      note: "promotion window",
-      tone: "info",
-    },
-    {
-      id: "talent",
-      label: "Doctrine",
-      value: selectedCommander.talentPointsAvailable,
-      note: "points ready",
-      tone: "success",
-    },
-  ] as const;
 
   return (
     <section className={styles.page}>
-      <header className={styles.hero}>
-        <div className={styles.heroLeadBlock}>
+      <header className={styles.commandBar}>
+        <div className={styles.commandIdentity}>
           <p className={styles.kicker}>Commander Profile</p>
-          <h2 className={styles.heroTitle}>{selectedCommander.name}</h2>
-          <div className={styles.heroMeta}>
+          <h2 className={styles.commandTitle}>{selectedCommander.name}</h2>
+          <div className={styles.commandMeta}>
             <Badge tone={selectedCommander.isPrimary ? "success" : "info"}>
               {selectedCommander.isPrimary ? "Primary banner" : "Reserve wing"}
             </Badge>
-            <span className={styles.heroMetaItem}>{selectedCommander.skillTree.trackLabel}</span>
-            <span className={styles.heroMetaItem}>{selectedCommander.starLevel} stars</span>
+            <span>{selectedCommander.skillTree.trackLabel}</span>
+            <span>{selectedCommander.starLevel} stars</span>
           </div>
-          <p className={styles.heroLead}>
-            A cinematic command sheet for doctrine, readiness, and field tempo. Promotion, preset planning, and talent review stay readable in one place.
-          </p>
         </div>
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Roster Power</span>
-            <strong className={styles.summaryValue}>{formatNumber(rosterStats.totalPower)}</strong>
-            <span className={styles.summaryHint}>{formatNumber(commanders.length)} sworn officers</span>
+
+        <div className={styles.commandStats} aria-label="Commander command summary">
+          <article>
+            <span>Power</span>
+            <strong>{formatNumber(selectedCommander.totalPowerScore)}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Roster Levels</span>
-            <strong className={styles.summaryValue}>{formatNumber(rosterStats.totalLevels)}</strong>
-            <span className={styles.summaryHint}>campaign experience</span>
+          <article>
+            <span>Level</span>
+            <strong>L{selectedCommander.level}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Doctrine Reserve</span>
-            <strong className={styles.summaryValue}>{selectedCommander.talentPointsAvailable}</strong>
-            <span className={styles.summaryHint}>points ready to place</span>
+          <article>
+            <span>Doctrine</span>
+            <strong>{selectedCommander.talentPointsAvailable}</strong>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>City Gold</span>
-            <strong className={styles.summaryValue}>{formatNumber(state.city.resources.gold)}</strong>
-            <span className={styles.summaryHint}>promotion treasury</span>
+          <article>
+            <span>Gold</span>
+            <strong>{formatNumber(state.city.resources.gold)}</strong>
           </article>
         </div>
       </header>
@@ -237,7 +181,16 @@ export function CommanderPage() {
               aside={<Badge tone={selectedCommander.isPrimary ? "success" : "info"}>{selectedCommander.isPrimary ? "Lead" : "Reserve"}</Badge>}
               className={styles.surfaceHeader}
             />
-            <PanelStatGrid items={selectedCommanderRailStats} columns={2} compact className={styles.rosterStats} />
+            <div className={styles.rosterStats}>
+              <article>
+                <span>Roster</span>
+                <strong>{formatNumber(commanders.length)}</strong>
+              </article>
+              <article>
+                <span>Levels</span>
+                <strong>{formatNumber(rosterStats.totalLevels)}</strong>
+              </article>
+            </div>
             <div className={styles.rosterList}>
               {commanders.map((commander) => (
                 <button
@@ -310,8 +263,6 @@ export function CommanderPage() {
               </article>
             </div>
           </section>
-
-          <PanelStatGrid items={attributeStats} columns={4} className={styles.attributeStats} />
 
           <SectionCard
             kicker="Promotion Orders"
