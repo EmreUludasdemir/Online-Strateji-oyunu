@@ -113,8 +113,8 @@ export function CommanderPage() {
   if (!selectedCommander) {
     return (
       <section className={styles.page}>
-        <SectionCard kicker="Command Staff" title="No commanders available">
-          <EmptyState title="Commander roster empty" body="Unlock or seed commanders before opening the progression chamber." />
+        <SectionCard kicker="Başbuğ Defteri" title="Hazır başbuğ yok">
+          <EmptyState title="Başbuğ kadrosu boş" body="İlerleme otağını açmadan önce başbuğları üret veya ekle." />
         </SectionCard>
       </section>
     );
@@ -122,48 +122,48 @@ export function CommanderPage() {
 
   const commanderMonogram = getCommanderMonogram(selectedCommander.name);
   const bonusCards: DetailListItem[] = [
-    { id: "attack", label: "Attack Doctrine", value: `+${selectedCommander.attackBonusPct}%`, note: "frontline pressure" },
-    { id: "defense", label: "Defense Posture", value: `+${selectedCommander.defenseBonusPct}%`, note: "wall discipline" },
-    { id: "speed", label: "March Tempo", value: `+${selectedCommander.marchSpeedBonusPct}%`, note: "field movement" },
-    { id: "carry", label: "Carry Capacity", value: `+${selectedCommander.carryBonusPct}%`, note: "supply lift" },
+    { id: "attack", label: "Saldırı Töresi", value: `+${selectedCommander.attackBonusPct}%`, note: "ön saf baskısı" },
+    { id: "defense", label: "Savunma Duruşu", value: `+${selectedCommander.defenseBonusPct}%`, note: "sur disiplini" },
+    { id: "speed", label: "Sefer Hızı", value: `+${selectedCommander.marchSpeedBonusPct}%`, note: "saha temposu" },
+    { id: "carry", label: "Yük Kapasitesi", value: `+${selectedCommander.carryBonusPct}%`, note: "ikmal taşıma" },
   ];
   const serviceRows: DetailListItem[] = [
-    { id: "track", label: "Doctrine Track", value: selectedCommander.skillTree.trackLabel },
-    { id: "preset", label: "Preset", value: selectedCommander.assignedPreset ?? "Unassigned" },
-    { id: "reserve", label: "Talent Reserve", value: `${selectedCommander.talentPointsAvailable} ready` },
-    { id: "status", label: "Command Status", value: selectedCommander.isPrimary ? "Primary banner" : "Reserve wing" },
+    { id: "track", label: "Töre Yolu", value: selectedCommander.skillTree.trackLabel },
+    { id: "preset", label: "Hazır Kalıp", value: selectedCommander.assignedPreset ?? "Atanmamış" },
+    { id: "reserve", label: "Yetenek Rezervi", value: `${selectedCommander.talentPointsAvailable} hazır` },
+    { id: "status", label: "Komut Durumu", value: selectedCommander.isPrimary ? "Baş sancak" : "Yedek kol" },
   ];
 
   return (
     <section className={styles.page}>
       <header className={styles.commandBar}>
         <div className={styles.commandIdentity}>
-          <p className={styles.kicker}>Commander Profile</p>
+          <p className={styles.kicker}>Başbuğ Künyesi</p>
           <h2 className={styles.commandTitle}>{selectedCommander.name}</h2>
           <div className={styles.commandMeta}>
             <Badge tone={selectedCommander.isPrimary ? "success" : "info"}>
-              {selectedCommander.isPrimary ? "Primary banner" : "Reserve wing"}
+              {selectedCommander.isPrimary ? "Baş sancak" : "Yedek kol"}
             </Badge>
             <span>{selectedCommander.skillTree.trackLabel}</span>
-            <span>{selectedCommander.starLevel} stars</span>
+            <span>{selectedCommander.starLevel} yıldız</span>
           </div>
         </div>
 
-        <div className={styles.commandStats} aria-label="Commander command summary">
+        <div className={styles.commandStats} aria-label="Başbuğ özet kartı">
           <article>
-            <span>Power</span>
+            <span>Güç</span>
             <strong>{formatNumber(selectedCommander.totalPowerScore)}</strong>
           </article>
           <article>
-            <span>Level</span>
+            <span>Mertebe</span>
             <strong>L{selectedCommander.level}</strong>
           </article>
           <article>
-            <span>Doctrine</span>
+            <span>Töre</span>
             <strong>{selectedCommander.talentPointsAvailable}</strong>
           </article>
           <article>
-            <span>Gold</span>
+            <span>Altın</span>
             <strong>{formatNumber(state.city.resources.gold)}</strong>
           </article>
         </div>
@@ -171,23 +171,23 @@ export function CommanderPage() {
 
       <div className={styles.layout}>
         <aside className={styles.rosterColumn}>
-          <SectionCard kicker="Command Ledger" title="Available commanders" aside={<Badge tone="info">{commanders.length} total</Badge>}>
+          <SectionCard kicker="Başbuğ Defteri" title="Bağlı başbuğlar" aside={<Badge tone="info">{commanders.length} kayıt</Badge>}>
             <SectionHeaderBlock
-              kicker="Active Banner"
+              kicker="Aktif Sancak"
               title={selectedCommander.name}
-              lead={`${selectedCommander.skillTree.trackLabel} doctrine | ${
-                selectedCommander.isPrimary ? "Primary banner" : "Reserve wing"
+              lead={`${selectedCommander.skillTree.trackLabel} töresi | ${
+                selectedCommander.isPrimary ? "Baş sancak" : "Yedek kol"
               }`}
-              aside={<Badge tone={selectedCommander.isPrimary ? "success" : "info"}>{selectedCommander.isPrimary ? "Lead" : "Reserve"}</Badge>}
+              aside={<Badge tone={selectedCommander.isPrimary ? "success" : "info"}>{selectedCommander.isPrimary ? "Baş" : "Yedek"}</Badge>}
               className={styles.surfaceHeader}
             />
             <div className={styles.rosterStats}>
               <article>
-                <span>Roster</span>
+                <span>Kadro</span>
                 <strong>{formatNumber(commanders.length)}</strong>
               </article>
               <article>
-                <span>Levels</span>
+                <span>Mertebe</span>
                 <strong>{formatNumber(rosterStats.totalLevels)}</strong>
               </article>
             </div>
@@ -203,15 +203,15 @@ export function CommanderPage() {
                 >
                   <div className={styles.rosterHeader}>
                     <strong>{commander.name}</strong>
-                    <Badge tone={commander.isPrimary ? "success" : "info"}>{commander.isPrimary ? "Primary" : "Reserve"}</Badge>
+                    <Badge tone={commander.isPrimary ? "success" : "info"}>{commander.isPrimary ? "Baş" : "Yedek"}</Badge>
                   </div>
                   <p className={styles.rosterMeta}>
-                    L{commander.level} | {commander.skillTree.trackLabel} | {commander.starLevel} stars
+                    L{commander.level} | {commander.skillTree.trackLabel} | {commander.starLevel} yıldız
                   </p>
                   <div className={styles.progressRail}>
                     <span style={{ width: `${getProgressPct(commander)}%` }} />
                   </div>
-                  <span className={styles.rosterNote}>{formatNumber(commander.totalPowerScore)} power</span>
+                  <span className={styles.rosterNote}>{formatNumber(commander.totalPowerScore)} güç</span>
                 </button>
               ))}
             </div>
@@ -222,14 +222,14 @@ export function CommanderPage() {
           <section className={styles.commanderStage}>
             <article className={styles.portraitCard}>
               <div className={styles.portraitInset}>
-                <span className={styles.portraitKicker}>Service Banner</span>
+                <span className={styles.portraitKicker}>Hizmet Sancağı</span>
                 <span className={styles.portraitMonogram}>{commanderMonogram}</span>
                 <strong className={styles.portraitName}>{selectedCommander.skillTree.trackLabel}</strong>
-                <span className={styles.portraitMeta}>Level {selectedCommander.level} commander | {selectedCommander.starLevel} stars</span>
+                <span className={styles.portraitMeta}>Mertebe {selectedCommander.level} başbuğ | {selectedCommander.starLevel} yıldız</span>
               </div>
               <div className={styles.portraitFooter}>
                 <div className={styles.portraitRow}>
-                  <span>Experience progress</span>
+                  <span>Tecrübe ilerlemesi</span>
                   <strong>
                     {formatNumber(selectedCommander.xp)} / {formatNumber(selectedCommander.xp + selectedCommander.xpToNextLevel)} XP
                   </strong>
@@ -243,9 +243,9 @@ export function CommanderPage() {
             <div className={styles.stageStack}>
               <article className={styles.stageCard}>
                 <SectionHeaderBlock
-                  kicker="War Cabinet"
-                  title="Field doctrine"
-                  lead="Frontline pressure, wall discipline, march tempo, and carry lift stay readable before promotion."
+                  kicker="Savaş Otağı"
+                  title="Saha töresi"
+                  lead="Ön saf baskısı, sur disiplini, sefer hızı ve yük kapasitesi terfi öncesi okunabilir kalır."
                   className={styles.surfaceHeader}
                 />
                 <DetailList items={bonusCards} />
@@ -253,10 +253,10 @@ export function CommanderPage() {
 
               <article className={styles.stageCard}>
                 <SectionHeaderBlock
-                  kicker="Service Record"
-                  title="Campaign ledger"
-                  lead="Preset, reserve doctrine, and command status stay visible while you plan the next rank."
-                  aside={<Badge tone="warning">{selectedCommander.starLevel} stars</Badge>}
+                  kicker="Hizmet Defteri"
+                  title="Sefer kayıtları"
+                  lead="Hazır kalıp, yedek töre ve komut durumu; bir sonraki rütbeyi planlarken görünür kalır."
+                  aside={<Badge tone="warning">{selectedCommander.starLevel} yıldız</Badge>}
                   className={styles.surfaceHeader}
                 />
                 <DetailList items={serviceRows} />
@@ -265,13 +265,13 @@ export function CommanderPage() {
           </section>
 
           <SectionCard
-            kicker="Promotion Orders"
-            title="Advance commander rank"
-            aside={<Badge tone="warning">{selectedCommander.talentPointsAvailable} doctrine points</Badge>}
+            kicker="Terfi Buyruğu"
+            title="Başbuğ rütbesini yükselt"
+            aside={<Badge tone="warning">{selectedCommander.talentPointsAvailable} töre puanı</Badge>}
           >
             <div className={styles.orderGrid}>
               <p className={styles.orderLead}>
-                Promotion opens when the experience bar is filled. Doctrine and stat cards below keep the power curve visible before you commit.
+                Tecrübe çubuğu dolduğunda terfi açılır. Aşağıdaki töre ve stat kartları, onaydan önce güç eğrisini görünür tutar.
               </p>
               <div className={styles.actionRow}>
                 <Button
@@ -279,7 +279,7 @@ export function CommanderPage() {
                   disabled={upgradeMutation.isPending || selectedCommander.xp < selectedCommander.xpToNextLevel}
                   onClick={() => upgradeMutation.mutate(selectedCommander.id)}
                 >
-                  {upgradeMutation.isPending ? "Upgrading" : "Upgrade Commander"}
+                  {upgradeMutation.isPending ? "Yükseltiliyor" : "Başbuğu Terfi Et"}
                 </Button>
               </div>
             </div>
@@ -288,14 +288,14 @@ export function CommanderPage() {
           <CommanderSkillTree commander={selectedCommander} />
 
           <SectionCard
-            kicker="Research Synergy"
-            title="Doctrine amplifiers"
-            aside={<Badge tone="info">{TRACK_SYNERGIES[selectedCommander.skillTree.track].length} synergies</Badge>}
+            kicker="Töre Sinerjisi"
+            title="Töre güçlendiricileri"
+            aside={<Badge tone="info">{TRACK_SYNERGIES[selectedCommander.skillTree.track].length} sinerji</Badge>}
           >
             <p className={styles.orderLead}>
-              These research branches amplify the{" "}
-              <strong>{selectedCommander.skillTree.trackLabel}</strong> doctrine track.
-              Higher research tiers multiply the bonus for every level of this commander.
+              Bu töre dalları{" "}
+              <strong>{selectedCommander.skillTree.trackLabel}</strong> yolunu güçlendirir.
+              Daha üst töre kademeleri bu başbuğun her seviyesindeki bonusu katlar.
             </p>
             <div className={styles.synergyGrid}>
               {TRACK_SYNERGIES[selectedCommander.skillTree.track].map((entry) => (

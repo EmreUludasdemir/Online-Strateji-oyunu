@@ -254,6 +254,141 @@
   pointer-events: none;
 }
 
+.mapTooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  min-width: 130px;
+  max-width: 240px;
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-xs);
+  background: rgba(15, 17, 13, 0.9);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 246, 216, 0.14);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  pointer-events: none;
+  will-change: transform;
+  animation: mapTooltipFade 140ms ease-out both;
+}
+
+.mapTooltipTitle {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-style: italic;
+  color: var(--color-primary-fixed);
+  line-height: 1.15;
+}
+
+.mapTooltipSubtitle {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--color-on-surface-variant);
+}
+
+.mapTooltipToneSuccess {
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(125, 196, 194, 0.32);
+}
+
+.mapTooltipToneDanger {
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(216, 104, 81, 0.45);
+}
+
+.mapTooltipToneWarning {
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(226, 194, 117, 0.4);
+}
+
+.mapTooltipToneInfo {
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(89, 139, 192, 0.4);
+}
+
+.mapCompass {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 6;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(40, 32, 22, 0.85), rgba(15, 17, 13, 0.85));
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 246, 216, 0.16);
+  pointer-events: none;
+  animation: mapCompassFloat 4200ms ease-in-out infinite;
+}
+
+.mapCompassRing {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(226, 194, 117, 0.4);
+  background: conic-gradient(
+    from -45deg,
+    transparent 0deg,
+    transparent 60deg,
+    rgba(226, 194, 117, 0.12) 65deg,
+    transparent 90deg,
+    transparent 240deg,
+    rgba(226, 194, 117, 0.12) 245deg,
+    transparent 270deg
+  );
+}
+
+.mapCompassNorth {
+  position: relative;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--color-primary-fixed);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.08em;
+  z-index: 1;
+}
+
+.mapCompassMeta {
+  position: absolute;
+  bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  color: rgba(241, 229, 198, 0.7);
+  z-index: 1;
+}
+
+@keyframes mapTooltipFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mapCompassFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
 .tacticalHud {
   top: 1rem;
   left: 1rem;

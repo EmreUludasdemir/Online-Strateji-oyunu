@@ -169,15 +169,15 @@ export function ResearchPage() {
   const completedDoctrines = state.city.research.filter((entry) => entry.level >= entry.maxLevel).length;
   const availableDoctrineTiers = state.city.research.reduce((sum, entry) => sum + entry.maxLevel, 0);
   const activeResearchLabel =
-    state.city.research.find((entry) => entry.type === state.city.activeResearch?.researchType)?.label ?? "Dormant";
+    state.city.research.find((entry) => entry.type === state.city.activeResearch?.researchType)?.label ?? "Sessiz";
 
   if (!selectedResearch) {
     return (
       <section className={styles.page}>
         <PageNotice
-          kicker="Imperial Research"
-          title="Doctrine archive unavailable"
-          body="Research lanes appear once the city state exposes academy doctrine progress."
+          kicker="Töre Araştırması"
+          title="Töre arşivi açılamadı"
+          body="Bilge ocağı töre ilerlemesini açtığında araştırma yolları görünür olur."
           tone="warning"
         />
       </section>
@@ -195,30 +195,30 @@ export function ResearchPage() {
     <section className={styles.page}>
       <header className={styles.commandBar}>
         <div className={styles.commandIdentity}>
-          <p className={styles.kicker}>Imperial Research</p>
+          <p className={styles.kicker}>Töre Araştırması</p>
           <h2 className={styles.commandTitle}>{selectedResearch.label}</h2>
           <div className={styles.commandMeta}>
-            {state.city.activeResearch ? <TimerChip endsAt={state.city.activeResearch.completesAt} now={now} /> : <Badge tone="info">Academy ready</Badge>}
+            {state.city.activeResearch ? <TimerChip endsAt={state.city.activeResearch.completesAt} now={now} /> : <Badge tone="info">Bilge ocağı hazır</Badge>}
             <span>{brief.chapter}</span>
-            <span>{state.city.activeResearch ? activeResearchLabel : "Queue open"}</span>
+            <span>{state.city.activeResearch ? activeResearchLabel : "Kuyruk açık"}</span>
           </div>
         </div>
 
-        <div className={styles.commandStats} aria-label="Research command summary">
+        <div className={styles.commandStats} aria-label="Töre araştırması özeti">
           <article>
-            <span>Academy</span>
+            <span>Bilge Ocağı</span>
             <strong>L{academy?.level ?? 0}</strong>
           </article>
           <article>
-            <span>Depth</span>
+            <span>Derinlik</span>
             <strong>{formatNumber(totalDoctrineLevels)}/{formatNumber(availableDoctrineTiers)}</strong>
           </article>
           <article>
-            <span>Done</span>
+            <span>Tamamlanan</span>
             <strong>{formatNumber(completedDoctrines)}</strong>
           </article>
           <article>
-            <span>Tier</span>
+            <span>Kademe</span>
             <strong>{selectedResearch.level}/{selectedResearch.maxLevel}</strong>
           </article>
         </div>
@@ -227,9 +227,9 @@ export function ResearchPage() {
       <div className={styles.layout}>
         <div className={styles.boardColumn}>
           <SectionCard
-            kicker="Research atlas"
-            title="Doctrine lanes"
-            aside={<Badge tone="warning">4 chapters</Badge>}
+            kicker="Töre Atlası"
+            title="Töre yolları"
+            aside={<Badge tone="warning">4 bölüm</Badge>}
             className={styles.canvasCard}
           >
             <div className={styles.laneStack}>
@@ -247,7 +247,7 @@ export function ResearchPage() {
                           return sum + (entry?.level ?? 0);
                         }, 0),
                       )}{" "}
-                      ranks
+                      kademe
                     </Badge>
                   </header>
 
@@ -279,7 +279,7 @@ export function ResearchPage() {
                           <span className={styles.nodeTier}>T{entry.nextLevel}</span>
                           <strong className={styles.nodeTitle}>{entry.label}</strong>
                           <span className={styles.nodeMeta}>
-                            Level {entry.level}/{entry.maxLevel}
+                            Kademe {entry.level}/{entry.maxLevel}
                           </span>
                           <span className={styles.nodeProgress}>
                             <span style={{ width: `${progressPercent}%` }} />
@@ -300,11 +300,11 @@ export function ResearchPage() {
             title={selectedResearch.label}
             aside={
               selectedResearch.isActive ? (
-                <Badge tone="warning">In progress</Badge>
+                <Badge tone="warning">Sürüyor</Badge>
               ) : selectedResearch.level >= selectedResearch.maxLevel ? (
-                <Badge tone="success">Complete</Badge>
+                <Badge tone="success">Tamamlandı</Badge>
               ) : (
-                <Badge tone="info">Tier {selectedResearch.nextLevel}</Badge>
+                <Badge tone="info">Kademe {selectedResearch.nextLevel}</Badge>
               )
             }
           >
@@ -318,21 +318,21 @@ export function ResearchPage() {
                   <strong className={styles.detailValue}>L{selectedResearch.level}</strong>
                 </article>
                 <article>
-                  <span className={styles.detailLabel}>Next tier duration</span>
-                  <strong className={styles.detailValue}>{formatNumber(selectedResearch.durationSeconds / 60)}m</strong>
+                  <span className={styles.detailLabel}>Sonraki kademe süresi</span>
+                  <strong className={styles.detailValue}>{formatNumber(selectedResearch.durationSeconds / 60)}dk</strong>
                 </article>
               </div>
 
               <div className={styles.bonusStrip}>
                 <article className={styles.bonusRow}>
-                  <span className={styles.detailLabel}>Current bonus</span>
+                  <span className={styles.detailLabel}>Şu anki bonus</span>
                   <strong className={styles.bonusValue}>
                     {getResearchBonusLabel(selectedResearch.type, selectedResearch.level)}
                   </strong>
                 </article>
                 {selectedResearch.level < selectedResearch.maxLevel && (
                   <article className={styles.bonusRow}>
-                    <span className={styles.detailLabel}>At tier {selectedResearch.nextLevel}</span>
+                    <span className={styles.detailLabel}>Kademe {selectedResearch.nextLevel}'te</span>
                     <strong className={styles.bonusValueNext}>
                       {getResearchBonusLabel(selectedResearch.type, selectedResearch.nextLevel)}
                     </strong>
@@ -348,7 +348,7 @@ export function ResearchPage() {
                       <div>
                         <strong>{resource}</strong>
                         <p className={styles.detailMeta}>
-                          {getAffordabilityLabel(available, amount)} from current city stock.
+                          {getAffordabilityLabel(available, amount)} oba ambarından.
                         </p>
                       </div>
                       <span className={available >= amount ? styles.costReady : styles.costShort}>
@@ -368,48 +368,47 @@ export function ResearchPage() {
                   }}
                 >
                   {selectedResearch.isActive
-                    ? "Doctrine in progress"
+                    ? "Töre çalışması sürüyor"
                     : selectedResearch.level >= selectedResearch.maxLevel
-                      ? "Doctrine complete"
+                      ? "Töre tamamlandı"
                       : state.city.activeResearch
-                        ? "Academy occupied"
+                        ? "Bilge ocağı meşgul"
                         : isResearching
-                          ? "Submitting"
-                          : `Begin tier ${selectedResearch.nextLevel}`}
+                          ? "Gönderiliyor"
+                          : `Kademe ${selectedResearch.nextLevel}'i başlat`}
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => navigate("/app/dashboard")}>
-                  Return to city deck
+                  Oba merkezine dön
                 </Button>
               </div>
             </div>
           </SectionCard>
 
           <SectionCard
-            kicker="Current operation"
-            title={state.city.activeResearch ? activeResearchLabel : "No live study"}
+            kicker="Mevcut Çalışma"
+            title={state.city.activeResearch ? activeResearchLabel : "Aktif töre yok"}
             aside={state.city.activeResearch ? <TimerChip endsAt={state.city.activeResearch.completesAt} now={now} /> : null}
           >
             {state.city.activeResearch ? (
               <div className={styles.detailStack}>
                 <div className={styles.metricStrip}>
                   <article>
-                    <span className={styles.detailLabel}>Target tier</span>
+                    <span className={styles.detailLabel}>Hedef kademe</span>
                     <strong className={styles.detailValue}>T{state.city.activeResearch.toLevel}</strong>
                   </article>
                   <article>
-                    <span className={styles.detailLabel}>Research type</span>
+                    <span className={styles.detailLabel}>Töre türü</span>
                     <strong className={styles.detailValue}>{activeResearchLabel}</strong>
                   </article>
                 </div>
                 <p className={styles.detailMeta}>
-                  The academy is occupied, so additional doctrine orders must wait for the current ledger entry to
-                  resolve.
+                  Bilge ocağı meşgul; yeni töre buyruğu mevcut kayıt çözülene dek bekler.
                 </p>
               </div>
             ) : (
               <EmptyState
-                title="Archive is open"
-                body="Choose the next doctrine lane to keep march tempo, production, or scouting pressure moving."
+                title="Arşiv açık"
+                body="Sefer hızı, üretim veya keşif baskısını canlı tutmak için bir sonraki töre yolunu seç."
               />
             )}
           </SectionCard>

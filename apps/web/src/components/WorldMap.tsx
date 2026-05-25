@@ -66,6 +66,18 @@ export interface MapReportMarkerView {
   resultTone: "success" | "warning" | "info";
 }
 
+export type MapHoverKind = "city" | "poi-camp" | "poi-node" | "march" | "report" | "alliance-marker";
+
+export interface MapHoverState {
+  id: string;
+  kind: MapHoverKind;
+  label: string;
+  subtitle: string;
+  screenX: number;
+  screenY: number;
+  tone: "info" | "warning" | "success" | "danger";
+}
+
 interface WorldMapProps {
   worldSize: number;
   initialCenter: {
@@ -95,6 +107,7 @@ interface WorldMapProps {
   onOpenReport?: (reportId: string) => void;
   onOpenFieldCommand?: (command: MapFieldCommand) => void;
   onCameraChange: (state: MapCameraState) => void;
+  onHoverChange?: (state: MapHoverState | null) => void;
   commandHandleRef?: MutableRefObject<WorldMapHandle | null>;
 }
 
@@ -314,6 +327,7 @@ interface SceneConfig {
   onOpenReport?: (reportId: string) => void;
   onOpenFieldCommand?: (command: MapFieldCommand) => void;
   onCameraChange: (state: MapCameraState) => void;
+  onHoverChange?: (state: MapHoverState | null) => void;
 }
 
 function hashCoordinate(x: number, y: number): number {
@@ -427,6 +441,11 @@ class FrontierMapScene extends Phaser.Scene {
   private onOpenReport: (reportId: string) => void = () => undefined;
   private onOpenFieldCommand: (command: MapFieldCommand) => void = () => undefined;
   private onCameraChange: (state: MapCameraState) => void = () => undefined;
+  private onHoverChange: (state: MapHoverState | null) => void = () => undefined;
+
+  private hoverRing?: Phaser.GameObjects.Container;
+  private hoverKey: string | null = null;
+  private lastHoverPointerMs = 0;
 
   private terrainLayer?: Phaser.GameObjects.Layer;
   private ambientLayer?: Phaser.GameObjects.Layer;
@@ -595,6 +614,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.onOpenReport = config.onOpenReport ?? (() => undefined);
     this.onOpenFieldCommand = config.onOpenFieldCommand ?? (() => undefined);
     this.onCameraChange = config.onCameraChange;
+    this.onHoverChange = config.onHoverChange ?? (() => undefined);
 
     if (!this.sys.isActive()) {
       return;
@@ -749,6 +769,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       if (!this.dragState.active || !pointer.isDown) {
+        this.updateHover(pointer);
         return;
       }
 
@@ -761,6 +782,7 @@ class FrontierMapScene extends Phaser.Scene {
 
       if (distance > 8) {
         this.dragState.dragging = true;
+        this.clearHover();
       }
 
       if (!this.dragState.dragging) {
@@ -777,6 +799,10 @@ class FrontierMapScene extends Phaser.Scene {
       this.dragState.velocityY = lerp(this.dragState.velocityY, scrollDeltaY, 0.45);
       this.dragState.lastX = pointer.x;
       this.dragState.lastY = pointer.y;
+    });
+
+    this.input.on("pointerout", () => {
+      this.clearHover();
     });
 
     this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
@@ -2964,6 +2990,198 @@ class FrontierMapScene extends Phaser.Scene {
   private isCameraReady() {
     return Boolean(this.sys?.isActive() && this.cameras && this.cameras.main);
   }
+
+  private getOrCreateHoverRing() {
+    if (this.hoverRing) {
+      return this.hoverRing;
+    }
+    const container = this.add.container(0, 0);
+    const halo = this.add.circle(0, 0, 28, MAP_COLOR_REPORT, 0.1);
+    const ring = this.add.circle(0, 0, 22, 0x000000, 0);
+    ring.setStrokeStyle(2, MAP_COLOR_REPORT, 0.9);
+    const ringOuter = this.add.circle(0, 0, 30, 0x000000, 0);
+    ringOuter.setStrokeStyle(1, MAP_COLOR_REPORT, 0.4);
+    container.add([halo, ring, ringOuter]);
+    container.setVisible(false);
+    this.fxLayer?.add(container);
+    this.tweens.add({
+      targets: ring,
+      scale: { from: 0.92, to: 1.06 },
+      alpha: { from: 0.85, to: 1 },
+      duration: 1100,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: -1,
+    });
+    this.tweens.add({
+      targets: halo,
+      scale: { from: 0.95, to: 1.18 },
+      alpha: { from: 0.06, to: 0.16 },
+      duration: 1400,
+      ease: "Sine.easeInOut",
+      yoyo: true,
+      repeat: -1,
+    });
+    this.hoverRing = container;
+    return container;
+  }
+
+  private clearHover() {
+    if (this.hoverKey !== null) {
+      this.hoverKey = null;
+      this.onHoverChange(null);
+    }
+    if (this.hoverRing) {
+      this.hoverRing.setVisible(false);
+    }
+    this.setCanvasCursor("default");
+  }
+
+  private setCanvasCursor(value: "default" | "pointer") {
+    if (this.game?.canvas) {
+      this.game.canvas.style.cursor = value;
+    }
+  }
+
+  private updateHover(pointer: Phaser.Input.Pointer) {
+    if (!this.isCameraReady()) {
+      return;
+    }
+    const nowMs = Date.now();
+    if (nowMs - this.lastHoverPointerMs < 40) {
+      return;
+    }
+    this.lastHoverPointerMs = nowMs;
+
+    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+    const report = this.showReports ? this.findNearestReport(worldPoint.x, worldPoint.y) : null;
+    if (report) {
+      this.applyHover({
+        id: report.data.id,
+        kind: "report",
+        label: report.data.label,
+        subtitle: report.data.kind === "RESOURCE_GATHER" ? "Yağma Tutanağı" : report.data.kind === "BARBARIAN_BATTLE" ? "Akın Tutanağı" : "Şehir Tutanağı",
+        tone: report.data.resultTone === "warning" ? "warning" : report.data.resultTone === "info" ? "info" : "success",
+        worldX: report.worldX,
+        worldY: report.worldY - 18,
+        screenX: pointer.x,
+        screenY: pointer.y,
+        ringRadius: 22,
+      });
+      return;
+    }
+
+    const marchId = this.findNearestMarch(worldPoint.x, worldPoint.y);
+    if (marchId) {
+      const march = this.marchEntities.get(marchId);
+      const marchData = this.marches.find((entry) => entry.id === marchId);
+      if (march && marchData) {
+        const objectiveLabel =
+          marchData.objective === "RESOURCE_GATHER"
+            ? "Yağma seferi"
+            : marchData.objective === "BARBARIAN_ATTACK"
+              ? "Kamp akını"
+              : marchData.objective === "CITY_ATTACK"
+                ? "Şehir akını"
+                : "Sefer";
+        this.applyHover({
+          id: marchId,
+          kind: "march",
+          label: marchData.targetCityName ?? marchData.targetPoiName ?? "Sefer hedefi",
+          subtitle: `${objectiveLabel} | ${marchData.state.toLowerCase()}`,
+          tone: marchData.objective === "BARBARIAN_ATTACK" || marchData.objective === "CITY_ATTACK" ? "danger" : "info",
+          worldX: march.container.x,
+          worldY: march.container.y,
+          screenX: pointer.x,
+          screenY: pointer.y,
+          ringRadius: 20,
+        });
+        return;
+      }
+    }
+
+    const poi = this.findNearestPoi(worldPoint.x, worldPoint.y);
+    if (poi) {
+      const isCamp = poi.data.kind === "BARBARIAN_CAMP";
+      const subtitle = isCamp
+        ? `Barbar Kampı | L${poi.data.level}`
+        : `${poiResourceLabels[poi.data.resourceType ?? "WOOD"]} Bereketi | L${poi.data.level}`;
+      this.applyHover({
+        id: poi.data.id,
+        kind: isCamp ? "poi-camp" : "poi-node",
+        label: poi.data.label,
+        subtitle,
+        tone: isCamp ? "danger" : "success",
+        worldX: poi.worldX,
+        worldY: poi.worldY,
+        screenX: pointer.x,
+        screenY: pointer.y,
+        ringRadius: 24,
+      });
+      return;
+    }
+
+    const city = this.findNearestCity(worldPoint.x, worldPoint.y);
+    if (city) {
+      const isOwn = city.data.isCurrentPlayer;
+      const isAllied = !isOwn && this.alliedOwnerNames.has(city.data.ownerName);
+      const subtitle = isOwn
+        ? `Senin obanın | TH L${city.data.townHallLevel}`
+        : isAllied
+          ? `${city.data.ownerName} (Toy) | TH L${city.data.townHallLevel}`
+          : `${city.data.ownerName} | TH L${city.data.townHallLevel}`;
+      this.applyHover({
+        id: city.data.cityId,
+        kind: "city",
+        label: city.data.cityName,
+        subtitle,
+        tone: isOwn ? "success" : isAllied ? "info" : "danger",
+        worldX: city.worldX,
+        worldY: city.worldY,
+        screenX: pointer.x,
+        screenY: pointer.y,
+        ringRadius: 28,
+      });
+      return;
+    }
+
+    this.clearHover();
+  }
+
+  private applyHover(payload: {
+    id: string;
+    kind: MapHoverKind;
+    label: string;
+    subtitle: string;
+    tone: "info" | "warning" | "success" | "danger";
+    worldX: number;
+    worldY: number;
+    screenX: number;
+    screenY: number;
+    ringRadius: number;
+  }) {
+    this.setCanvasCursor("pointer");
+    const ring = this.getOrCreateHoverRing();
+    ring.setPosition(payload.worldX, payload.worldY);
+    ring.setScale(payload.ringRadius / 22);
+    ring.setVisible(true);
+
+    const key = `${payload.kind}:${payload.id}`;
+    if (key !== this.hoverKey) {
+      this.hoverKey = key;
+    }
+
+    this.onHoverChange({
+      id: payload.id,
+      kind: payload.kind,
+      label: payload.label,
+      subtitle: payload.subtitle,
+      tone: payload.tone,
+      screenX: payload.screenX,
+      screenY: payload.screenY,
+    });
+  }
 }
 
 export default function WorldMap({
@@ -2992,6 +3210,7 @@ export default function WorldMap({
   onOpenReport,
   onOpenFieldCommand,
   onCameraChange,
+  onHoverChange,
   commandHandleRef,
 }: WorldMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -3124,6 +3343,7 @@ export default function WorldMap({
       onOpenReport,
       onOpenFieldCommand,
       onCameraChange,
+      onHoverChange,
     });
   }, [
     cities,
@@ -3139,6 +3359,7 @@ export default function WorldMap({
     allianceTag,
     marches,
     onCameraChange,
+    onHoverChange,
     onOpenFieldCommand,
     onSelectCity,
     onSelectMarch,

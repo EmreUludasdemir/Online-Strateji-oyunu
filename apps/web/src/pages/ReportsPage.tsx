@@ -251,16 +251,16 @@ export function ReportsPage() {
       <div className={styles.layout}>
         <aside className={styles.reportRail}>
           <SectionHeaderBlock
-            kicker="Council Rail"
-            title="Battle Reports"
-            lead={`${formatNumber(filteredReports.length)} active logs`}
+            kicker="Divan Rayı"
+            title="Akın Defterleri"
+            lead={`${formatNumber(filteredReports.length)} açık kayıt`}
             className={styles.railHeader}
           />
           {filteredReports.length === 0 ? (
-            <SectionCard kicker="Empty Log" title="No entries yet">
+            <SectionCard kicker="Boş Defter" title="Henüz kayıt yok">
               <EmptyState
-                title="Launch the first march"
-                body="Adjust the filters or launch a new march, then wait for the next resolved report to land here."
+                title="İlk seferi aç"
+                body="Filtreleri ayarla veya yeni bir sefer aç; çözümlenen ilk rapor buraya düşecek."
               />
             </SectionCard>
           ) : (
@@ -298,10 +298,10 @@ export function ReportsPage() {
 
         <div className={styles.detailPane}>
           {!activeReport ? (
-            <SectionCard kicker="Council Desk" title="Detail center" aside={<Badge tone="warning">{notifications.unreadMailboxCount} new</Badge>}>
-              <p className={styles.sideText}>Select a report from the rail to view siege telemetry, attrition, cargo returns, and the bridge into later dispatch handling.</p>
+            <SectionCard kicker="Divan Masası" title="Detay merkezi" aside={<Badge tone="warning">{notifications.unreadMailboxCount} yeni</Badge>}>
+              <p className={styles.sideText}>Bir kayıt seç; saldırı verisi, kayıplar, taşınan ganimet ve ulak odası köprüsü açılır.</p>
               <Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>
-                Open Message Center
+                Ulak Odasına Geç
               </Button>
             </SectionCard>
           ) : (
@@ -315,16 +315,16 @@ export function ReportsPage() {
                 <p className={styles.detailSubtitle}>{getReportSubtitle(activeReport)}</p>
                 <div className={styles.dossierStrip}>
                   <article className={styles.dossierCell}>
-                    <span>Theater</span>
+                    <span>Saha</span>
                     <strong>{getReportTheater(activeReport)}</strong>
                   </article>
                   <article className={styles.dossierCell}>
-                    <span>Result</span>
+                    <span>Sonuç</span>
                     <strong>{getReportResolution(activeReport)}</strong>
                   </article>
                   <article className={styles.dossierCell}>
-                    <span>Distance</span>
-                    <strong>{formatNumber(activeReport.location.distance)} tiles</strong>
+                    <span>Mesafe</span>
+                    <strong>{formatNumber(activeReport.location.distance)} kare</strong>
                   </article>
                 </div>
                 <div className={styles.detailActions}>
@@ -332,21 +332,21 @@ export function ReportsPage() {
                     {getReportRouteCopy(activeReport).label}
                   </Button>
                   <Button type="button" variant="ghost" onClick={() => navigate("/app/messages")}>
-                    Message Center
+                    Ulak Odası
                   </Button>
                 </div>
               </header>
 
               <div className={styles.detailGrid}>
                 {activeReport.kind === "RESOURCE_GATHER" ? (
-                  <SectionCard kicker="Cargo Manifest" title="Recovered assets">
+                  <SectionCard kicker="Kervan Defteri" title="Toplanan ganimet">
                     <div className={styles.lootGrid}>
                       <article className={styles.statCard}>
-                        <span className={styles.statLabel}>Resource</span>
+                        <span className={styles.statLabel}>Kaynak</span>
                         <strong>{copy.poiResources[activeReport.resourceType]}</strong>
                       </article>
                       <article className={styles.statCard}>
-                        <span className={styles.statLabel}>Amount</span>
+                        <span className={styles.statLabel}>Miktar</span>
                         <strong>{formatNumber(activeReport.amount)}</strong>
                       </article>
                     </div>
@@ -360,7 +360,7 @@ export function ReportsPage() {
                     </dl>
                   </SectionCard>
                 ) : (
-                  <SectionCard kicker="Attrition Report" title="Casualties and power">
+                  <SectionCard kicker="Kayıp Tutanağı" title="Kayıplar ve güç">
                     <div className={styles.powerSplit}>
                       <div
                         className={styles.powerFill}
@@ -368,16 +368,16 @@ export function ReportsPage() {
                       />
                     </div>
                     <div className={styles.powerLabels}>
-                      <span>{formatNumber(activeReport.attackerPower)} attacker</span>
-                      <span>{formatNumber(activeReport.defenderPower)} defender</span>
+                      <span>{formatNumber(activeReport.attackerPower)} saldıran</span>
+                      <span>{formatNumber(activeReport.defenderPower)} savunan</span>
                     </div>
                     <div className={styles.lootGrid}>
                       <article className={styles.statCard}>
-                        <span className={styles.statLabel}>Attacker losses</span>
+                        <span className={styles.statLabel}>Saldıran kaybı</span>
                         <strong>{formatNumber(getCasualtyTotal(activeReport.attackerLosses))}</strong>
                       </article>
                       <article className={styles.statCard}>
-                        <span className={styles.statLabel}>Defender losses</span>
+                        <span className={styles.statLabel}>Savunan kaybı</span>
                         <strong>{formatNumber(getCasualtyTotal(activeReport.defenderLosses))}</strong>
                       </article>
                     </div>
@@ -385,7 +385,7 @@ export function ReportsPage() {
                       <dl className={styles.definitionGrid}>
                         {Object.entries(activeReport.attackerLosses).map(([troopType, amount]) => (
                           <div key={troopType}>
-                            <dt>Atk {troopType.toLowerCase()}</dt>
+                            <dt>Saldıran {troopType.toLowerCase()}</dt>
                             <dd>{formatNumber(amount)}</dd>
                           </div>
                         ))}
@@ -393,7 +393,7 @@ export function ReportsPage() {
                       <dl className={styles.definitionGrid}>
                         {Object.entries(activeReport.defenderLosses).map(([troopType, amount]) => (
                           <div key={troopType}>
-                            <dt>Def {troopType.toLowerCase()}</dt>
+                            <dt>Savunan {troopType.toLowerCase()}</dt>
                             <dd>{formatNumber(amount)}</dd>
                           </div>
                         ))}
@@ -403,15 +403,15 @@ export function ReportsPage() {
                       <div className={styles.hospitalNotice}>
                         <span className={styles.hospitalNoticeIcon}>+</span>
                         <div>
-                          <strong className={styles.hospitalNoticeTitle}>Hospital Recovery Active</strong>
+                          <strong className={styles.hospitalNoticeTitle}>Şifahane Çalışıyor</strong>
                           <p className={styles.hospitalNoticeBody}>
-                            Wounded troops from this engagement are recovering in your hospital.
-                            {" "}Currently{" "}
+                            Bu çarpışmadaki yaralı askerler şifahanende iyileşiyor.
+                            {" "}Şu an{" "}
                             {formatNumber(
                               Object.values(state.city.woundedTroops).reduce((s, v) => s + v, 0)
                             )}{" "}
-                            troops in recovery at{" "}
-                            {formatNumber(state.city.hospitalHealingCapacity)} per cycle.
+                            asker iyileşmede, devir başına{" "}
+                            {formatNumber(state.city.hospitalHealingCapacity)} iyileşme kapasitesi.
                           </p>
                         </div>
                       </div>
@@ -419,9 +419,9 @@ export function ReportsPage() {
                   </SectionCard>
                 )}
 
-                <SectionCard kicker="War Spoils" title="Acquired assets">
+                <SectionCard kicker="Akın Payı" title="Edinilen ganimet">
                   {activeReport.kind === "RESOURCE_GATHER" ? (
-                    <p className={styles.sideText}>Gathering logs report delivered cargo and assigned troops. Reward parcels are available through the message center.</p>
+                    <p className={styles.sideText}>Yağma kayıtları taşınan ganimeti ve görev yapan askerleri özetler. Ödül paketleri Ulak Odası üzerinden erişilir.</p>
                   ) : (
                     <div className={styles.lootGrid}>
                       {Object.entries(activeReport.loot)

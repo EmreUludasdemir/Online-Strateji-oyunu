@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { BattleWindowPanel } from "../components/map/BattleWindowPanel";
-import type { MapFieldCommand, MapReportMarkerView, WorldMapHandle } from "../components/WorldMap";
+import type { MapFieldCommand, MapHoverState, MapReportMarkerView, WorldMapHandle } from "../components/WorldMap";
 import { Badge } from "../components/ui/Badge";
 import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
@@ -411,6 +411,10 @@ export function MapPage() {
   const [cameraView, setCameraView] = useState<MapCameraState>(() =>
     createInitialCameraState(state.city.coordinates.x, state.city.coordinates.y),
   );
+  const [hoverInfo, setHoverInfo] = useState<MapHoverState | null>(null);
+  const handleHoverChange = useCallback((next: MapHoverState | null) => {
+    setHoverInfo(next);
+  }, []);
   const [chunkRequest, setChunkRequest] = useState<ActiveMapChunkMeta>(() => ({
     centerTileX: state.city.coordinates.x,
     centerTileY: state.city.coordinates.y,
@@ -2225,9 +2229,32 @@ export function MapPage() {
                 onOpenReport={handleOpenReport}
                 onOpenFieldCommand={handleFieldCommandOpen}
                 onCameraChange={handleCameraChange}
+                onHoverChange={handleHoverChange}
                 commandHandleRef={mapCommandRef}
               />
             </Suspense>
+            <div className={styles.mapCompass} aria-hidden="true">
+              <span className={styles.mapCompassRing} />
+              <span className={styles.mapCompassNorth}>K</span>
+              <span className={styles.mapCompassMeta}>
+                {cameraView.centerTileX},{cameraView.centerTileY}
+              </span>
+            </div>
+            {hoverInfo ? (
+              <div
+                className={[styles.mapTooltip, styles[`mapTooltipTone${hoverInfo.tone[0].toUpperCase()}${hoverInfo.tone.slice(1)}` as keyof typeof styles]]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={{
+                  transform: `translate3d(${hoverInfo.screenX + 14}px, ${hoverInfo.screenY + 18}px, 0)`,
+                }}
+                role="status"
+                aria-live="polite"
+              >
+                <strong className={styles.mapTooltipTitle}>{hoverInfo.label}</strong>
+                <span className={styles.mapTooltipSubtitle}>{hoverInfo.subtitle}</span>
+              </div>
+            ) : null}
           </article>
         </div>
 
