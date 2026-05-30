@@ -88,7 +88,7 @@ function selectTrainingTarget(state: GameStateResponse): { troopType: TroopType;
 
 function describeReward(reward: TaskView["reward"] | MailboxEntryView["reward"]): string {
   const [primaryLine] = summarizeRewardLines(reward);
-  return primaryLine ?? "Resources, items, and season momentum are ready to land.";
+  return primaryLine ?? "Kaynak, eşya ve sezon ilerlemesi hazır.";
 }
 
 export function buildDashboardBriefing({
@@ -108,7 +108,7 @@ export function buildDashboardBriefing({
       .sort((left, right) => right.score / right.target - left.score / left.target || (left.target - left.score) - (right.target - right.score))[0] ?? null;
   const idleLaneCount =
     Number(!state.city.activeUpgrade) + Number(!state.city.activeTraining) + Number(!state.city.activeResearch);
-  const nextTier = state.alliance ? `Alliance of ${formatNumber(state.alliance.memberCount)}` : "Independent province";
+  const nextTier = state.alliance ? `${formatNumber(state.alliance.memberCount)} kişilik toy` : "Bağımsız oba";
   const upgradeTarget = !state.city.activeUpgrade ? selectUpgradeTarget(state) : null;
   const trainingTarget = !state.city.activeTraining ? selectTrainingTarget(state) : null;
   const suggestedResearch =
@@ -120,32 +120,32 @@ export function buildDashboardBriefing({
   const stats: PanelStatItem[] = [
     {
       id: "claimables",
-      label: "Claimables",
+      label: "Ödül",
       value: formatNumber(claimableCount),
-      note: `${allTasks.filter((task) => task.isCompleted && !task.isClaimed).length} task rewards and ${mailboxEntries.filter((entry) => entry.canClaim).length} dispatch rewards are ready.`,
+      note: `${allTasks.filter((task) => task.isCompleted && !task.isClaimed).length} görev ve ${mailboxEntries.filter((entry) => entry.canClaim).length} ulak ödülü hazır.`,
       tone: claimableCount > 0 ? "success" : "default",
     },
     {
       id: "idle-lanes",
-      label: "Idle lanes",
+      label: "Boş hat",
       value: `${idleLaneCount}/3`,
-      note: idleLaneCount > 0 ? "Idle queues are the fastest place to lose short-session momentum." : "Build, barracks, and academy are all moving.",
+      note: idleLaneCount > 0 ? "Boş kuyruk kısa oturum temposunu düşürür." : "Yapı, kışla ve bilge ocağı çalışıyor.",
       tone: idleLaneCount > 0 ? "warning" : "success",
     },
     {
       id: "event-pace",
-      label: "Event pace",
-      value: unfinishedEvent ? `${formatNumber(unfinishedEvent.score)}/${formatNumber(unfinishedEvent.target)}` : "Quiet",
+      label: "Etkinlik",
+      value: unfinishedEvent ? `${formatNumber(unfinishedEvent.score)}/${formatNumber(unfinishedEvent.target)}` : "Sakin",
       note: unfinishedEvent
-        ? `${formatNumber(Math.max(0, unfinishedEvent.target - unfinishedEvent.score))} points left in ${unfinishedEvent.label}.`
-        : "No live-event pressure is currently ahead of you.",
+        ? `${formatNumber(Math.max(0, unfinishedEvent.target - unfinishedEvent.score))} puan kaldı: ${unfinishedEvent.label}.`
+        : "Şu an canlı etkinlik baskısı yok.",
       tone: unfinishedEvent ? "info" : "default",
     },
     {
       id: "alliance-pulse",
-      label: "Alliance pulse",
-      value: state.alliance ? `${formatNumber(state.alliance.memberCount)} members` : "Independent",
-      note: state.alliance ? nextTier : "Shared vision, chat, and markers are still the strongest retention lever.",
+      label: "Toy nabzı",
+      value: state.alliance ? `${formatNumber(state.alliance.memberCount)} üye` : "Bağımsız",
+      note: state.alliance ? nextTier : "Ortak görüş, sohbet ve işaretler en güçlü dönüş sebebi.",
       tone: state.alliance ? "info" : "warning",
     },
   ];
@@ -155,13 +155,13 @@ export function buildDashboardBriefing({
   if (claimableMailbox) {
     actions.push({
       id: `claim-mailbox-${claimableMailbox.id}`,
-      eyebrow: "Archive warrant",
+      eyebrow: "Ulak ödülü",
       title: claimableMailbox.title,
-      detail: "A dispatch reward is already earned. Claim it before opening a new loop so the city starts compounding immediately.",
+      detail: "Kazanılmış ulak ödülü bekliyor. Yeni döngüye geçmeden önce ambara indir.",
       impact: describeReward(claimableMailbox.reward),
-      badgeLabel: "Instant",
+      badgeLabel: "Hemen",
       tone: "success",
-      ctaLabel: "Claim dispatch",
+      ctaLabel: "Ulak ödülünü al",
       command: { type: "claim_mailbox", mailboxId: claimableMailbox.id },
     });
   }
@@ -169,13 +169,13 @@ export function buildDashboardBriefing({
   if (claimableTask) {
     actions.push({
       id: `claim-task-${claimableTask.id}`,
-      eyebrow: claimableTask.kind === "TUTORIAL" ? "Onboarding payout" : "Daily payout",
+      eyebrow: claimableTask.kind === "TUTORIAL" ? "İlk oba ödülü" : "Günlük ödül",
       title: claimableTask.title,
-      detail: `${claimableTask.progress}/${claimableTask.target} progress is complete. Clear the reward now and keep the five-minute loop feeling responsive.`,
+      detail: `${claimableTask.progress}/${claimableTask.target} ilerleme tamam. Ödülü al, beş dakikalık döngü canlı kalsın.`,
       impact: describeReward(claimableTask.reward),
-      badgeLabel: "Reward",
+      badgeLabel: "Ödül",
       tone: "success",
-      ctaLabel: "Claim reward",
+      ctaLabel: "Ödülü al",
       command: { type: "claim_task", taskId: claimableTask.id },
     });
   }
@@ -183,13 +183,13 @@ export function buildDashboardBriefing({
   if (upgradeTarget) {
     actions.push({
       id: `upgrade-${upgradeTarget.type}`,
-      eyebrow: "Growth lane",
-      title: `Raise ${upgradeTarget.label}`,
-      detail: `The build queue is idle. ${upgradeTarget.label} can move to L${upgradeTarget.nextLevel} right now.`,
-      impact: "One building order keeps the city curve climbing while the rest of the session happens elsewhere.",
-      badgeLabel: "Compounding",
+      eyebrow: "Yapı hattı",
+      title: `${upgradeTarget.label} yükselt`,
+      detail: `Yapı kuyruğu boş. ${upgradeTarget.label} hemen L${upgradeTarget.nextLevel} olabilir.`,
+      impact: "Tek yapı buyruğu, sen haritadayken obanın büyümesini sürdürür.",
+      badgeLabel: "Büyüme",
       tone: "warning",
-      ctaLabel: `Start L${upgradeTarget.nextLevel}`,
+      ctaLabel: `L${upgradeTarget.nextLevel} başlat`,
       command: { type: "upgrade", buildingType: upgradeTarget.type },
     });
   }
@@ -197,13 +197,13 @@ export function buildDashboardBriefing({
   if (trainingTarget) {
     actions.push({
       id: `train-${trainingTarget.troopType}`,
-      eyebrow: "Barracks tempo",
-      title: `Queue ${trainingTarget.label}`,
-      detail: `Barracks are open. A fresh ${trainingTarget.quantity}-unit batch restores passive progress while you step into the frontier or alliance rail.`,
-      impact: "Short-session strategy games feel alive when the barracks are always burning in the background.",
-      badgeLabel: "Queue",
+      eyebrow: "Kışla temposu",
+      title: `${trainingTarget.label} kuyruğa al`,
+      detail: `Kışla açık. ${trainingTarget.quantity} birliklik yeni talim, sen sefer veya toy hattına geçerken ilerlemeyi sürdürür.`,
+      impact: "Kısa oturumlu stratejide kışlanın arkada çalışması oyunu canlı tutar.",
+      badgeLabel: "Kuyruk",
       tone: "warning",
-      ctaLabel: `Queue x${trainingTarget.quantity}`,
+      ctaLabel: `x${trainingTarget.quantity} talim`,
       command: { type: "train", troopType: trainingTarget.troopType, quantity: trainingTarget.quantity },
     });
   }
@@ -211,13 +211,13 @@ export function buildDashboardBriefing({
   if (suggestedResearch) {
     actions.push({
       id: `research-${suggestedResearch.type}`,
-      eyebrow: "Doctrine lane",
-      title: `Start ${suggestedResearch.label}`,
-      detail: "The academy is quiet. Spend one tap on doctrine so the city keeps converting downtime into leverage.",
-      impact: `${suggestedResearch.label} is still below its cap and keeps the macro curve moving even in short logins.`,
-      badgeLabel: "Doctrine",
+      eyebrow: "Töre hattı",
+      title: `${suggestedResearch.label} başlat`,
+      detail: "Bilge ocağı sessiz. Tek dokunuşla boş zamanı güce çevir.",
+      impact: `${suggestedResearch.label} hâlâ sınırının altında ve kısa girişlerde bile makro eğriyi taşır.`,
+      badgeLabel: "Töre",
       tone: "info",
-      ctaLabel: "Open doctrine",
+      ctaLabel: "Töre aç",
       command: { type: "research", researchType: suggestedResearch.type },
     });
   }
@@ -225,13 +225,13 @@ export function buildDashboardBriefing({
   if (unfinishedEvent) {
     actions.push({
       id: `event-${unfinishedEvent.eventKey}`,
-      eyebrow: "Live ops",
+      eyebrow: "Canlı sefer",
       title: unfinishedEvent.label,
-      detail: `${formatNumber(Math.max(0, unfinishedEvent.target - unfinishedEvent.score))} points remain in the current event track. This is the clearest reason to leave the dashboard and do one short frontier loop.`,
-      impact: "Live-event pressure is what turns a polished dashboard into a returning habit.",
-      badgeLabel: "Live",
+      detail: `Etkinlik hattında ${formatNumber(Math.max(0, unfinishedEvent.target - unfinishedEvent.score))} puan kaldı. Obadan çıkıp kısa bir sefer döngüsü yapmanın en net sebebi bu.`,
+      impact: "Canlı etkinlik baskısı, güzel bir ekranı geri dönülen alışkanlığa çevirir.",
+      badgeLabel: "Canlı",
       tone: "info",
-      ctaLabel: "Open frontier map",
+      ctaLabel: "Sefer haritası",
       command: { type: "open_route", route: "/app/map" },
     });
   }
@@ -239,13 +239,13 @@ export function buildDashboardBriefing({
   if (unreadMailboxCount > 0 && !claimableMailbox) {
     actions.push({
       id: "open-messages",
-      eyebrow: "Dispatch rail",
-      title: `${formatNumber(unreadMailboxCount)} unread dispatches`,
-      detail: "Reports, scout returns, or claimable intel are waiting in the archive. Read them before choosing the next move.",
-      impact: "Unread dispatches are your fastest source of situational clarity after a gap between sessions.",
-      badgeLabel: "Intel",
+      eyebrow: "Ulak hattı",
+      title: `${formatNumber(unreadMailboxCount)} okunmamış ulak`,
+      detail: "Rapor, keşif dönüşü veya alınacak istihbarat arşivde bekliyor. Sonraki hamleden önce oku.",
+      impact: "Ara verdikten sonra en hızlı durum bilgisi ulak kayıtlarından gelir.",
+      badgeLabel: "İstihbarat",
       tone: "info",
-      ctaLabel: "Open message center",
+      ctaLabel: "Ulak odası",
       command: { type: "open_route", route: "/app/messages" },
     });
   }
@@ -253,25 +253,25 @@ export function buildDashboardBriefing({
   if (!state.alliance) {
     actions.push({
       id: "join-alliance",
-      eyebrow: "Community loop",
-      title: "Open the alliance room",
-      detail: "The solo city board is stable enough. The next big product lever is still coordination, not another static stat panel.",
-      impact: "Alliance chat, markers, and shared vision make short check-ins much stickier.",
-      badgeLabel: "Social",
+      eyebrow: "Toy döngüsü",
+      title: "Toy meclisini aç",
+      detail: "Tek oba düzeni stabil. Bir sonraki büyük güç, yeni stat paneli değil koordinasyon.",
+      impact: "Sohbet, işaretler ve ortak görüş kısa girişleri daha bağlayıcı yapar.",
+      badgeLabel: "Toy",
       tone: "info",
-      ctaLabel: "Find an alliance",
+      ctaLabel: "Toy bul",
       command: { type: "open_route", route: "/app/alliance" },
     });
   } else {
     actions.push({
       id: "alliance-pulse",
-      eyebrow: "Alliance pulse",
+      eyebrow: "Toy nabzı",
       title: `[${state.alliance.tag}] ${state.alliance.name}`,
-      detail: `${formatNumber(state.alliance.memberCount)} members can turn a quick login into coordinated movement. Check the room before the next march.`,
-      impact: "Community pressure is the real moat against cleaner but lonelier browser-strategy clones.",
-      badgeLabel: "Social",
+      detail: `${formatNumber(state.alliance.memberCount)} üye hızlı girişi ortak harekete çevirebilir. Sonraki seferden önce meclise bak.`,
+      impact: "Topluluk baskısı, yalnız tarayıcı stratejisi klonlarına karşı gerçek savunmadır.",
+      badgeLabel: "Toy",
       tone: "info",
-      ctaLabel: "Open alliance room",
+      ctaLabel: "Toy meclisi",
       command: { type: "open_route", route: "/app/alliance" },
     });
   }
@@ -279,46 +279,46 @@ export function buildDashboardBriefing({
   if (state.city.openMarchCount === 0) {
     actions.push({
       id: "frontier-sweep",
-      eyebrow: "Frontier sweep",
-      title: "Put one march in motion",
-      detail: "No marches are currently active. A short sweep keeps the account feeling alive between check-ins.",
-      impact: "For a short-session MMORTS loop, idle troops are dead screen time.",
-      badgeLabel: "Map",
+      eyebrow: "Bozkır taraması",
+      title: "Bir seferi harekete geçir",
+      detail: "Aktif sefer yok. Kısa bir tarama, hesap hissini girişler arasında canlı tutar.",
+      impact: "Kısa oturumlu stratejide boş birlik, ölü ekran süresidir.",
+      badgeLabel: "Harita",
       tone: "warning",
-      ctaLabel: "Sweep map",
+      ctaLabel: "Haritayı tara",
       command: { type: "open_route", route: "/app/map" },
     });
   }
 
-  let headline = "Keep the next five minutes working";
+  let headline = "Sonraki beş dakikayı çalıştır";
   let lead =
-    "Claim what is already earned, refill any idle queue, and then spend one deliberate tap on either the frontier or the alliance rail.";
-  let badgeLabel = "Stable window";
+    "Kazanılanı al, boş kuyruğu doldur, sonra bozkır ya da toy hattına tek bilinçli hamle yap.";
+  let badgeLabel = "Dengeli an";
   let badgeTone: BriefingTone = "success";
 
   if (claimableCount > 0) {
-    headline = "Harvest the board before you leave";
+    headline = "Çıkmadan önce tahtayı topla";
     lead =
-      "Immediate rewards are waiting. Clear them first, then refill idle queues so the city keeps compounding after this login ends.";
-    badgeLabel = "Harvest window";
+      "Hazır ödüller bekliyor. Önce onları al, sonra boş hatları doldur ki oba sen çıkınca da büyüsün.";
+    badgeLabel = "Toplama anı";
     badgeTone = "success";
   } else if (idleLaneCount >= 2) {
-    headline = "Refill the idle lanes";
+    headline = "Boş hatları doldur";
     lead =
-      "The city has too much downtime in build, barracks, or academy. Fixing that is the fastest retention gain you can create in one short session.";
-    badgeLabel = "Setup window";
+      "Obada yapı, kışla veya bilge ocağı fazla boş kalmış. Kısa oturumdaki en hızlı kazanım bunu düzeltmek.";
+    badgeLabel = "Kurulum anı";
     badgeTone = "warning";
   } else if (unfinishedEvent) {
-    headline = `Push ${unfinishedEvent.label} while the board is warm`;
+    headline = `${unfinishedEvent.label} sıcakken ilerlet`;
     lead =
-      "Your city core is stable enough that live-event pressure should now dictate the next tap. One short frontier loop is more valuable than browsing deeper menus.";
-    badgeLabel = "Pressure window";
+      "Oba çekirdeği yeterince stabil. Şimdi sonraki dokunuşu canlı etkinlik belirlemeli; kısa sefer döngüsü menü gezmekten değerli.";
+    badgeLabel = "Baskı anı";
     badgeTone = "info";
   } else if (!state.alliance) {
-    headline = "Add a social loop to the session";
+    headline = "Oturuma toy döngüsü ekle";
     lead =
-      "The command board already reads well. The next product gain comes from giving players a reason to return for other people, not only for timers.";
-    badgeLabel = "Community window";
+      "Buyruk panosu okunuyor. Sıradaki kazanım, oyuncuya sadece sayaçlar için değil insanlar için de dönme sebebi vermek.";
+    badgeLabel = "Toy anı";
     badgeTone = "info";
   }
 

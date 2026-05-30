@@ -306,3 +306,11 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
   - A direct Playwright pass logged in with `demo_alpha`, opened `/app/market` and `/app/messages`, captured desktop/mobile screenshots for both, and reported zero console/page errors.
   - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/web-game-market-message-cleanup` passed; generated screenshot/state were inspected.
+- 2026-05-29: Started the Turkish history/mythology identity pass from the user's Umaykut / 3 Hanedan / Travian direction. Without copying those games, the visible shell language now leans into an original `Bozkır Kağanlığı` theme: nav labels moved to Oba / Sefer Haritası / Toy Meclisi / Akın Defteri / Bilge Otağı / Ulak Odası / Kervan Pazarı, resource labels moved to Odun / Taş / Erzak / Altın, and dashboard scene actions now use short command words such as Yapı, Ordu, Bilge, Sefer, Toy, Buyruk, Kışla, Şifahane, and Kağan Otağı.
+- 2026-05-29: Dashboard briefing copy was localized into compact Turkish command language while preserving the same action-priority behavior. The affected unit tests were updated to assert the new labels (`Toplama anı`, `Baskı anı`, `Bağımsız`) instead of the previous English wording.
+- 2026-05-29: Validation after the identity pass:
+  - `corepack pnpm --filter @frontier/web exec tsc -p tsconfig.json --noEmit` passed.
+  - `corepack pnpm --filter @frontier/web test` passed: 8 files, 13 tests.
+  - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
+  - Docker Desktop was not running from this shell (`docker compose ps` could not connect to the Docker Desktop pipe), so authenticated dashboard/map browser validation could not be run against the live API/DB stack in this pass.
+  - A Vite-only Playwright smoke capture of `/login` visually confirmed the `Bozkır Kağanlığı` / `Kapalı alpha kapısından bozkırı yönet` identity layer. The only console error in that capture was the expected API `500` caused by the backend being unavailable.

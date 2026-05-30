@@ -65,9 +65,9 @@ describe("AuthPage closed alpha guards", () => {
     view = await renderAuthRoute("/login");
     await flushUi();
 
-    expect(view.container.textContent).toContain("Closed Alpha");
-    expect(view.container.textContent).toContain("Operator-provisioned access");
-    expect(view.container.textContent).toContain("Access Policy");
+    expect(view.container.textContent).toContain("Kapalı Alpha");
+    expect(view.container.textContent).toContain("Operatör destekli erişim");
+    expect(view.container.textContent).toContain("Kapı Töresi");
     expect(view.container.textContent).not.toContain("Go to register");
     expect(view.container.querySelectorAll("[data-demo-login]")).toHaveLength(0);
   });

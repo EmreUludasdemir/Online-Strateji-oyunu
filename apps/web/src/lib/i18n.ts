@@ -8,10 +8,10 @@ export const copy = {
     gold: "Altın",
   },
   poiResources: {
-    WOOD: "Wood",
-    STONE: "Stone",
-    FOOD: "Food",
-    GOLD: "Gold",
+    WOOD: "Odun",
+    STONE: "Taş",
+    FOOD: "Erzak",
+    GOLD: "Altın",
   },
   hud: {
     dashboard: "Oba",

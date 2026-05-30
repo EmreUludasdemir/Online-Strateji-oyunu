@@ -152,9 +152,9 @@ export function DashboardPage() {
   const primaryCommander = state.city.commanders.find((commander) => commander.isPrimary) ?? state.city.commanders[0];
   const townHall = state.city.buildings.find((building) => building.type === "TOWN_HALL");
   const activeTrainingLabel =
-    state.city.troops.find((troop) => troop.type === activeTraining?.troopType)?.label ?? "Open";
+    state.city.troops.find((troop) => troop.type === activeTraining?.troopType)?.label ?? "Açık";
   const activeResearchLabel =
-    state.city.research.find((entry) => entry.type === activeResearch?.researchType)?.label ?? "Ready";
+    state.city.research.find((entry) => entry.type === activeResearch?.researchType)?.label ?? "Hazır";
   const [selectedDistrictType, setSelectedDistrictType] = useState<BuildingType>(
     state.city.activeUpgrade?.buildingType ?? townHall?.type ?? state.city.buildings[0]?.type ?? "TOWN_HALL",
   );
@@ -236,36 +236,36 @@ export function DashboardPage() {
   );
   const getBuildingBonusStat = (type: BuildingType, level: number) => {
     if (type === "HOSPITAL")
-      return { id: "bonus", label: "Heal capacity", value: `${state.city.hospitalHealingCapacity}/tick`, note: "Wounded troops recovered per reconcile" };
+      return { id: "bonus", label: "Şifa gücü", value: `${state.city.hospitalHealingCapacity}/tur`, note: "Her döngü iyileşen yaralı birlik" };
     if (type === "WALL")
-      return { id: "bonus", label: "Wall defense", value: `+${level * 40}`, note: "Structural defense added to city shield" };
+      return { id: "bonus", label: "Sur savunması", value: `+${level * 40}`, note: "Oba kalkanına ek savunma" };
     if (type === "FORGE")
-      return { id: "bonus", label: "Attack boost", value: `+${level * 4}%`, note: "Forge multiplier on all troop attack" };
+      return { id: "bonus", label: "Akın gücü", value: `+${level * 4}%`, note: "Tüm birlik saldırısına demirci katkısı" };
     if (type === "WATCHTOWER")
-      return { id: "bonus", label: "Vision radius", value: `${state.city.visionRadius}`, note: "Current scouting coverage in tiles" };
+      return { id: "bonus", label: "Görüş alanı", value: `${state.city.visionRadius}`, note: "Keşif sisini açan karo menzili" };
     if (type === "BARRACKS")
-      return { id: "bonus", label: "Train speed", value: `+${Math.max(0, level - 1) * 12}%`, note: "Training queue acceleration" };
+      return { id: "bonus", label: "Talim hızı", value: `+${Math.max(0, level - 1) * 12}%`, note: "Kışla kuyruğu hızlanması" };
     return null;
   };
   const selectedDistrictStats = selectedDistrict
     ? [
         {
           id: "level",
-          label: "Current level",
+          label: "Mevcut seviye",
           value: `L${selectedDistrict.level}`,
-          note: "Current district rank",
+          note: "Seçili oba yapısı",
         },
         {
           id: "next",
-          label: "Next level",
+          label: "Sıradaki seviye",
           value: `L${selectedDistrict.nextLevel}`,
-          note: "Queued target tier",
+          note: "Geliştirme hedefi",
         },
         {
           id: "queue",
-          label: "Queue state",
-          value: selectedDistrict.isUpgradeActive ? "Running" : activeUpgrade ? "Queued elsewhere" : "Ready",
-          note: selectedDistrict.isUpgradeActive ? "Master queue is live" : activeUpgrade ? "Another district holds the line" : "Open for a fresh order",
+          label: "Kuyruk",
+          value: selectedDistrict.isUpgradeActive ? "Sürüyor" : activeUpgrade ? "Başka hatta" : "Hazır",
+          note: selectedDistrict.isUpgradeActive ? "Ana yapı hattı canlı" : activeUpgrade ? "Başka oba yapısı sırada" : "Yeni buyruğa açık",
           tone: selectedDistrict.isUpgradeActive ? ("warning" as const) : activeUpgrade ? ("info" as const) : ("success" as const),
         },
         ...(getBuildingBonusStat(selectedDistrict.type as BuildingType, selectedDistrict.level)
@@ -330,46 +330,46 @@ export function DashboardPage() {
   const dashboardInfoPanels: Record<DashboardInfoPanelId, DashboardInfoPanel> = {
     overview: {
       id: "overview",
-      label: "Overview",
+      label: "Oba",
       value: formatCompactMetric(totalStores),
-      kicker: "Province",
-      title: `${state.city.cityName} at ${state.city.coordinates.x}, ${state.city.coordinates.y}`,
+      kicker: "Yurt",
+      title: `${state.city.cityName} | ${state.city.coordinates.x}, ${state.city.coordinates.y}`,
       badgeTone: state.city.peaceShieldUntil ? "info" : "warning",
       badgeLabel: provinceStatus,
       stats: [
-        { id: "attack", label: "Attack", value: formatNumber(state.city.attackPower), note: "Field strike power", tone: "warning" },
-        { id: "defense", label: "Defense", value: formatNumber(state.city.defensePower), note: "City shield value", tone: "info" },
-        { id: "stock", label: "Stock", value: formatNumber(totalStores), note: "All resources", tone: "success" },
+        { id: "attack", label: "Akın", value: formatNumber(state.city.attackPower), note: "Saha vuruş gücü", tone: "warning" },
+        { id: "defense", label: "Kalkan", value: formatNumber(state.city.defensePower), note: "Oba savunması", tone: "info" },
+        { id: "stock", label: "Ambar", value: formatNumber(totalStores), note: "Toplam kaynak", tone: "success" },
       ],
       actions: [
-        { label: "Map", onClick: () => navigate("/app/map"), variant: "primary" },
-        { label: "Messages", onClick: () => navigate("/app/messages"), variant: "secondary" },
+        { label: "Harita", onClick: () => navigate("/app/map"), variant: "primary" },
+        { label: "Ulak", onClick: () => navigate("/app/messages"), variant: "secondary" },
       ],
     },
     queues: {
       id: "queues",
-      label: "Queues",
+      label: "Kuyruk",
       value: `${idleQueueCount}/3`,
-      kicker: "Build / Train / Research",
-      title: idleQueueCount > 0 ? "Fill idle lanes" : "All lanes moving",
+      kicker: "Yapı / Talim / Töre",
+      title: idleQueueCount > 0 ? "Boş hatları doldur" : "Tüm hatlar çalışıyor",
       badgeTone: idleQueueCount > 0 ? "warning" : "success",
-      badgeLabel: idleQueueCount > 0 ? "Needs order" : "In motion",
+      badgeLabel: idleQueueCount > 0 ? "Buyruk ister" : "Hareketli",
       stats: queueLedger.map((entry) => ({
         id: entry.id,
         label: entry.label,
         value: entry.value,
         note: entry.detail,
-        tone: entry.value === "Idle" || entry.value === "Ready" || entry.value === "Open" ? "warning" : "info",
+        tone: entry.value === "Boş" || entry.value === "Hazır" || entry.value === "Açık" ? "warning" : "info",
       })),
       actions: [
         {
-          label: selectedDistrict?.isUpgradeActive ? "Building" : activeUpgrade ? "Locked" : "Upgrade",
+          label: selectedDistrict?.isUpgradeActive ? "İnşa" : activeUpgrade ? "Kilitli" : "Yükselt",
           onClick: () => selectedDistrict && void upgrade(selectedDistrict.type as BuildingType),
           variant: "primary",
           disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
         },
         {
-          label: state.city.activeTraining ? "Training" : "Train",
+          label: state.city.activeTraining ? "Talim" : "Ordu",
           onClick: () => void train(selectedTroopType, trainingQuantity),
           variant: "secondary",
           disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
@@ -378,9 +378,9 @@ export function DashboardPage() {
     },
     briefing: {
       id: "briefing",
-      label: "Briefing",
+      label: "Buyruk",
       value: formatNumber(dashboardBriefing.actions.length),
-      kicker: "Next tap",
+      kicker: "Sıradaki hamle",
       title: dashboardBriefing.headline,
       badgeTone: dashboardBriefing.badgeTone,
       badgeLabel: dashboardBriefing.badgeLabel,
@@ -393,60 +393,60 @@ export function DashboardPage() {
               variant: "primary",
               disabled: isBriefingActionBusy(firstBriefingAction),
             }
-          : { label: "Open map", onClick: () => navigate("/app/map"), variant: "primary" },
+          : { label: "Haritayı aç", onClick: () => navigate("/app/map"), variant: "primary" },
       ],
     },
     district: {
       id: "district",
-      label: "District",
+      label: "Yapı",
       value: selectedDistrict ? `L${selectedDistrict.level}` : "0",
-      kicker: "Selected node",
-      title: selectedDistrict?.label ?? "Select a district",
+      kicker: "Seçili yapı",
+      title: selectedDistrict?.label ?? "Yapı seç",
       badgeTone: selectedDistrict?.isUpgradeActive ? "warning" : "info",
-      badgeLabel: selectedDistrict ? `Next L${selectedDistrict.nextLevel}` : "No node",
+      badgeLabel: selectedDistrict ? `Sonraki L${selectedDistrict.nextLevel}` : "Yok",
       stats: selectedDistrictStats,
       actions: [
         {
-          label: selectedDistrict?.isUpgradeActive ? "Building" : activeUpgrade ? "Queue locked" : "Upgrade",
+          label: selectedDistrict?.isUpgradeActive ? "İnşa" : activeUpgrade ? "Kuyruk dolu" : "Yükselt",
           onClick: () => selectedDistrict && void upgrade(selectedDistrict.type as BuildingType),
           variant: "primary",
           disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
         },
-        { label: "Map", onClick: () => navigate("/app/map"), variant: "secondary" },
+        { label: "Harita", onClick: () => navigate("/app/map"), variant: "secondary" },
       ],
     },
   };
   const dashboardPanelOrder: DashboardInfoPanelId[] = ["overview", "queues", "briefing", "district"];
   const activeCommandPanel = dashboardInfoPanels[activeDashboardPanel];
   const citySceneQuickRoutes = [
-    { id: "map", label: "Map", glyph: "MAP", badge: formatNumber(state.city.openMarchCount), onClick: () => navigate("/app/map") },
-    { id: "war", label: "War", glyph: "WAR", badge: formatNumber(state.city.attackPower), onClick: () => navigate("/app/reports") },
-    { id: "mail", label: "Mail", glyph: "MSG", badge: formatNumber(unreadMailboxCount), onClick: () => navigate("/app/messages") },
-    { id: "alliance", label: "Ally", glyph: "ALLY", badge: state.alliance?.tag ?? "--", onClick: () => navigate("/app/alliance") },
-    { id: "research", label: "Arc", glyph: "ARC", badge: activeResearch ? "Live" : "Open", onClick: () => navigate("/app/research") },
-    { id: "market", label: "Market", glyph: "MKT", badge: formatNumber(inventoryItems.length), onClick: () => navigate("/app/market") },
+    { id: "map", label: "Harita", glyph: "MAP", badge: formatNumber(state.city.openMarchCount), onClick: () => navigate("/app/map") },
+    { id: "war", label: "Akın", glyph: "AKN", badge: formatNumber(state.city.attackPower), onClick: () => navigate("/app/reports") },
+    { id: "mail", label: "Ulak", glyph: "ULK", badge: formatNumber(unreadMailboxCount), onClick: () => navigate("/app/messages") },
+    { id: "alliance", label: "Toy", glyph: "TOY", badge: state.alliance?.tag ?? "--", onClick: () => navigate("/app/alliance") },
+    { id: "research", label: "Bilge", glyph: "BIL", badge: activeResearch ? "Canlı" : "Açık", onClick: () => navigate("/app/research") },
+    { id: "market", label: "Kervan", glyph: "KRV", badge: formatNumber(inventoryItems.length), onClick: () => navigate("/app/market") },
   ];
   const citySceneDockActions: DashboardPanelAction[] = [
     {
-      label: selectedDistrict?.isUpgradeActive ? "Building" : activeUpgrade ? "Locked" : "Build",
+      label: selectedDistrict?.isUpgradeActive ? "İnşa" : activeUpgrade ? "Kilitli" : "Yapı",
       onClick: () => selectedDistrict && void upgrade(selectedDistrict.type as BuildingType),
       variant: "primary",
       disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
     },
     {
-      label: state.city.activeTraining ? "Training" : "Train",
+      label: state.city.activeTraining ? "Talim" : "Ordu",
       onClick: () => void train(selectedTroopType, trainingQuantity),
       variant: "secondary",
       disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
     },
     {
-      label: activeResearch ? "Researching" : "Research",
+      label: activeResearch ? "Töre" : "Bilge",
       onClick: () => (suggestedResearch ? void research(suggestedResearch.type as ResearchType) : navigate("/app/research")),
       variant: "secondary",
       disabled: isResearching || Boolean(activeResearch) || !suggestedResearch,
     },
-    { label: "World", onClick: () => navigate("/app/map"), variant: "ghost" },
-    { label: "Alliance", onClick: () => navigate("/app/alliance"), variant: "ghost" },
+    { label: "Sefer", onClick: () => navigate("/app/map"), variant: "ghost" },
+    { label: "Toy", onClick: () => navigate("/app/alliance"), variant: "ghost" },
   ];
 
   useEffect(() => {
@@ -470,15 +470,15 @@ export function DashboardPage() {
         <div className={styles.cityHomeScene}>
           <div className={styles.citySceneTopBar}>
             <div className={styles.citySceneTitleBlock}>
-              <span className={styles.citySceneKicker}>City</span>
+              <span className={styles.citySceneKicker}>Oba</span>
               <h2 className={styles.citySceneTitle}>{state.city.cityName}</h2>
               <span className={styles.citySceneCoords}>
-                {state.city.coordinates.x}, {state.city.coordinates.y} | {state.alliance?.tag ?? "Solo"}
+                {state.city.coordinates.x}, {state.city.coordinates.y} | {state.alliance?.tag ?? "Tek Oba"}
               </span>
             </div>
             <div className={styles.citySceneBadges}>
-              {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Idle</Badge>}
-              <Badge tone={idleQueueCount > 0 ? "warning" : "success"}>{idleQueueCount}/3 queues</Badge>
+              {activeUpgrade ? <TimerChip endsAt={activeUpgrade.completesAt} now={now} /> : <Badge tone="info">Boş</Badge>}
+              <Badge tone={idleQueueCount > 0 ? "warning" : "success"}>{idleQueueCount}/3 hat</Badge>
             </div>
           </div>
 
@@ -549,7 +549,7 @@ export function DashboardPage() {
             </div>
           </aside>
 
-          <div className={styles.cityScenePanelSwitch} aria-label="City information panels">
+          <div className={styles.cityScenePanelSwitch} aria-label="Oba bilgi panelleri">
             {dashboardPanelOrder.map((panelId) => {
               const panel = dashboardInfoPanels[panelId];
               return (
@@ -569,7 +569,7 @@ export function DashboardPage() {
             })}
           </div>
 
-          <nav className={styles.citySceneDock} aria-label="Primary city actions">
+          <nav className={styles.citySceneDock} aria-label="Ana oba buyrukları">
             {citySceneDockActions.map((action) => (
               <Button
                 key={action.label}
@@ -587,15 +587,15 @@ export function DashboardPage() {
       </header>
 
       <SectionCard
-        kicker="Command Briefing"
+        kicker="Buyruk Özeti"
         title={dashboardBriefing.headline}
         aside={<Badge tone={dashboardBriefing.badgeTone}>{dashboardBriefing.badgeLabel}</Badge>}
       >
         <div className={styles.briefingLayout}>
           <SectionHeaderBlock
-            kicker="Short-session loop"
-            title="Action queue"
-            lead={`${formatNumber(dashboardBriefing.actions.length)} actions | ${idleQueueCount}/3 idle queues | ${formatNumber(claimableCount)} claims`}
+            kicker="Kısa oturum döngüsü"
+            title="Buyruk kuyruğu"
+            lead={`${formatNumber(dashboardBriefing.actions.length)} buyruk | ${idleQueueCount}/3 boş hat | ${formatNumber(claimableCount)} ödül`}
             className={styles.briefingHeader}
           />
           <PanelStatGrid items={dashboardBriefing.stats} columns={4} className={styles.briefingStats} />
@@ -634,14 +634,14 @@ export function DashboardPage() {
       <div className={styles.dashboardDetailRow}>
         <SectionCard kicker={copy.dashboard.commanders} title={primaryCommander?.name ?? "No commander"} aside={<Badge tone="info">L{primaryCommander?.level ?? 0}</Badge>}>
           <p className={styles.stackHint}>XP {formatNumber(primaryCommander?.xp ?? 0)}/{formatNumber(primaryCommander?.xpToNextLevel ?? 0)} | Stars {formatNumber(primaryCommander?.starLevel ?? 0)}</p>
-          <div className={styles.actionRow}><Button type="button" onClick={() => openCommanderPanel(primaryCommander?.id)}>Open Commander Panel</Button></div>
+          <div className={styles.actionRow}><Button type="button" onClick={() => openCommanderPanel(primaryCommander?.id)}>Başbuğ Paneli</Button></div>
         </SectionCard>
 
-        <SectionCard kicker={copy.dashboard.mailbox} title="Latest dispatches" aside={<Badge tone="warning">{unreadMailboxCount} new</Badge>}>
+        <SectionCard kicker={copy.dashboard.mailbox} title="Son ulak kayıtları" aside={<Badge tone="warning">{unreadMailboxCount} yeni</Badge>}>
           <div className={styles.compactList}>
-            {mailboxEntries.slice(0, 4).map((entry) => <div key={entry.id} className={styles.taskMeta}><strong>{entry.title}</strong><span className={styles.stackHint}>{entry.canClaim ? "Reward waiting" : "Report archived"}</span></div>)}
+            {mailboxEntries.slice(0, 4).map((entry) => <div key={entry.id} className={styles.taskMeta}><strong>{entry.title}</strong><span className={styles.stackHint}>{entry.canClaim ? "Ödül bekliyor" : "Rapor arşivde"}</span></div>)}
           </div>
-          <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>Open Message Center</Button></div>
+          <div className={styles.actionRow}><Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>Ulak Odası</Button></div>
         </SectionCard>
       </div>
     </section>

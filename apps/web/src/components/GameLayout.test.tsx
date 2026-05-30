@@ -290,12 +290,12 @@ describe("GameLayout release guards", () => {
 
   it("keeps market navigation hidden in closed alpha while showing release metadata", async () => {
     view = await renderLayout(makeBootstrap({ storeEnabled: false, launchPhase: "closed_alpha" }));
-    await waitForRender(() => view?.container.textContent?.includes("Sovereign Archive") ?? false, "the shell to render");
+    await waitForRender(() => view?.container.textContent?.includes("Kağanlık Arşivi") ?? false, "the shell to render");
 
     expect(view.container.querySelector("[data-release-badge]")?.textContent).toContain("Closed Alpha");
     expect(view.container.querySelector("[data-version-stamp]")?.textContent).toContain("vtest-build");
-    expect(view.container.querySelector("[data-nav-item='map']")?.textContent).toContain("Strategic Map");
-    expect(view.container.querySelector("[data-archive-item='messages']")?.textContent).toContain("Message Center");
+    expect(view.container.querySelector("[data-nav-item='map']")?.textContent).toContain("Sefer Haritası");
+    expect(view.container.querySelector("[data-archive-item='messages']")?.textContent).toContain("Ulak Odası");
     expect(view.container.querySelector("[data-archive-item='market']")).toBeNull();
   });
 
@@ -307,6 +307,6 @@ describe("GameLayout release guards", () => {
     );
 
     expect(view.container.querySelector("[data-release-badge]")?.textContent).toContain("Public Build");
-    expect(view.container.querySelector("[data-archive-item='market']")?.textContent).toContain("Imperial Market");
+    expect(view.container.querySelector("[data-archive-item='market']")?.textContent).toContain("Kervan Pazarı");
   });
 });

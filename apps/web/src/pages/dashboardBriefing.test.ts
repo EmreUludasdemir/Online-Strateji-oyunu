@@ -188,7 +188,7 @@ describe("buildDashboardBriefing", () => {
       liveEvents: [makeEvent()],
     });
 
-    expect(result.badgeLabel).toBe("Harvest window");
+    expect(result.badgeLabel).toBe("Toplama anı");
     expect(result.actions.map((action) => action.command.type)).toEqual([
       "claim_mailbox",
       "claim_task",
@@ -235,9 +235,9 @@ describe("buildDashboardBriefing", () => {
       liveEvents: [makeEvent({ score: 90, target: 100 })],
     });
 
-    expect(result.badgeLabel).toBe("Pressure window");
+    expect(result.badgeLabel).toBe("Baskı anı");
     expect(result.actions.map((action) => action.id)).toContain("event-BARBARIAN_HUNT");
     expect(result.actions.map((action) => action.id)).toContain("join-alliance");
-    expect(result.stats.find((entry) => entry.id === "alliance-pulse")?.value).toBe("Independent");
+    expect(result.stats.find((entry) => entry.id === "alliance-pulse")?.value).toBe("Bağımsız");
   });
 });
