@@ -22,6 +22,14 @@ beforeEach(async () => {
     prisma.building.deleteMany(),
     prisma.city.deleteMany(),
     prisma.user.deleteMany(),
+    // Grand-strategy domain (delete children before parents to satisfy FKs).
+    prisma.war.deleteMany(),
+    prisma.army.deleteMany(),
+    prisma.countryRelation.deleteMany(),
+    prisma.provinceOwnership.deleteMany(),
+    prisma.worldTick.deleteMany(),
+    prisma.province.deleteMany(),
+    prisma.country.deleteMany(),
   ]);
 });
 

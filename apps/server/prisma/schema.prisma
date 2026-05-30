@@ -885,3 +885,138 @@ model IdempotencyKey {
 
   @@unique([userId, scope, key])
 }
+
+// ---------------------------------------------------------------------------
+// Grand-strategy domain layer (EU4/HOI4-style). Lives alongside the legacy
+// city systems above; nothing here removes or depends on the city models.
+// ---------------------------------------------------------------------------
+
+enum ProvinceTerrain {
+  PLAINS
+  STEPPE
+  FOREST
+  HILLS
+  MOUNTAIN
+  COAST
+}
+
+enum CountryRelationKind {
+  NEUTRAL
+  RIVAL
+  TRUCE
+  ALLIANCE
+  WAR
+}
+
+enum WarStatus {
+  ACTIVE
+  ATTACKER_VICTORY
+  DEFENDER_VICTORY
+  WHITE_PEACE
+}
+
+model Country {
+  id           String                @id @default(cuid())
+  key          String                @unique
+  name         String                @unique
+  tag          String                @unique
+  color        String                @default("#8a6a1f")
+  treasury     Float                 @default(0)
+  manpower     Int                   @default(0)
+  manpowerCap  Int                   @default(100000)
+  stability    Int                   @default(0)
+  isPlayer     Boolean               @default(false)
+  ownerUserId  String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  ownerships   ProvinceOwnership[]
+  armies       Army[]
+  relationsOut CountryRelation[]     @relation("RelationFrom")
+  relationsIn  CountryRelation[]     @relation("RelationTo")
+  warsAttacked War[]                 @relation("WarAttacker")
+  warsDefended War[]                 @relation("WarDefender")
+}
+
+model Province {
+  id            String             @id @default(cuid())
+  key           String             @unique
+  name          String
+  x             Int
+  y             Int
+  terrain       ProvinceTerrain    @default(PLAINS)
+  baseTax       Float              @default(1)
+  baseManpower  Int                @default(500)
+  development   Int                @default(1)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  ownership     ProvinceOwnership?
+  armies        Army[]
+
+  @@unique([x, y])
+}
+
+model ProvinceOwnership {
+  id         String   @id @default(cuid())
+  provinceId String   @unique
+  countryId  String
+  isCore     Boolean  @default(false)
+  claimedAt  DateTime @default(now())
+  province   Province @relation(fields: [provinceId], references: [id], onDelete: Cascade)
+  country    Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@index([countryId])
+}
+
+model CountryRelation {
+  id            String              @id @default(cuid())
+  fromCountryId String
+  toCountryId   String
+  kind          CountryRelationKind @default(NEUTRAL)
+  opinion       Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  fromCountry   Country             @relation("RelationFrom", fields: [fromCountryId], references: [id], onDelete: Cascade)
+  toCountry     Country             @relation("RelationTo", fields: [toCountryId], references: [id], onDelete: Cascade)
+
+  @@unique([fromCountryId, toCountryId])
+  @@index([toCountryId])
+}
+
+model Army {
+  id         String    @id @default(cuid())
+  name       String
+  countryId  String
+  provinceId String?
+  manpower   Int       @default(1000)
+  morale     Float     @default(1)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  country    Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  province   Province? @relation(fields: [provinceId], references: [id], onDelete: SetNull)
+
+  @@index([countryId])
+  @@index([provinceId])
+}
+
+model War {
+  id         String    @id @default(cuid())
+  attackerId String
+  defenderId String
+  status     WarStatus @default(ACTIVE)
+  warScore   Int       @default(0)
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  attacker   Country   @relation("WarAttacker", fields: [attackerId], references: [id], onDelete: Cascade)
+  defender   Country   @relation("WarDefender", fields: [defenderId], references: [id], onDelete: Cascade)
+
+  @@index([attackerId])
+  @@index([defenderId])
+}
+
+model WorldTick {
+  id          String   @id @default(cuid())
+  tickNumber  Int      @unique
+  gameDate    DateTime
+  processedAt DateTime @default(now())
+  summary     Json?
+}

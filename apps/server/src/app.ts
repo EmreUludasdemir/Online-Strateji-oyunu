@@ -16,6 +16,7 @@ import { requestIdMiddleware } from "./middleware/requestId";
 import { allianceRouter } from "./routes/alliance";
 import { authRouter } from "./routes/auth";
 import { gameRouter } from "./routes/game";
+import { grandRouter } from "./routes/grand";
 import { publicRouter } from "./routes/public";
 import { storeRouter } from "./routes/store";
 
@@ -231,6 +232,7 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   app.use("/api/alliance", allianceRouter);
   app.use("/api/game", gameRouter);
+  app.use("/api/grand", grandRouter);
   app.use("/api/store", storeRouter);
 
   app.use((error: unknown, request: Request, response: Response, _next: NextFunction) => {

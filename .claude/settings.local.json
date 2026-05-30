@@ -1,14 +1,56 @@
 {
   "permissions": {
     "allow": [
+      "Read(./**)",
+      "Edit(./apps/**)",
+      "Edit(./packages/**)",
+      "Edit(./scripts/**)",
+      "Edit(./.claude/**)",
+
+      "Bash(cd *)",
+      "Bash(echo *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(ls *)",
+      "Bash(dir *)",
+      "Bash(type *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+
       "Bash(npx prisma *)",
       "Bash(pnpm run *)",
+      "Bash(corepack pnpm *)",
+
       "Bash(./apps/server/node_modules/.bin/tsc --noEmit -p apps/server/tsconfig.json)",
       "Bash(./apps/web/node_modules/.bin/tsc --noEmit -p apps/web/tsconfig.json)",
-      "Bash(pnpm --filter @frontier/server exec prisma migrate dev --name add_new_buildings_research_wounded_troops)",
-      "Bash(corepack pnpm *)",
+
       "Bash(ls apps/server/src/routes/)",
       "Bash(ls apps/server/src/)"
+    ],
+    "ask": [
+      "Bash(git commit*)",
+      "Bash(docker *)",
+      "Bash(prisma migrate*)",
+      "Bash(npx prisma migrate*)",
+      "Bash(corepack pnpm db:migrate*)",
+      "Bash(corepack pnpm db:seed*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Bash(git push*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean*)",
+      "Bash(rm -rf *)",
+      "Bash(del /s *)",
+      "Bash(wget *)"
     ]
   },
   "enabledPlugins": {

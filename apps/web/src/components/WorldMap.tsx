@@ -968,11 +968,12 @@ class FrontierMapScene extends Phaser.Scene {
       this.terrainGraphics.fillStyle(getTerrainFill(tile, this.worldSize), terrainAlpha);
       this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
 
-      const decoration = hashCoordinate(tile.x, tile.y) % 5;
-      if (tile.state !== "HIDDEN" && decoration <= 2) {
-        const tier = getKingdomTier(tile.x, tile.y, this.worldSize);
-        this.terrainGraphics.fillStyle(tier.fill, tile.state === "VISIBLE" ? 0.2 : 0.11);
-        this.terrainGraphics.fillCircle(x + 28 + decoration * 10, y + 26 + decoration * 8, 8 + decoration * 2);
+      const pass = getNearestKingdomPass(tile.x, tile.y, this.worldSize, 0.72);
+      const isMountain = !pass && isKingdomMountainTile(tile.x, tile.y, this.worldSize);
+      const isSanctuary = sanctuaryTiles.has(`${tile.x}:${tile.y}`);
+
+      if (tile.state !== "HIDDEN" && !pass && !isMountain && !isSanctuary) {
+        this.drawTerrainDecoration(tile, x, y);
       }
 
       if (tile.state === "HIDDEN") {
@@ -983,14 +984,13 @@ class FrontierMapScene extends Phaser.Scene {
         this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
       }
 
-      const pass = getNearestKingdomPass(tile.x, tile.y, this.worldSize, 0.72);
       if (pass) {
         this.drawPassTile(tile, pass.x, pass.y);
-      } else if (isKingdomMountainTile(tile.x, tile.y, this.worldSize)) {
+      } else if (isMountain) {
         this.drawMountainTile(tile);
       }
 
-      if (sanctuaryTiles.has(`${tile.x}:${tile.y}`)) {
+      if (isSanctuary) {
         this.drawSanctuaryTile(tile);
       }
     }
@@ -1014,6 +1014,123 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     this.syncAmbientMotes();
+  }
+
+  private drawTerrainDecoration(tile: FogTileView, x: number, y: number) {
+    if (!this.terrainGraphics || this.currentDetailLevel === "far") {
+      return;
+    }
+
+    const g = this.terrainGraphics;
+    const hash = hashCoordinate(tile.x + 101, tile.y + 211);
+    const tier = getKingdomTier(tile.x, tile.y, this.worldSize).id;
+    const visible = tile.state === "VISIBLE";
+    const near = this.currentDetailLevel === "near";
+    const baseAlpha = visible ? 1 : 0.55;
+    // Deterministic feature offsets inside the 128px tile, kept off the edges.
+    const ox = 22 + (hash % 64);
+    const oy = 30 + (Math.floor(hash / 7) % 60);
+
+    if (tier === "TIER_3") {
+      // Crown core: ornamental amethyst glints.
+      if (hash % 4 === 0) {
+        g.fillStyle(MAP_COLOR_TEMPLE, baseAlpha * 0.4);
+        g.fillTriangle(ox, oy - 7, ox - 5, oy, ox + 5, oy);
+        g.fillTriangle(ox, oy + 7, ox - 5, oy, ox + 5, oy);
+        g.fillStyle(0xf7ecff, baseAlpha * 0.5);
+        g.fillCircle(ox, oy, 1.4);
+      }
+      if (near && hash % 5 === 1) {
+        this.drawDecoRocks(ox + 34, oy + 28, hash, baseAlpha * 0.7);
+      }
+      return;
+    }
+
+    if (tier === "TIER_2") {
+      // Mid ring: river-steppe — reed glints + scattered stones.
+      if (hash % 3 === 0) {
+        g.lineStyle(1.5, 0x7fb4d4, baseAlpha * 0.3);
+        g.beginPath();
+        g.moveTo(ox - 8, oy + 4);
+        g.lineTo(ox + 10, oy + 1);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(ox - 6, oy + 9);
+        g.lineTo(ox + 8, oy + 6);
+        g.strokePath();
+      }
+      if (hash % 5 === 2) {
+        this.drawDecoRocks(ox, oy, hash, baseAlpha);
+      }
+      if (near && hash % 7 === 3) {
+        this.drawDecoGrass(ox + 30, oy + 24, hash, baseAlpha * 0.7, 0x3e6b6a);
+      }
+      return;
+    }
+
+    // TIER_1 steppe: grass tufts, occasional rocks and lone trees.
+    const density = hash % 5;
+    if (density <= 2) {
+      this.drawDecoGrass(ox, oy, hash, baseAlpha, 0x4a7a52);
+    }
+    if (near && density === 3) {
+      this.drawDecoGrass(ox + 36, oy + 30, hash >> 3, baseAlpha * 0.85, 0x3e6b46);
+    }
+    if (hash % 9 === 0) {
+      this.drawDecoRocks(ox + 24, oy + 18, hash, baseAlpha);
+    }
+    if (hash % 13 === 0) {
+      this.drawDecoTree(ox + 12, oy + 26, hash, baseAlpha);
+    }
+  }
+
+  private drawDecoGrass(x: number, y: number, hash: number, alpha: number, color: number) {
+    if (!this.terrainGraphics) {
+      return;
+    }
+    const g = this.terrainGraphics;
+    g.lineStyle(1.4, color, alpha * 0.7);
+    const lean = (hash % 3) - 1;
+    g.beginPath();
+    g.moveTo(x, y + 6);
+    g.lineTo(x + lean, y - 4);
+    g.strokePath();
+    g.beginPath();
+    g.moveTo(x + 4, y + 6);
+    g.lineTo(x + 4 + lean, y - 2);
+    g.strokePath();
+    g.beginPath();
+    g.moveTo(x - 4, y + 6);
+    g.lineTo(x - 4 + lean, y - 1);
+    g.strokePath();
+  }
+
+  private drawDecoRocks(x: number, y: number, hash: number, alpha: number) {
+    if (!this.terrainGraphics) {
+      return;
+    }
+    const g = this.terrainGraphics;
+    g.fillStyle(0x6b7178, alpha * 0.7);
+    g.fillEllipse(x, y + 2, 9, 5);
+    g.fillStyle(0x868d94, alpha * 0.8);
+    g.fillEllipse(x - 1, y, 6, 3.5);
+    if (hash % 2 === 0) {
+      g.fillStyle(0x565b61, alpha * 0.7);
+      g.fillEllipse(x + 7, y + 3, 5, 3);
+    }
+  }
+
+  private drawDecoTree(x: number, y: number, hash: number, alpha: number) {
+    if (!this.terrainGraphics) {
+      return;
+    }
+    const g = this.terrainGraphics;
+    g.fillStyle(0x3d2a1a, alpha * 0.85);
+    g.fillRect(x - 1, y, 2.5, 7);
+    g.fillStyle(0x274a31, alpha * 0.85);
+    g.fillCircle(x, y - 2, 6);
+    g.fillStyle(0x356a42, alpha * 0.85);
+    g.fillCircle(x - 2 + (hash % 2), y - 4, 4);
   }
 
   private drawMountainTile(tile: FogTileView) {

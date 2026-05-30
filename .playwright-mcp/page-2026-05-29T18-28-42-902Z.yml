@@ -1,0 +1,63 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - paragraph [ref=e5]: Bozkır Kağanlığı
+    - heading "Kapalı alpha kapısından bozkırı yönet." [level=1] [ref=e6]
+    - paragraph [ref=e7]: Bu giriş katmanı oyuncuya buyruk zinciri, sefer, ulak hattı ve toy düzenine hızlı yol açar; ana strateji halkasını değiştirmez.
+    - generic [ref=e8]:
+      - article [ref=e9]:
+        - text: "01"
+        - strong [ref=e10]: Oba'ya gir
+        - paragraph [ref=e11]: Demo sancağı veya verilmiş hesapla canlı obaya doğrudan atla.
+      - article [ref=e12]:
+        - text: "02"
+        - strong [ref=e13]: İlk buyrukları aç
+        - paragraph [ref=e14]: Oba merkezi oyuncuyu ilk yapı, talim ve töre adımlarına götürür.
+      - article [ref=e15]:
+        - text: "03"
+        - strong [ref=e16]: Bozkıra sefer aç
+        - paragraph [ref=e17]: Komut tepsisi keşif, yağma ve akın onayını mobil ile masaüstünde okunur tutar.
+    - list [ref=e18]:
+      - listitem [ref=e19]: Davetli alpha açılışı
+      - listitem [ref=e20]: Mobil-öncelikli HUD ve alt navigasyon
+      - listitem [ref=e21]: Sefer-odaklı strateji halkası
+      - listitem [ref=e22]: Ulak odası ile savaş divanı köprüsü
+  - generic [ref=e23]:
+    - generic [ref=e24]:
+      - paragraph [ref=e25]: Giriş
+      - heading "Komuta otağına gir" [level=2] [ref=e26]
+      - paragraph [ref=e27]: Kuyruklarına, seferlerine ve toy durumuna momentum kaybetmeden geri dön.
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]: Username
+        - textbox "Username" [ref=e31]:
+          - /placeholder: commander_01
+      - generic [ref=e32]:
+        - generic [ref=e33]: Password
+        - textbox "Password" [ref=e34]:
+          - /placeholder: At least 8 characters
+      - button "Log in" [ref=e35] [cursor=pointer]
+    - paragraph [ref=e36]:
+      - text: Yeni hesap mı?
+      - link "Kayıt ekranına geç" [ref=e37] [cursor=pointer]:
+        - /url: /register
+    - generic [ref=e38]:
+      - generic [ref=e39]: Hazır demo sancakları
+      - paragraph [ref=e40]:
+        - text: Tüm demo başbuğlarının ortak parolası
+        - code [ref=e41]: demo12345
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - strong [ref=e45]: demo_alpha
+            - paragraph [ref=e46]: Ekilmiş oba, toy ve sefer verisiyle açılır.
+          - button "Log in" [ref=e47] [cursor=pointer]
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - strong [ref=e50]: demo_beta
+            - paragraph [ref=e51]: Ekilmiş oba, toy ve sefer verisiyle açılır.
+          - button "Log in" [ref=e52] [cursor=pointer]
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - strong [ref=e55]: demo_gamma
+            - paragraph [ref=e56]: Ekilmiş oba, toy ve sefer verisiyle açılır.
+          - button "Log in" [ref=e57] [cursor=pointer]
