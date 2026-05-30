@@ -73,7 +73,7 @@ export function AuthPage({ mode }: AuthPageProps) {
     <main className={styles.shell}>
       <section className={styles.hero}>
         <p className={styles.kicker}>{copy.auth.brand}</p>
-        <h1 className={styles.title}>Kapalı alpha kapısından bozkırı yönet.</h1>
+        <h1 className={styles.title}>Bozkırı yönetmeye başla.</h1>
         <p className={styles.subtitle}>
           {registrationClosed
             ? "Erişim kağan kâtipleri tarafından verilir. Eski başbuğlar geri dönebilir, ama yeni hesap bu dalga süresince kilitli kalır."
@@ -91,7 +91,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>01</span>
             <strong>Oba'ya gir</strong>
-            <p>{isClosedAlpha ? "Operatör paketinden gelen alpha kimliğiyle canlı obaya gir." : "Demo sancağı veya verilmiş hesapla canlı obaya doğrudan atla."}</p>
+            <p>{isClosedAlpha ? "Alpha kimliğiyle canlı obaya gir." : "Demo sancağı ile obaya doğrudan atla."}</p>
           </article>
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>02</span>
@@ -101,7 +101,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           <article className={styles.stepCard}>
             <span className={styles.stepIndex}>03</span>
             <strong>Bozkıra sefer aç</strong>
-            <p>Komut tepsisi keşif, yağma ve akın onayını mobil ile masaüstünde okunur tutar.</p>
+            <p>Keşif, yağma ve akın komutlarını sahadan anında ver.</p>
           </article>
         </div>
 

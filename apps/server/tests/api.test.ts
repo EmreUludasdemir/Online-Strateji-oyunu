@@ -196,11 +196,11 @@ describe("API smoke", () => {
 
     const stateResponse = await attacker.get("/api/game/state");
     expect(stateResponse.status).toBe(200);
-    expect(stateResponse.body.city.buildings).toHaveLength(8);
+    expect(stateResponse.body.city.buildings).toHaveLength(12);
     expect(stateResponse.body.city.troops).toHaveLength(3);
     expect(stateResponse.body.city.commanders).toHaveLength(6);
     expect(stateResponse.body.city.commanders.some((commander: { isPrimary: boolean }) => commander.isPrimary)).toBe(true);
-    expect(stateResponse.body.city.research).toHaveLength(6);
+    expect(stateResponse.body.city.research).toHaveLength(11);
 
     const upgradeResponse = await attacker.post("/api/game/buildings/FARM/upgrade");
     expect(upgradeResponse.status).toBe(200);

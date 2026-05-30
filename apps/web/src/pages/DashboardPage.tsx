@@ -369,7 +369,7 @@ export function DashboardPage() {
           disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
         },
         {
-          label: state.city.activeTraining ? "Talim" : "Ordu",
+          label: state.city.activeTraining ? "Talim" : "Talim Et",
           onClick: () => void train(selectedTroopType, trainingQuantity),
           variant: "secondary",
           disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
@@ -420,7 +420,7 @@ export function DashboardPage() {
   const activeCommandPanel = dashboardInfoPanels[activeDashboardPanel];
   const citySceneQuickRoutes = [
     { id: "map", label: "Harita", glyph: "MAP", badge: formatNumber(state.city.openMarchCount), onClick: () => navigate("/app/map") },
-    { id: "war", label: "Akın", glyph: "AKN", badge: formatNumber(state.city.attackPower), onClick: () => navigate("/app/reports") },
+    { id: "war", label: "Raporlar", glyph: "RPR", badge: formatNumber(state.city.attackPower), onClick: () => navigate("/app/reports") },
     { id: "mail", label: "Ulak", glyph: "ULK", badge: formatNumber(unreadMailboxCount), onClick: () => navigate("/app/messages") },
     { id: "alliance", label: "Toy", glyph: "TOY", badge: state.alliance?.tag ?? "--", onClick: () => navigate("/app/alliance") },
     { id: "research", label: "Bilge", glyph: "BIL", badge: activeResearch ? "Canlı" : "Açık", onClick: () => navigate("/app/research") },
@@ -428,19 +428,19 @@ export function DashboardPage() {
   ];
   const citySceneDockActions: DashboardPanelAction[] = [
     {
-      label: selectedDistrict?.isUpgradeActive ? "İnşa" : activeUpgrade ? "Kilitli" : "Yapı",
+      label: selectedDistrict?.isUpgradeActive ? "İnşa" : activeUpgrade ? "Kilitli" : "İnşa Et",
       onClick: () => selectedDistrict && void upgrade(selectedDistrict.type as BuildingType),
       variant: "primary",
       disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
     },
     {
-      label: state.city.activeTraining ? "Talim" : "Ordu",
+      label: state.city.activeTraining ? "Talim" : "Talim Et",
       onClick: () => void train(selectedTroopType, trainingQuantity),
       variant: "secondary",
       disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
     },
     {
-      label: activeResearch ? "Töre" : "Bilge",
+      label: activeResearch ? "Töre" : "Araştır",
       onClick: () => (suggestedResearch ? void research(suggestedResearch.type as ResearchType) : navigate("/app/research")),
       variant: "secondary",
       disabled: isResearching || Boolean(activeResearch) || !suggestedResearch,

@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CommanderProgressView, CommanderTalentTrack } from "@frontier/shared";
 import { useMemo, useState } from "react";
 
@@ -114,7 +114,7 @@ export function CommanderPage() {
     return (
       <section className={styles.page}>
         <SectionCard kicker="Başbuğ Defteri" title="Hazır başbuğ yok">
-          <EmptyState title="Başbuğ kadrosu boş" body="İlerleme otağını açmadan önce başbuğları üret veya ekle." />
+          <EmptyState title="Başbuğ kadrosu boş" body="Oba seviyesini yükselterek veya görevleri tamamlayarak ilk başbuğunu sancağa çağır." />
         </SectionCard>
       </section>
     );

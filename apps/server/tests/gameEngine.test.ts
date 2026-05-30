@@ -27,6 +27,10 @@ describe("game engine", () => {
         BARRACKS: 1,
         ACADEMY: 1,
         WATCHTOWER: 1,
+        HOSPITAL: 0,
+        WALL: 0,
+        EMBASSY: 0,
+        FORGE: 0,
       },
       {
         ...createStartingResearchLevels(),
@@ -121,6 +125,10 @@ describe("game engine", () => {
         BARRACKS: 1,
         ACADEMY: 1,
         WATCHTOWER: 1,
+        HOSPITAL: 0,
+        WALL: 0,
+        EMBASSY: 0,
+        FORGE: 0,
       },
       {
         wood: 800,

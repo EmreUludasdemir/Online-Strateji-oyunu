@@ -1,4 +1,4 @@
-﻿import type { ResearchType } from "@frontier/shared";
+import type { ResearchType } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
 
 // Returns a human-readable bonus string for each research type at a given level
@@ -375,7 +375,7 @@ export function ResearchPage() {
                         ? "Bilge ocağı meşgul"
                         : isResearching
                           ? "Gönderiliyor"
-                          : `Kademe ${selectedResearch.nextLevel}'i başlat`}
+                          : `Başlat (L${selectedResearch.nextLevel})`}
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => navigate("/app/dashboard")}>
                   Oba merkezine dön
@@ -408,7 +408,7 @@ export function ResearchPage() {
             ) : (
               <EmptyState
                 title="Arşiv açık"
-                body="Sefer hızı, üretim veya keşif baskısını canlı tutmak için bir sonraki töre yolunu seç."
+                body="Sessizlik zayıflıktır. Obanın gelişimini hızlandırmak için bir töre çalışması başlat."
               />
             )}
           </SectionCard>
