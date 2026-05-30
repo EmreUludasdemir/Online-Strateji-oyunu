@@ -1,4 +1,4 @@
-﻿import type { ResearchType } from "@frontier/shared";
+import type { ResearchType } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
 
 // Returns a human-readable bonus string for each research type at a given level
@@ -30,31 +30,32 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
 import { formatNumber } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
+import uiStyles from "../components/ui/primitives.module.css";
 import styles from "./ResearchPage.module.css";
 
 const RESEARCH_LANES = [
   {
     id: "war",
-    label: "Field Command",
-    note: "Aggression, routing discipline, and frontier awareness.",
+    label: "Saha Komutası",
+    note: "Taarruz, sefer disiplini ve keşif.",
     types: ["MILITARY_DRILL", "LOGISTICS", "SCOUTING"] as ResearchType[],
   },
   {
     id: "prosperity",
-    label: "Imperial Works",
-    note: "District output, stone pressure, and treasury flow.",
+    label: "Oba Gelişimi",
+    note: "Üretim, taş işçiliği ve altın rezervi.",
     types: ["AGRONOMY", "STONEWORK", "GOLD_TRADE", "CITY_PLANNING"] as ResearchType[],
   },
   {
     id: "arms",
-    label: "Arms & Tactics",
-    note: "Specialized troop disciplines and forge mastery.",
+    label: "Silah ve Taktik",
+    note: "Birlik eğitimleri ve demir ocağı.",
     types: ["METALLURGY", "CAVALRY_TACTICS", "ARCHERY"] as ResearchType[],
   },
   {
     id: "administration",
-    label: "City Administration",
-    note: "Healing doctrine and civic resilience.",
+    label: "Oba Düzeni",
+    note: "Şifa töresi ve yapı inşası.",
     types: ["MEDICINE"] as ResearchType[],
   },
 ] as const;
@@ -69,70 +70,70 @@ const RESEARCH_BRIEFS: Record<
   }
 > = {
   MILITARY_DRILL: {
-    chapter: "War doctrine",
-    effect: "Raises offensive pressure across every troop class in the field.",
-    directive: "Best when city attack tempo or barbarian clear speed needs to spike.",
-    metricLabel: "Attack Pressure",
+    chapter: "Savaş töresi",
+    effect: "Birliklerin saldırı gücünü artırır.",
+    directive: "Taarruz gücü gerektiğinde.",
+    metricLabel: "Saldırı Gücü",
   },
   LOGISTICS: {
-    chapter: "Operational movement",
-    effect: "Improves march speed and reduces the drag between objectives.",
-    directive: "Best when map rotation, rally timing, and resource gathering must tighten.",
-    metricLabel: "March Tempo",
+    chapter: "Sefer rotası",
+    effect: "Sefer hızını artırır.",
+    directive: "Harita temposu için.",
+    metricLabel: "Sefer Hızı",
   },
   AGRONOMY: {
-    chapter: "Province sustainment",
-    effect: "Expands food throughput to support larger queues and longer marches.",
-    directive: "Best when troop upkeep or long training cycles are constraining growth.",
-    metricLabel: "Food Yield",
+    chapter: "Oba hasadı",
+    effect: "Erzak üretimini artırır.",
+    directive: "Birlik yetiştirirken.",
+    metricLabel: "Erzak Geliri",
   },
   STONEWORK: {
-    chapter: "Masonry records",
-    effect: "Strengthens quarry output and structural resilience for city defense.",
-    directive: "Best when upgrades and defensive readiness are competing for stock.",
-    metricLabel: "Stone Yield",
+    chapter: "Taş işçiliği",
+    effect: "Taş üretimi ve sur savunması.",
+    directive: "Gelişim ve savunma için.",
+    metricLabel: "Taş Geliri",
   },
   GOLD_TRADE: {
-    chapter: "Market charter",
-    effect: "Improves gold inflow for command, upgrades, and long-range planning.",
-    directive: "Best when research cadence or elite actions are gold-gated.",
-    metricLabel: "Treasury Yield",
+    chapter: "Pazar beratı",
+    effect: "Altın gelirini artırır.",
+    directive: "Altın ihtiyacı arttığında.",
+    metricLabel: "Altın Geliri",
   },
   SCOUTING: {
-    chapter: "Recon bureau",
-    effect: "Expands visible territory and makes the frontier easier to read.",
-    directive: "Best when locating camps, routes, and hostile staging is becoming slow.",
-    metricLabel: "Vision Radius",
+    chapter: "Gözcü otağı",
+    effect: "Görüş alanını genişletir.",
+    directive: "Haritayı açmak için.",
+    metricLabel: "Görüş Çapı",
   },
   METALLURGY: {
-    chapter: "Forge doctrine",
-    effect: "Enhances weapon quality, raising attack power for all troop classes.",
-    directive: "Best when you have a Forge built and want to amplify offensive pressure.",
-    metricLabel: "Attack Bonus",
+    chapter: "Demir ocağı",
+    effect: "Silah kalitesini artırır.",
+    directive: "Hasar potansiyeli için.",
+    metricLabel: "Saldırı Bonusu",
   },
   MEDICINE: {
-    chapter: "Field medicine",
-    effect: "Accelerates wounded troop recovery in the Hospital between engagements.",
-    directive: "Best when your garrison suffers heavy losses and Hospital capacity needs to scale.",
-    metricLabel: "Healing Rate",
+    chapter: "Şifa çadırı",
+    effect: "Yaralıların iyileşmesini hızlandırır.",
+    directive: "Kayıpları telafi etmek için.",
+    metricLabel: "İyileşme Hızı",
   },
   CAVALRY_TACTICS: {
-    chapter: "Cavalry doctrine",
-    effect: "Sharpens cavalry attack angles and march speed across frontier operations.",
-    directive: "Best when your march composition is cavalry-heavy or you need faster strike tempo.",
-    metricLabel: "Cavalry Edge",
+    chapter: "Atlı töresi",
+    effect: "Atlı birliklerin hızını ve gücünü artırır.",
+    directive: "Atlı ağırlıklı seferler.",
+    metricLabel: "Atlı Bonusu",
   },
   CITY_PLANNING: {
-    chapter: "Civic records",
-    effect: "Reduces building upgrade durations across all district tiers.",
-    directive: "Best when construction queues are bottlenecking city growth and research.",
-    metricLabel: "Build Speed",
+    chapter: "Oba düzeni",
+    effect: "Yapı sürelerini kısaltır.",
+    directive: "Şehir gelişimi için.",
+    metricLabel: "İnşa Hızı",
   },
   ARCHERY: {
-    chapter: "Archer corps",
-    effect: "Improves arrow discipline and volley coordination for archer formations.",
-    directive: "Best when your garrison or field force relies on archer output for holding power.",
-    metricLabel: "Archer Damage",
+    chapter: "Okçu nizamı",
+    effect: "Okçuların hasarını artırır.",
+    directive: "Menzilli savunma için.",
+    metricLabel: "Okçu Hasarı",
   },
 };
 
@@ -177,7 +178,7 @@ export function ResearchPage() {
         <PageNotice
           kicker="Töre Araştırması"
           title="Töre arşivi açılamadı"
-          body="Bilge ocağı töre ilerlemesini açtığında araştırma yolları görünür olur."
+          body="Bilge ocağı inşa edildiğinde araştırma yolları görünür olur."
           tone="warning"
         />
       </section>
@@ -362,6 +363,7 @@ export function ResearchPage() {
               <div className={styles.detailActions}>
                 <Button
                   type="button"
+                  className={canStartResearch ? uiStyles.pulseHighlight : undefined}
                   disabled={!canStartResearch}
                   onClick={() => {
                     void research(selectedResearch.type);
@@ -407,8 +409,9 @@ export function ResearchPage() {
               </div>
             ) : (
               <EmptyState
+                icon="science"
                 title="Arşiv açık"
-                body="Sefer hızı, üretim veya keşif baskısını canlı tutmak için bir sonraki töre yolunu seç."
+                body="Sefer hızı, üretim veya keşif baskısını canlı tutmak için bir sonraki töreyi seç."
               />
             )}
           </SectionCard>

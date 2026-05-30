@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ReportEntryView, TroopStock } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -259,6 +259,7 @@ export function ReportsPage() {
           {filteredReports.length === 0 ? (
             <SectionCard kicker="Boş Defter" title="Henüz kayıt yok">
               <EmptyState
+                icon="history"
                 title="İlk seferi aç"
                 body="Filtreleri ayarla veya yeni bir sefer aç; çözümlenen ilk rapor buraya düşecek."
               />
@@ -280,7 +281,6 @@ export function ReportsPage() {
                       <span>{formatDateTime(report.createdAt)}</span>
                     </div>
                     <strong className={styles.reportCardTitle}>{getReportTitle(report)}</strong>
-                    <p className={styles.reportCardBody}>{getReportSubtitle(report)}</p>
                     <div className={styles.reportCardSignals}>
                       <span className={styles.reportSignal}>{getReportTheater(report)}</span>
                       <span className={styles.reportSignal}>
@@ -299,10 +299,16 @@ export function ReportsPage() {
         <div className={styles.detailPane}>
           {!activeReport ? (
             <SectionCard kicker="Divan Masası" title="Detay merkezi" aside={<Badge tone="warning">{notifications.unreadMailboxCount} yeni</Badge>}>
-              <p className={styles.sideText}>Bir kayıt seç; saldırı verisi, kayıplar, taşınan ganimet ve ulak odası köprüsü açılır.</p>
-              <Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>
-                Ulak Odasına Geç
-              </Button>
+              <EmptyState
+                icon="explore"
+                title="Kayıt seçilmedi"
+                body="Bir kayıt seçerek saldırı verisi, kayıplar ve ganimeti incele."
+                action={
+                  <Button type="button" variant="secondary" onClick={() => navigate("/app/messages")}>
+                    Ulak Odasına Geç
+                  </Button>
+                }
+              />
             </SectionCard>
           ) : (
             <>

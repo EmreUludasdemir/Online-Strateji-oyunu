@@ -1,4 +1,4 @@
-﻿import type { LiveEventKey, LeaderboardEntryView, RewardBundleView } from "@frontier/shared";
+import type { LiveEventKey, LeaderboardEntryView, RewardBundleView } from "@frontier/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,27 +21,27 @@ const DEFAULT_EVENT_TABS: Array<{
 }> = [
   {
     id: "POWER_SPRINT",
-    label: "Power Sprint",
-    eyebrow: "War census",
-    description: "Ranks raw growth pressure and total power acceleration across active rulers.",
+    label: "Kudret Yarışı",
+    eyebrow: "Güç sayımı",
+    description: "Diyardaki beylerin toplam güç artışını ölçer.",
   },
   {
     id: "BARBARIAN_HUNT",
-    label: "Barbarian Hunt",
-    eyebrow: "Field purge",
-    description: "Tracks camp clears and the commanders driving frontier suppression.",
+    label: "Av Seferi",
+    eyebrow: "Saha temizliği",
+    description: "Yok edilen isyancı kamplarını ve sınır güvenliğini ölçer.",
   },
   {
     id: "GATHERING_RUSH",
-    label: "Gathering Rush",
-    eyebrow: "Supply race",
-    description: "Measures who is pulling the most value out of frontier nodes and caravans.",
+    label: "Hasat Şenliği",
+    eyebrow: "Erzak yarışı",
+    description: "Sınır kaynaklarından en çok erzak toplayanları sıralar.",
   },
   {
     id: "alliance_contribution",
-    label: "Alliance Contribution",
-    eyebrow: "Banner ledger",
-    description: "Keeps alliance help, donations, and banner service visible to every member.",
+    label: "Sancak Hizmeti",
+    eyebrow: "Otağ bağışı",
+    description: "Beylerin sancağa yaptığı bağış ve yardımları sıralar.",
   },
 ] as const;
 
@@ -73,12 +73,12 @@ function summarizeReward(bundle: RewardBundleView | null | undefined): string[] 
 
 function getPodiumLabel(rank: number) {
   if (rank === 1) {
-    return "Crown seat";
+    return "Kağanlık Makamı";
   }
   if (rank === 2) {
-    return "War seat";
+    return "Başbuğ Makamı";
   }
-  return "Archive seat";
+  return "Bey Makamı";
 }
 
 export function LeaderboardPage() {
@@ -95,8 +95,8 @@ export function LeaderboardPage() {
         return {
           ...tab,
           rewardLines: state.alliance
-            ? [`Alliance banner: [${state.alliance.tag}] ${state.alliance.name}`]
-            : ["Join an alliance to push the banner ledger."],
+            ? [`Sancak: [${state.alliance.tag}] ${state.alliance.name}`]
+            : ["Bu listeye girmek için bir sancağa katıl."],
           target: null,
           currentScore: null,
         };
@@ -136,47 +136,47 @@ export function LeaderboardPage() {
   const heroMetrics = [
     {
       id: "board",
-      label: "Board",
-      value: selectedTab?.label ?? "Unavailable",
-      note: "Current ranking surface.",
+      label: "Sıralama",
+      value: selectedTab?.label ?? "Mevcut Değil",
+      note: "Mevcut pano.",
       tone: "info" as const,
     },
     {
       id: "top",
-      label: "Top score",
+      label: "En Yüksek Skor",
       value: formatNumber(entries[0]?.value ?? 0),
-      note: "Highest mark on the active board.",
+      note: "Panodaki en iyi derece.",
       tone: entries.length > 0 ? ("success" as const) : ("default" as const),
     },
     {
       id: "rank",
-      label: "Your rank",
-      value: currentPlayerEntry ? `#${currentPlayerEntry.rank}` : "Unranked",
-      note: "Pulled from the live leaderboard response.",
+      label: "Sıranız",
+      value: currentPlayerEntry ? `#${currentPlayerEntry.rank}` : "Sıralama Dışı",
+      note: "Mevcut panodaki yeriniz.",
       tone: currentPlayerEntry ? ("warning" as const) : ("default" as const),
     },
     {
       id: "competitors",
-      label: "Competitors",
+      label: "Beyler",
       value: formatNumber(entries.length),
-      note: "Visible entries on this board.",
+      note: "Sıralamaya giren oyuncular.",
     },
   ];
 
   return (
     <section className={styles.page}>
       <PageHero
-        kicker="Imperial Leaderboards"
-        title="Sovereign ranking ledger"
-        lead="Live boards now read like a premium imperial record: top seats, event tabs, and a clear personal standing layer instead of a flat score list."
-        aside={<Badge tone="warning">{selectedTab?.eyebrow ?? "Ranking board"}</Badge>}
+        kicker="Diyar Sıralaması"
+        title="Sancak beyi sıralaması"
+        lead="Diyardaki beylerin kudret ve itibar sıralaması."
+        aside={<Badge tone="warning">{selectedTab?.eyebrow ?? "Sıralama panosu"}</Badge>}
       >
         <SummaryMetricGrid items={heroMetrics} />
       </PageHero>
 
       <div className={styles.layout}>
         <div className={styles.mainColumn}>
-          <SectionCard kicker="Board selector" title="Event and banner standings">
+          <SectionCard kicker="Pano Seçimi" title="Sefer ve Sancak Sıralamaları">
             <div className={styles.tabRow}>
               {tabs.map((tab) => (
                 <button
@@ -195,18 +195,19 @@ export function LeaderboardPage() {
           </SectionCard>
 
           <SectionCard
-            kicker="Sovereign podium"
-            title={selectedTab?.label ?? "Leaderboard"}
-            aside={selectedTab?.currentScore != null ? <Badge tone="success">{formatNumber(selectedTab.currentScore)} progress</Badge> : null}
+            kicker="İlk Üç Bey"
+            title={selectedTab?.label ?? "Sıralama"}
+            aside={selectedTab?.currentScore != null ? <Badge tone="success">{formatNumber(selectedTab.currentScore)} puan</Badge> : null}
           >
             {leaderboardQuery.isPending ? (
-              <p className={styles.feedback}>Loading ranking ledger...</p>
+              <p className={styles.feedback}>Sıralamalar yükleniyor...</p>
             ) : leaderboardQuery.isError ? (
-              <p className={styles.feedback}>Leaderboard data could not be loaded.</p>
+              <p className={styles.feedback}>Sıralama verisi alınamadı.</p>
             ) : entries.length === 0 ? (
               <EmptyState
-                title="No rankings yet"
-                body="This board has not accumulated enough score pressure to render standings."
+                icon="emoji_events"
+                title="Sıralama boş"
+                body="Henüz yeterli kudret puanı toplanmadı."
               />
             ) : (
               <>
@@ -222,7 +223,7 @@ export function LeaderboardPage() {
                       <span className={styles.podiumLabel}>{getPodiumLabel(entry.rank)}</span>
                       <strong className={styles.podiumName}>#{entry.rank} {entry.username}</strong>
                       <span className={styles.podiumScore}>{formatNumber(entry.value)}</span>
-                      <span className={styles.podiumMeta}>{entry.secondaryLabel ?? "Imperial score registered."}</span>
+                      <span className={styles.podiumMeta}>{entry.secondaryLabel ?? "Kudret puanı işlendi."}</span>
                     </article>
                   ))}
                 </div>
@@ -239,7 +240,7 @@ export function LeaderboardPage() {
                         <span className={styles.rankNumber}>#{entry.rank}</span>
                         <div>
                           <strong>{entry.username}</strong>
-                          <p className={styles.rankMeta}>{entry.secondaryLabel ?? "Imperial score recorded."}</p>
+                          <p className={styles.rankMeta}>{entry.secondaryLabel ?? "Kudret puanı işlendi."}</p>
                         </div>
                       </div>
                       <strong className={styles.rankValue}>{formatNumber(entry.value)}</strong>
@@ -253,9 +254,9 @@ export function LeaderboardPage() {
 
         <aside className={styles.sideColumn}>
           <SectionCard
-            kicker={selectedTab?.eyebrow ?? "Board brief"}
-            title={selectedTab?.label ?? "Ranking board"}
-            aside={selectedTab?.target != null ? <Badge tone="info">Target {formatNumber(selectedTab.target)}</Badge> : null}
+            kicker={selectedTab?.eyebrow ?? "Sıralama Özeti"}
+            title={selectedTab?.label ?? "Sıralama Panosu"}
+            aside={selectedTab?.target != null ? <Badge tone="info">Hedef {formatNumber(selectedTab.target)}</Badge> : null}
           >
             <div className={styles.sideStack}>
               <p className={styles.sideLead}>{selectedTab?.description}</p>
@@ -268,26 +269,26 @@ export function LeaderboardPage() {
                   ))}
                 </div>
               ) : (
-                <p className={styles.sideMeta}>Reward manifest appears when the live event payload exposes it.</p>
+                <p className={styles.sideMeta}>Ödüller bu panoda açıldığında burada görünür.</p>
               )}
               <div className={styles.sideActions}>
                 <Button type="button" variant="secondary" onClick={() => navigate("/app/dashboard")}>
-                  Open city deck
+                  Obaya dön
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => navigate(selectedBoardId === "alliance_contribution" ? "/app/alliance" : "/app/reports")}
                 >
-                  Open related room
+                  İlgili otağa git
                 </Button>
               </div>
             </div>
           </SectionCard>
 
           <SectionCard
-            kicker="Personal standing"
-            title={currentPlayerEntry ? `${state.player.username} is ranked` : "No personal entry yet"}
+            kicker="Kişisel Durum"
+            title={currentPlayerEntry ? `${state.player.username} listeye girdi` : "Sıralama dışı"}
             aside={currentPlayerEntry ? <Badge tone="warning">#{currentPlayerEntry.rank}</Badge> : null}
           >
             {currentPlayerEntry ? (() => {
@@ -299,34 +300,35 @@ export function LeaderboardPage() {
               return (
                 <div className={styles.sideStack}>
                   <div className={styles.personalMetric}>
-                    <span className={styles.summaryLabel}>Registered score</span>
+                    <span className={styles.summaryLabel}>Kayıtlı skor</span>
                     <strong className={styles.personalScore}>{formatNumber(currentPlayerEntry.value)}</strong>
                     <meter className={styles.rankMeter} value={currentPlayerEntry.value} min={0} max={Math.max(1, topScore)} />
-                    <span className={styles.rankRailLabel}>{rankPct.toFixed(1)}% of crown score</span>
+                    <span className={styles.rankRailLabel}>Birincinin %{rankPct.toFixed(1)}'i</span>
                   </div>
                   {gapToLeader > 0 && (
                     <div className={styles.gapRow}>
                       <div className={styles.gapCell}>
-                        <span className={styles.summaryLabel}>Gap to crown</span>
+                         <span className={styles.summaryLabel}>Lidere uzaklık</span>
                         <strong className={styles.gapValue}>{formatNumber(gapToLeader)}</strong>
                       </div>
                       {gapToNext > 0 && (
                         <div className={styles.gapCell}>
-                          <span className={styles.summaryLabel}>Gap to rank {currentPlayerEntry.rank - 1}</span>
+                          <span className={styles.summaryLabel}>Sıra {currentPlayerEntry.rank - 1} ile fark</span>
                           <strong className={styles.gapValueNext}>{formatNumber(gapToNext)}</strong>
                         </div>
                       )}
                     </div>
                   )}
                   <p className={styles.sideMeta}>
-                    {currentPlayerEntry.secondaryLabel ?? "Continue pushing this event or banner board to climb the ledger."}
+                    {currentPlayerEntry.secondaryLabel ?? "Üst sıralara tırmanmak için seferlere katılmaya devam et."}
                   </p>
                 </div>
               );
             })() : (
               <EmptyState
-                title="No current placement"
-                body="This ruler has not entered the visible range of the active board yet."
+                icon="emoji_events"
+                title="Derece yok"
+                body="Bey bu sıralamada henüz yer edinemedi."
               />
             )}
           </SectionCard>

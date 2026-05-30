@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AllianceRole, ResourceKey } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -210,7 +210,7 @@ export function AlliancePage() {
   if (allianceQuery.isPending) {
     return (
       <section className={styles.page}>
-        <PageNotice title="Loading alliance chamber" body="Roster, directives, support queue, and marker ledgers are still being assembled." />
+        <PageNotice title="Loading alliance chamber" body="Toy otağı kuruluyor." />
       </section>
     );
   }
@@ -220,7 +220,7 @@ export function AlliancePage() {
       <section className={styles.page}>
         <PageNotice
           title="Alliance chamber could not be loaded"
-          body="Alliance state is unavailable right now. Retry once membership and realtime state settle."
+          body="Bağlantı koptu, tekrar deneniyor."
           tone="danger"
         />
       </section>
@@ -343,7 +343,7 @@ export function AlliancePage() {
                   value={announcementDraft}
                   maxLength={220}
                   onChange={(event) => setAnnouncementDraft(event.target.value)}
-                  placeholder="Bugünün töresini, toplanma yolunu veya savunma buyruğunu yaz."
+                  placeholder="Buyruk yaz..."
                 />
                 <div className={styles.actions}>
                   <Button
@@ -416,7 +416,7 @@ export function AlliancePage() {
               </div>
               <div className={styles.feedList}>
                 {alliance.helpRequests.length === 0 ? (
-                  <EmptyState title="Açık çağrı yok" body="Etkin yapı, talim veya töre kuyruğun varsa buradan imece çağırabilirsin." />
+                  <EmptyState icon="handshake" title="Açık çağrı yok" body="Etkin yapı, talim veya töre kuyruğun varsa imece çağırabilirsin." />
                 ) : (
                   alliance.helpRequests.slice(0, 4).map((request) => (
                     <FeedCardShell
@@ -450,7 +450,7 @@ export function AlliancePage() {
                   value={chatMessage}
                   maxLength={240}
                   onChange={(event) => setChatMessage(event.target.value)}
-                  placeholder="Planı paylaş, destek çağır veya bir hedef işaretle."
+                  placeholder="Mesaj gönder..."
                 />
                 <Button
                   type="button"
@@ -462,7 +462,7 @@ export function AlliancePage() {
               </div>
               <div className={styles.feedList}>
                 {alliance.chatMessages.length === 0 ? (
-                  <EmptyState title="Sessiz Kanal" body="İlk buyruğu yaz ve saha temposunu buradan ayarla." />
+                  <EmptyState icon="forum" title="Sessiz Kanal" body="İlk buyruğu sen yaz." />
                 ) : (
                   alliance.chatMessages.slice(0, 4).map((message) => (
                     <FeedCardShell
@@ -511,7 +511,7 @@ export function AlliancePage() {
                 Oba ambarı: {formatNumber(state.city.resources[donationResource])} {donationResource}
               </p>
               {latestDonation ? (
-                <p className={styles.mutedText}>Son kervan: {latestDonation.username} toplam {formatNumber(latestDonation.totalValue)} değer ulaştırdı.</p>
+                <p className={styles.mutedText}>Son kervan: {latestDonation.username} (+{formatNumber(latestDonation.totalValue)})</p>
               ) : null}
               <Button
                 type="button"
@@ -525,7 +525,7 @@ export function AlliancePage() {
             <SectionCard kicker="Sefer Sancakları" title="Aktif sancaklar" aside={<Badge tone="info">{alliance.markers.length} sancak</Badge>}>
               <div className={styles.feedList}>
                 {alliance.markers.length === 0 ? (
-                  <EmptyState title="Sancak yok" body="Toplanma, savunma ve hedef noktalarını buradan sabitle." />
+                  <EmptyState icon="flag" title="Sancak yok" body="Toplanma ve hedefler için sancak dik." />
                 ) : (
                   alliance.markers.slice(0, 6).map((marker) => (
                     <FeedCardShell
@@ -582,7 +582,7 @@ export function AlliancePage() {
                 value={description}
                 maxLength={180}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Kısa töre notu"
+                placeholder="Töre notu"
               />
               <Button
                 type="button"
@@ -597,7 +597,7 @@ export function AlliancePage() {
           <SectionCard kicker="Açık Sancaklar" title="Toy ocağına katıl">
             <div className={styles.feedList}>
               {publicAlliances.length === 0 ? (
-                <EmptyState title="Liste boş" body="Henüz görünen bir toy yok." />
+                <EmptyState icon="public" title="Liste boş" body="Henüz görünen bir toy yok." />
               ) : (
                 publicAlliances.map((entry) => (
                   <FeedCardShell

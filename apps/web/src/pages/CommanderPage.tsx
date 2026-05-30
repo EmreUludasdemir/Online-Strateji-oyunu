@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CommanderProgressView, CommanderTalentTrack } from "@frontier/shared";
 import { useMemo, useState } from "react";
 
@@ -12,6 +12,7 @@ import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { formatNumber } from "../lib/formatters";
+import uiStyles from "../components/ui/primitives.module.css";
 import styles from "./CommanderPage.module.css";
 
 type ResearchSynergyEntry = {
@@ -93,7 +94,7 @@ export function CommanderPage() {
   if (commandersQuery.isPending) {
     return (
       <section className={styles.page}>
-        <PageNotice title="Loading commander progression" body="The war cabinet is assembling roster, doctrines, and promotion records." />
+        <PageNotice title="Loading commander progression" body="Başbuğ defteri açılıyor." />
       </section>
     );
   }
@@ -103,7 +104,7 @@ export function CommanderPage() {
       <section className={styles.page}>
         <PageNotice
           title="Commander progression could not be loaded"
-          body="Commander records are unavailable right now. Retry once the player state and route data stabilize."
+          body="Bağlantı koptu, tekrar deneniyor."
           tone="danger"
         />
       </section>
@@ -114,7 +115,7 @@ export function CommanderPage() {
     return (
       <section className={styles.page}>
         <SectionCard kicker="Başbuğ Defteri" title="Hazır başbuğ yok">
-          <EmptyState title="Başbuğ kadrosu boş" body="İlerleme otağını açmadan önce başbuğları üret veya ekle." />
+          <EmptyState icon="military_tech" title="Başbuğ kadrosu boş" body="İlerleme otağını açmadan önce başbuğları üret veya ekle." />
         </SectionCard>
       </section>
     );
@@ -245,7 +246,6 @@ export function CommanderPage() {
                 <SectionHeaderBlock
                   kicker="Savaş Otağı"
                   title="Saha töresi"
-                  lead="Ön saf baskısı, sur disiplini, sefer hızı ve yük kapasitesi terfi öncesi okunabilir kalır."
                   className={styles.surfaceHeader}
                 />
                 <DetailList items={bonusCards} />
@@ -255,7 +255,6 @@ export function CommanderPage() {
                 <SectionHeaderBlock
                   kicker="Hizmet Defteri"
                   title="Sefer kayıtları"
-                  lead="Hazır kalıp, yedek töre ve komut durumu; bir sonraki rütbeyi planlarken görünür kalır."
                   aside={<Badge tone="warning">{selectedCommander.starLevel} yıldız</Badge>}
                   className={styles.surfaceHeader}
                 />
@@ -271,11 +270,12 @@ export function CommanderPage() {
           >
             <div className={styles.orderGrid}>
               <p className={styles.orderLead}>
-                Tecrübe çubuğu dolduğunda terfi açılır. Aşağıdaki töre ve stat kartları, onaydan önce güç eğrisini görünür tutar.
+                Tecrübe çubuğu dolduğunda terfi açılır.
               </p>
               <div className={styles.actionRow}>
                 <Button
                   type="button"
+                  className={selectedCommander.xp >= selectedCommander.xpToNextLevel ? uiStyles.pulseHighlight : undefined}
                   disabled={upgradeMutation.isPending || selectedCommander.xp < selectedCommander.xpToNextLevel}
                   onClick={() => upgradeMutation.mutate(selectedCommander.id)}
                 >
@@ -293,9 +293,7 @@ export function CommanderPage() {
             aside={<Badge tone="info">{TRACK_SYNERGIES[selectedCommander.skillTree.track].length} sinerji</Badge>}
           >
             <p className={styles.orderLead}>
-              Bu töre dalları{" "}
-              <strong>{selectedCommander.skillTree.trackLabel}</strong> yolunu güçlendirir.
-              Daha üst töre kademeleri bu başbuğun her seviyesindeki bonusu katlar.
+              Bu töreler <strong>{selectedCommander.skillTree.trackLabel}</strong> yolunu güçlendirir.
             </p>
             <div className={styles.synergyGrid}>
               {TRACK_SYNERGIES[selectedCommander.skillTree.track].map((entry) => (

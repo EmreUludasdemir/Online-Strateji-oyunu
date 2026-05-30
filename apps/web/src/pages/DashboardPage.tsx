@@ -18,6 +18,7 @@ import { useNow } from "../lib/useNow";
 import type { DashboardBriefingAction } from "./dashboardBriefing";
 import { buildDashboardBriefing } from "./dashboardBriefing";
 import styles from "./DashboardPage.module.css";
+import uiStyles from "../components/ui/primitives.module.css";
 
 type DistrictStageTone = "core" | "war" | "economy" | "support";
 type DashboardInfoPanelId = "overview" | "queues" | "briefing" | "district";
@@ -171,23 +172,23 @@ export function DashboardPage() {
   const queueLedger = [
     {
       id: "build",
-      label: "Yapı kuyruğu",
+      label: "İnşaat",
       value: activeUpgrade ? `L${activeUpgrade.toLevel}` : "Boş",
       detail: activeUpgrade
-        ? `${activeUpgrade.buildingType.replaceAll("_", " ").toLowerCase()} geliştirmesi sürüyor.`
-        : "Ustalar yeni oba buyruğunu bekliyor.",
+        ? `Geliştirme sürüyor`
+        : "Buyruk bekliyor",
     },
     {
       id: "training",
-      label: "Kışla",
+      label: "Talim",
       value: activeTraining ? `${activeTrainingLabel} x${formatNumber(activeTraining.quantity)}` : "Hazır",
-      detail: activeTraining ? "Yeni birlikler talim meydanında." : "Yeni birlik buyruğu hemen başlayabilir.",
+      detail: activeTraining ? "Birlikler hazırlanıyor" : "Buyruk bekliyor",
     },
     {
       id: "research",
-      label: "Bilge Ocağı",
+      label: "Töre",
       value: activeResearch ? activeResearchLabel : "Açık",
-      detail: activeResearch ? "Bilgeler töre çalışmasını sürdürüyor." : "Araştırma kuyruğu yeni buyruğa açık.",
+      detail: activeResearch ? "Araştırma sürüyor" : "Buyruk bekliyor",
     },
   ];
   const selectedDistrict =
@@ -348,12 +349,12 @@ export function DashboardPage() {
     },
     queues: {
       id: "queues",
-      label: "Kuyruk",
-      value: `${idleQueueCount}/3`,
-      kicker: "Yapı / Talim / Töre",
-      title: idleQueueCount > 0 ? "Boş hatları doldur" : "Tüm hatlar çalışıyor",
+      label: "Hatlar",
+      value: `${idleQueueCount}/3 Boş`,
+      kicker: "Üretim Merkezi",
+      title: idleQueueCount > 0 ? "Üretim Bekliyor" : "Tam Kapasite",
       badgeTone: idleQueueCount > 0 ? "warning" : "success",
-      badgeLabel: idleQueueCount > 0 ? "Buyruk ister" : "Hareketli",
+      badgeLabel: idleQueueCount > 0 ? "Eksik Buyruk" : "Aktif",
       stats: queueLedger.map((entry) => ({
         id: entry.id,
         label: entry.label,
@@ -620,6 +621,7 @@ export function DashboardPage() {
                       data-briefing-action={action.id}
                       disabled={isBriefingActionBusy(action)}
                       onClick={() => void runBriefingAction(action)}
+                      className={action === firstBriefingAction ? uiStyles.pulseHighlight : undefined}
                     >
                       {action.ctaLabel}
                     </Button>

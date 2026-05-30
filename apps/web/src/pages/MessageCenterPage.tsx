@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,6 +13,7 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { formatDateTime, formatNumber } from "../lib/formatters";
 import { getMailboxEntryTone, getMailboxSectionLabel, groupMailboxEntries } from "../lib/mailbox";
 import { summarizeRewardLines } from "../lib/rewardSummaries";
+import uiStyles from "../components/ui/primitives.module.css";
 import styles from "./MessageCenterPage.module.css";
 
 function getDispatchRoute(entry: {
@@ -22,14 +23,14 @@ function getDispatchRoute(entry: {
     return {
       label: "Open Strategic Map",
       to: "/app/map",
-      note: "Scout packets are best resolved back on the world map where routes, markers, and targets are visible.",
+      note: "Review map targets.",
     };
   }
   if (entry.kind === "BATTLE_REPORT" || entry.kind === "RALLY_REPORT") {
     return {
       label: "Open War Council",
       to: "/app/reports",
-      note: "Battle dispatches stay tied to council dossiers, attrition breakdowns, and follow-up combat review.",
+      note: "Review combat dossier.",
     };
   }
   if (entry.kind === "PURCHASE_REWARD") {
@@ -37,19 +38,19 @@ function getDispatchRoute(entry: {
       ? {
           label: "Open Imperial Market",
           to: "/app/market",
-          note: "Trade warrants and purchase bundles hand back into the market floor for the next acquisition cycle.",
+          note: "Return to market.",
         }
       : {
           label: "Open City Dashboard",
           to: "/app/dashboard",
-          note: "Market rewards are archived during closed alpha, so purchase dispatches resolve back on the city deck.",
+          note: "Return to city deck.",
         };
   }
 
   return {
     label: "Open City Dashboard",
     to: "/app/dashboard",
-    note: "System notices route back to the city deck for execution and queue management.",
+    note: "Return to city deck.",
   };
 }
 
@@ -125,7 +126,7 @@ export function MessageCenterPage() {
   if (mailboxQuery.isPending) {
     return (
       <section className={styles.page}>
-        <PageNotice title="Loading dispatch archive" body="Message Center is indexing reports, scout returns, and claimable warrants." />
+        <PageNotice title="Loading dispatch archive" body="Indexing reports and warrants." />
       </section>
     );
   }
@@ -177,7 +178,7 @@ export function MessageCenterPage() {
 
       {entries.length === 0 || !selectedEntry ? (
         <SectionCard kicker="Archive" title="No dispatches on file">
-          <EmptyState title="Archive empty" body="Rewards, reports, and recon returns will populate here once the frontier starts moving." />
+          <EmptyState icon="mail" title="Archive empty" body="Rewards, reports, and recon returns will populate here." />
         </SectionCard>
       ) : (
         <div className={styles.layout}>
@@ -315,7 +316,7 @@ export function MessageCenterPage() {
                   {getSecondaryDispatchRoute(selectedEntry, bootstrap.storeEnabled).label}
                 </Button>
                 {selectedEntry.canClaim ? (
-                  <Button type="button" variant="primary" disabled={claimMailboxMutation.isPending} onClick={() => claimMailboxMutation.mutate(selectedEntry.id)}>
+                  <Button type="button" variant="primary" className={uiStyles.pulseHighlight} disabled={claimMailboxMutation.isPending} onClick={() => claimMailboxMutation.mutate(selectedEntry.id)}>
                     {claimMailboxMutation.isPending ? "Processing" : "Claim Reward"}
                   </Button>
                 ) : null}
