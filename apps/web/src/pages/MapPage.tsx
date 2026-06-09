@@ -25,7 +25,7 @@ import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { getKingdomPasses, getKingdomRingRadii, getKingdomSanctuaries, getKingdomTier } from "../components/kingdomMap";
 import { buildChunkPrefetchRequests, mergeWorldChunks } from "../components/worldMapData";
-import { getWorldRegions } from "../components/worldRegions";
+import { getWorldRegionForTile, getWorldRegions, type WorldRegion } from "../components/worldRegions";
 import {
   MAP_CAMERA_DEFAULT_ZOOM,
   type ActiveMapChunkMeta,
@@ -64,9 +64,9 @@ const BASE_MARCH_SECONDS_PER_TILE = 20;
 const MIN_MARCH_SECONDS = 15;
 
 const detailGuideSteps: Array<{ id: MapDetailLevel; label: string; hint: string }> = [
-  { id: "far", label: "Kingdom Scan", hint: "Tier rings, passes, and alliance lanes" },
-  { id: "mid", label: "Frontier Read", hint: "Fog blocks, routes, targets, and reports" },
-  { id: "near", label: "Siege Focus", hint: "Tactical tiles, scout trails, and gates" },
+  { id: "far", label: "Devlet Haritası", hint: "Ülkeler, tier halkaları, geçitler ve toy hatları" },
+  { id: "mid", label: "Bozkır Okuması", hint: "Sis blokları, rotalar, hedefler ve raporlar" },
+  { id: "near", label: "Kuşatma Odağı", hint: "Taktik karolar, keşif izleri ve geçitler" },
 ];
 
 function createTroopPayload(stateTroops: Array<{ type: TroopType; quantity: number }>): TroopStock {
@@ -154,34 +154,34 @@ function estimateTroopPower(
 
 function getComposerTitle(mode: ComposerMode) {
   if (mode === "SCOUT") {
-    return "Scout Mission";
+    return "Keşif Buyruğu";
   }
   if (mode === "RALLY") {
-    return "Rally Setup";
+    return "Toy Çağrısı";
   }
   if (mode === "RESOURCE_GATHER") {
-    return "Gathering Orders";
+    return "Hasat Buyruğu";
   }
   if (mode === "BARBARIAN_ATTACK") {
-    return "Camp Assault";
+    return "Kamp Akını";
   }
-  return "March Orders";
+  return "Sefer Buyruğu";
 }
 
 function getComposerActionLabel(mode: ComposerMode) {
   if (mode === "SCOUT") {
-    return "Send Scout";
+    return "Keşifçi gönder";
   }
   if (mode === "RALLY") {
-    return "Open Rally";
+    return "Toy aç";
   }
   if (mode === "RESOURCE_GATHER") {
-    return "Start Gathering";
+    return "Hasadı başlat";
   }
   if (mode === "BARBARIAN_ATTACK") {
-    return "March to Camp";
+    return "Kampa akın";
   }
-  return "Send March";
+  return "Sefer gönder";
 }
 
 function getMarchTimingLabel(
@@ -189,25 +189,25 @@ function getMarchTimingLabel(
   now: number,
 ): string {
   if (march.state === "STAGING" && march.battleWindowClosesAt) {
-    return `Window ${formatRelativeTimer(march.battleWindowClosesAt, now)}`;
+    return `Pencere ${formatRelativeTimer(march.battleWindowClosesAt, now)}`;
   }
   if (march.state === "GATHERING") {
-    return `Gathering ${formatRelativeTimer(march.etaAt, now)}`;
+    return `Hasat ${formatRelativeTimer(march.etaAt, now)}`;
   }
   if (march.state === "RETURNING" && march.returnEtaAt) {
-    return `Return ${formatRelativeTimer(march.returnEtaAt, now)}`;
+    return `Dönüş ${formatRelativeTimer(march.returnEtaAt, now)}`;
   }
   return `ETA ${formatRelativeTimer(march.etaAt, now)}`;
 }
 
 function getMarchObjectiveLabel(objective: MarchView["objective"]) {
   if (objective === "CITY_ATTACK") {
-    return "City assault";
+    return "Oba akını";
   }
   if (objective === "BARBARIAN_ATTACK") {
-    return "Camp assault";
+    return "Kamp akını";
   }
-  return "Gathering run";
+  return "Hasat seferi";
 }
 
 function getMarchStatusTone(state: MarchView["state"]): "warning" | "info" | "success" {
@@ -218,6 +218,36 @@ function getMarchStatusTone(state: MarchView["state"]): "warning" | "info" | "su
     return "info";
   }
   return "success";
+}
+
+function getMarchStateLabel(state: MarchView["state"]) {
+  if (state === "STAGING") return "hazırlık";
+  if (state === "RETURNING") return "dönüş";
+  if (state === "GATHERING") return "hasat";
+  return "yolda";
+}
+
+function getPoiStateLabel(state: PoiView["state"]) {
+  if (state === "OCCUPIED") return "dolu";
+  if (state === "DEPLETED") return "tükendi";
+  return "açık";
+}
+
+function getFieldCommandKindLabel(kind: MapFieldCommand["kind"]) {
+  if (kind === "CITY") return "oba";
+  if (kind === "POI") return "hedef";
+  return "karo";
+}
+
+function getPoiKindLabel(kind: PoiView["kind"]) {
+  if (kind === "BARBARIAN_CAMP") return "akın kampı";
+  return "kaynak damarı";
+}
+
+function getReportKindLabel(kind: ReportEntryView["kind"]) {
+  if (kind === "CITY_BATTLE") return "oba çarpışması";
+  if (kind === "BARBARIAN_BATTLE") return "kamp akını";
+  return "hasat dönüşü";
 }
 
 function getMarchCargoSummary(cargo: MarchView["cargo"]) {
@@ -319,12 +349,22 @@ function getScoutTarget(selectedCity: MapCity | null, selectedPoi: PoiView | nul
 
 function getMinimapStateColor(state: "VISIBLE" | "DISCOVERED" | "HIDDEN") {
   if (state === "VISIBLE") {
-    return "#4d7d72";
+    return "#25342f";
   }
   if (state === "DISCOVERED") {
-    return "#564339";
+    return "#2a2420";
   }
   return "#17100d";
+}
+
+function getMinimapRegionOpacity(state: "VISIBLE" | "DISCOVERED" | "HIDDEN") {
+  if (state === "VISIBLE") {
+    return 0.58;
+  }
+  if (state === "DISCOVERED") {
+    return 0.34;
+  }
+  return 0.12;
 }
 
 function isEditableElement(target: EventTarget | null) {
@@ -500,7 +540,7 @@ export function MapPage() {
         queryClient.invalidateQueries({ queryKey: ["alliance-state"] }),
         queryClient.invalidateQueries({ queryKey: ["game-state"] }),
       ]);
-      setMapNotice("Alliance marker posted to the frontier map.");
+      setMapNotice("Toy işareti bozkır haritasına bırakıldı.");
       setMarkerDraft("");
     },
   });
@@ -513,7 +553,7 @@ export function MapPage() {
         queryClient.invalidateQueries({ queryKey: ["game-state"] }),
         queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
       ]);
-      setMapNotice("Marker removed from the frontier map.");
+      setMapNotice("İşaret bozkır haritasından kaldırıldı.");
     },
   });
 
@@ -692,13 +732,13 @@ export function MapPage() {
       setFieldCommandOpenSource("automation-hook");
       setFieldCommand({
         kind: command.kind ?? "TILE",
-        label: command.label ?? `Frontier ${command.x},${command.y}`,
+        label: command.label ?? `Bozkır ${command.x},${command.y}`,
         x: command.x,
         y: command.y,
         cityId: command.cityId,
         poiId: command.poiId,
       });
-      setFieldMarkerDraft(command.label ?? `Frontier ${command.x},${command.y}`);
+      setFieldMarkerDraft(command.label ?? `Bozkır ${command.x},${command.y}`);
     };
 
     return () => {
@@ -952,7 +992,7 @@ export function MapPage() {
   const minimapStep = useMemo(() => Math.max(1, Math.ceil(minimapWorldSize / 32)), [minimapWorldSize]);
   const minimapCells = useMemo(() => {
     const tileMap = new Map(minimapTiles.map((tile) => [`${tile.x}:${tile.y}`, tile.state] as const));
-    const cells: Array<{ x: number; y: number; state: "VISIBLE" | "DISCOVERED" | "HIDDEN" }> = [];
+    const cells: Array<{ x: number; y: number; state: "VISIBLE" | "DISCOVERED" | "HIDDEN"; region: WorldRegion }> = [];
 
     for (let y = 0; y < minimapWorldSize; y += minimapStep) {
       for (let x = 0; x < minimapWorldSize; x += minimapStep) {
@@ -971,7 +1011,7 @@ export function MapPage() {
             break;
           }
         }
-        cells.push({ x, y, state });
+        cells.push({ x, y, state, region: getWorldRegionForTile(x, y, minimapWorldSize) });
       }
     }
 
@@ -1011,11 +1051,11 @@ export function MapPage() {
   );
   const selectedTargetSubtitle = selectedCity
     ? selectedCity.isCurrentPlayer
-      ? `Home city | ${selectedCity.x}, ${selectedCity.y}`
-      : `${selectedCityIsAllied ? "Allied city" : "Hostile city"} | ${selectedCity.x}, ${selectedCity.y}`
+      ? `Ana oba | ${selectedCity.x}, ${selectedCity.y}`
+      : `${selectedCityIsAllied ? "Toy obası" : "Düşman obası"} | ${selectedCity.x}, ${selectedCity.y}`
     : selectedPoi
-      ? `${selectedPoi.kind === "BARBARIAN_CAMP" ? "Camp objective" : "Resource lane"} | ${selectedPoi.x}, ${selectedPoi.y}`
-      : "Drag to pan | Wheel to zoom | Right-click for field command";
+      ? `${selectedPoi.kind === "BARBARIAN_CAMP" ? "Kamp hedefi" : "Kaynak hattı"} | ${selectedPoi.x}, ${selectedPoi.y}`
+      : "Sürükle: kaydır | Tekerlek: yakınlaş | Sağ tık: saha buyruğu";
   const selectedTargetDistance = getTargetDistance(state.city.coordinates, selectedCity, selectedPoi);
   const estimatedMarchEtaMs =
     composerMode && composerMode !== "SCOUT" && selectedTargetDistance != null && selectedCommander
@@ -1057,16 +1097,16 @@ export function MapPage() {
       ? "BARBARIAN_ATTACK"
       : "RESOURCE_GATHER";
   const targetPrimaryActionLabel = selectedCity
-    ? "Attack City"
+    ? "Obaya akın"
     : selectedPoi?.kind === "BARBARIAN_CAMP"
-      ? "Attack Camp"
-      : "Gather Here";
+      ? "Kampa akın"
+      : "Burada topla";
   const availableTargetActions = selectedCity
-    ? ["Send Scout", "Raise Rally", "Attack City"]
+    ? ["Keşifçi gönder", "Toy çağır", "Obaya akın"]
     : selectedPoi?.kind === "BARBARIAN_CAMP"
-      ? ["Send Scout", "Raise Rally", "Attack Camp"]
+      ? ["Keşifçi gönder", "Toy çağır", "Kampa akın"]
       : selectedPoi
-        ? ["Send Scout", "Gather Here"]
+        ? ["Keşifçi gönder", "Burada topla"]
         : [];
   const fieldCommandCanOpenTarget = Boolean(
     fieldCommand && ((fieldCommand.kind === "CITY" && fieldCommand.cityId) || (fieldCommand.kind === "POI" && fieldCommand.poiId)),
@@ -1080,19 +1120,19 @@ export function MapPage() {
     : 0;
   const selectedMarchRetargetable = Boolean(selectedMarch && canRetargetMarch(selectedMarch, selectedCity, selectedPoi));
   const selectedMarchRetargetLabel = !selectedMarchRetargetable
-    ? "Retarget locked"
+    ? "Hedef kilitli"
     : selectedCity
-      ? `Retarget to ${selectedCity.cityName}`
+      ? `${selectedCity.cityName} hedefine çevir`
       : selectedPoi
-        ? `Retarget to ${selectedPoi.label}`
-        : "Retarget march";
+        ? `${selectedPoi.label} hedefine çevir`
+        : "Seferi yönlendir";
   const selectedMarchCargoLabel = !selectedMarch
-    ? "Empty hold"
+    ? "Boş ambar"
     : selectedMarch.cargo.resourceType
       ? `${copy.poiResources[selectedMarch.cargo.resourceType]} ${formatNumber(selectedMarch.cargo.amount)}`
       : selectedMarch.cargo.amount > 0
         ? formatNumber(selectedMarch.cargo.amount)
-        : "Empty hold";
+        : "Boş ambar";
   const selectedMarchPower = selectedMarch ? estimateTroopPower(selectedMarch.troops, state.city.troops) : 0;
   const overlaySelectionTone = selectedMarch
     ? "info"
@@ -1108,18 +1148,18 @@ export function MapPage() {
           : "warning"
         : "info";
   const overlaySelectionLabel = selectedMarch
-    ? "March tracked"
+    ? "Sefer izleniyor"
     : selectedCity
       ? selectedCity.isCurrentPlayer
-        ? "Home city"
+        ? "Ana oba"
         : selectedCityIsAllied
-          ? "Allied city"
-          : "Hostile city"
+          ? "Toy obası"
+          : "Düşman obası"
       : selectedPoi
         ? selectedPoi.kind === "BARBARIAN_CAMP"
-          ? "Camp target"
-          : "Resource node"
-        : "Free camera";
+          ? "Kamp hedefi"
+          : "Kaynak noktası"
+        : "Serbest kamera";
   const targetSheetVisible = targetSheetOpen && !composerMode && !fieldCommand && !selectedMarch;
   const fieldCommandVisible = Boolean(fieldCommand) && !composerMode && !selectedMarch;
   const selectedMarchVisible = Boolean(selectedMarch) && !composerMode && !fieldCommand;
@@ -1161,45 +1201,45 @@ export function MapPage() {
     () => [
       {
         id: "orders",
-        label: "Live orders",
+        label: "Canlı buyruk",
         value: formatNumber(state.city.activeMarches.length),
         note:
           state.city.activeMarches.length > 0
-            ? `${formatNumber(marchStateCounts.ENROUTE)} en route / ${formatNumber(marchStateCounts.RETURNING)} returning`
-            : "No active columns on the frontier.",
-        badge: state.city.activeMarches.length > 0 ? "Active" : "Quiet",
+            ? `${formatNumber(marchStateCounts.ENROUTE)} yolda / ${formatNumber(marchStateCounts.RETURNING)} dönüyor`
+            : "Bozkırda aktif kol yok.",
+        badge: state.city.activeMarches.length > 0 ? "Canlı" : "Sakin",
         tone: state.city.activeMarches.length > 0 ? "info" : "warning",
       },
       {
         id: "windows",
-        label: "Battle windows",
+        label: "Savaş penceresi",
         value: formatNumber(marchStateCounts.STAGING + (activeBattleWindow ? 1 : 0)),
         note: activeBattleWindow
-          ? `${activeBattleWindow.label} / ${formatNumber(alliedBattleParticipants)} allied banners`
+          ? `${activeBattleWindow.label} / ${formatNumber(alliedBattleParticipants)} toy sancağı`
           : marchStateCounts.STAGING > 0
-            ? `${formatNumber(marchStateCounts.STAGING)} staged orders waiting on closure.`
-            : "No contested sectors are staged right now.",
-        badge: activeBattleWindow || marchStateCounts.STAGING > 0 ? "Contested" : "Stable",
+            ? `${formatNumber(marchStateCounts.STAGING)} bekleyen sefer kapanışı izliyor.`
+            : "Şu an çekişmeli saha yok.",
+        badge: activeBattleWindow || marchStateCounts.STAGING > 0 ? "Çekişmeli" : "Dengeli",
         tone: activeBattleWindow || marchStateCounts.STAGING > 0 ? "warning" : "success",
       },
       {
         id: "signals",
-        label: "Signal rail",
+        label: "İşaret hattı",
         value: formatNumber(recentAllianceMarkers.length),
         note: latestAllianceMarker
           ? `${latestAllianceMarker.label} / ${formatMarkerAge(latestAllianceMarker.createdAt, now)}`
-          : "Alliance markers will appear here once officers start posting beacons.",
-        badge: recentAllianceMarkers.length > 0 ? "Linked" : "Idle",
+          : "Toy işaretleri subaylar işaret bıraktığında burada görünür.",
+        badge: recentAllianceMarkers.length > 0 ? "Bağlı" : "Boş",
         tone: recentAllianceMarkers.length > 0 ? "success" : "info",
       },
       {
         id: "intel",
-        label: "Field intel",
+        label: "Saha bilgisi",
         value: formatNumber(reportMarkers.length),
         note: latestVisibleReport
-          ? `${latestVisibleReport.label} / ${latestVisibleReport.kind.toLowerCase().replaceAll("_", " ")}`
-          : "No visible report beacons inside the current map lens.",
-        badge: reportMarkers.length > 0 ? "Reports" : "Clear",
+          ? `${latestVisibleReport.label} / ${getReportKindLabel(latestVisibleReport.kind)}`
+          : "Mevcut harita merceğinde görünür rapor işareti yok.",
+        badge: reportMarkers.length > 0 ? "Rapor" : "Temiz",
         tone: reportMarkers.length > 0 ? "warning" : "info",
       },
     ],
@@ -1219,103 +1259,103 @@ export function MapPage() {
   );
   const theaterStatusTone = activeBattleWindow ? "warning" : selectedMarch ? "info" : selectedTargetName ? "success" : "info";
   const theaterStatusLabel = activeBattleWindow
-    ? "Contested sector"
+    ? "Çekişmeli saha"
     : selectedMarch
-      ? "March en route"
+      ? "Sefer yolda"
       : selectedTargetName
-        ? "Target acquired"
-        : "Free frontier";
+        ? "Hedef kilitli"
+        : "Serbest bozkır";
   const mapInteractionMode = composerMode
-    ? "Command compose"
+    ? "Buyruk hazırlığı"
     : fieldCommand
-      ? "Field command"
+      ? "Saha buyruğu"
       : selectedMarch
-        ? "March tracking"
+        ? "Sefer takibi"
         : targetSheetVisible
-          ? "Target review"
+          ? "Hedef inceleme"
           : selectedTargetName
-            ? "Target lock"
-            : "Free camera";
+            ? "Hedef kilidi"
+            : "Serbest kamera";
   const mapInteractionHint = composerMode
-    ? "Commander frame, formation load, and confirmation stay in one rail so the march commit feels deliberate."
+    ? "Başbuğ, birlik yükü ve onay aynı hatta kalır; sefer emri bilinçli verilir."
     : fieldCommand
-      ? "Right-click pings stay actionable: focus the coordinate, jump into the full target tray, or turn it into an alliance beacon."
+      ? "Sağ tık işareti eyleme dönüşür: odağı al, hedef tepsisine gir veya toy işareti yap."
       : selectedMarch
-        ? "Tracked columns keep timing, cargo, and retarget decisions anchored while the battlefield keeps moving underneath."
+        ? "İzlenen kolun süre, yük ve yön kararları harita akarken sabit kalır."
         : selectedTargetName
-          ? "Selection lock keeps the target readable while zoom layering strips away the noise the map does not need yet."
-          : "Drag to pan, use the wider smooth zoom ladder, and scout through fog before committing around passes or tier borders.";
+          ? "Seçim kilidi hedefi okunur tutar; zoom katmanı gereksiz gürültüyü geri iter."
+          : "Sürükle, yakınlaş, sis içinde keşifçi gönder; geçit ve katman sınırlarında acele etme.";
   const interactionTone = composerMode ? "warning" : selectedMarch ? "info" : fieldCommand ? "success" : "info";
   const tacticalObjectiveLabel = selectedMarch
     ? getMarchObjectiveLabel(selectedMarch.objective)
     : composerMode
       ? composerTitle
       : selectedCity
-        ? "City assault"
+        ? "Oba akını"
         : selectedPoi
           ? selectedPoi.kind === "BARBARIAN_CAMP"
-            ? "Camp assault"
-            : "Resource gathering"
-          : "Free sweep";
+            ? "Kamp akını"
+            : "Kaynak hasadı"
+          : "Serbest tarama";
   const tacticalEtaLabel = selectedMarch
     ? getMarchTimingLabel(selectedMarch, now)
     : previewMarchEtaMs != null
       ? formatTimeRemaining(new Date(now + previewMarchEtaMs).toISOString(), now)
-      : "Awaiting route";
+      : "Rota bekliyor";
   const tacticalPowerLabel = selectedMarch
     ? formatNumber(selectedMarchPower)
     : composerMode === "SCOUT"
-      ? "No troop cost"
+      ? "Birlik gerekmez"
       : formatNumber(previewPower);
   const tacticalCarryLabel = selectedMarch ? selectedMarchCargoLabel : formatNumber(previewCarry);
   const tacticalThreatValue = activeBattleWindow
     ? activeBattleWindow.label
     : selectedCity
       ? selectedCity.projectedOutcome === "ATTACKER_WIN"
-        ? "Weak outer wall"
-        : "Defender hold likely"
+        ? "Dış sur zayıf"
+        : "Savunma güçlü"
       : selectedPoi
         ? selectedPoi.kind === "BARBARIAN_CAMP"
-          ? "Hostile camp"
-          : "Open harvest lane"
-        : "Clear sector";
+          ? "Düşman kampı"
+          : "Açık hasat hattı"
+        : "Temiz saha";
   const tacticalThreatNote = latestAllianceMarker
-    ? `Signal ${latestAllianceMarker.label}`
+    ? `İşaret ${latestAllianceMarker.label}`
     : latestVisibleReport
-      ? `Report ${latestVisibleReport.label}`
-      : "No nearby beacons in the current lens";
+      ? `Rapor ${latestVisibleReport.label}`
+      : "Bu mercekte yakın işaret yok";
   const tacticalReadouts = [
     {
       id: "objective",
-      label: "Objective",
+      label: "Hedef",
       value: tacticalObjectiveLabel,
-      note: selectedTargetName ?? "Select any frontier objective",
+      note: selectedTargetName ?? "Bozkırda bir hedef seç",
       tone: overlaySelectionTone,
     },
     {
       id: "eta",
-      label: "March ETA",
+      label: "Sefer ETA",
       value: tacticalEtaLabel,
-      note: selectedTargetDistance != null ? `${formatNumber(selectedTargetDistance)} tiles from home` : "No route locked",
+      note: selectedTargetDistance != null ? `Obadan ${formatNumber(selectedTargetDistance)} karo` : "Rota kilitli değil",
       tone: previewMarchEtaMs != null || selectedMarch ? "warning" : "info",
     },
     {
       id: "power",
-      label: "Power",
+      label: "Güç",
       value: tacticalPowerLabel,
-      note: selectedMarch ? `${formatNumber(selectedMarchTroopTotal)} troops marching` : `${formatNumber(totalAssignedTroops)} troops staged`,
+      note: selectedMarch ? `${formatNumber(selectedMarchTroopTotal)} birlik yolda` : `${formatNumber(totalAssignedTroops)} birlik hazır`,
       tone: selectedMarch || totalAssignedTroops > 0 ? "success" : "info",
     },
     {
       id: "carry",
-      label: selectedMarch ? "Cargo" : "Carry",
+      label: selectedMarch ? "Yük" : "Taşıma",
       value: tacticalCarryLabel,
-      note: selectedPoi?.kind === "RESOURCE_NODE" ? "Higher carry favors node runs" : "Cargo stays visible in flight",
+      note: selectedPoi?.kind === "RESOURCE_NODE" ? "Yüksek taşıma hasatta avantajdır" : "Yük sefer boyunca görünür",
       tone: selectedPoi?.kind === "RESOURCE_NODE" || selectedMarch?.objective === "RESOURCE_GATHER" ? "success" : "info",
     },
     {
       id: "threat",
-      label: "Threat",
+      label: "Tehdit",
       value: tacticalThreatValue,
       note: tacticalThreatNote,
       tone: activeBattleWindow || selectedCity ? "warning" : latestAllianceMarker ? "success" : "info",
@@ -1409,7 +1449,7 @@ export function MapPage() {
       .map((city) => ({
         id: city.cityId,
         label: city.cityName,
-        meta: `${city.ownerName} | ${city.distance ?? "-"} tiles`,
+        meta: `${city.ownerName} | ${city.distance ?? "-"} karo`,
         kind: "CITY" as const,
         city,
       }));
@@ -1424,7 +1464,7 @@ export function MapPage() {
       .map((poi) => ({
         id: poi.id,
         label: poi.label,
-        meta: `${poi.kind.toLowerCase()} | ${poi.distance ?? "-"} tiles`,
+        meta: `${getPoiKindLabel(poi.kind)} | ${poi.distance ?? "-"} karo`,
         kind: "POI" as const,
         poi,
       }));
@@ -1576,7 +1616,7 @@ export function MapPage() {
         mode === "TARGET" && selectedMarkerTarget
           ? selectedMarkerTarget
           : {
-              label: `Frontier ${cameraView.centerTileX},${cameraView.centerTileY}`,
+              label: `Bozkır ${cameraView.centerTileX},${cameraView.centerTileY}`,
               x: cameraView.centerTileX,
               y: cameraView.centerTileY,
             };
@@ -1717,14 +1757,14 @@ export function MapPage() {
       .map((city) => ({
         id: `city:${city.cityId}`,
         label: city.cityName,
-        meta: `${city.ownerName} | ${city.distance ?? "-"} tiles`,
+        meta: `${city.ownerName} | ${city.distance ?? "-"} karo`,
         action: () => handleCitySelect(city, { focus: true }),
       }));
 
     const poiResults = worldChunk.pois.map((poi) => ({
       id: `poi:${poi.id}`,
       label: poi.label,
-      meta: `${poi.kind.toLowerCase()} | ${poi.distance ?? "-"} tiles`,
+      meta: `${getPoiKindLabel(poi.kind)} | ${poi.distance ?? "-"} karo`,
       action: () => handlePoiSelect(poi, { focus: true }),
     }));
 
@@ -1742,16 +1782,16 @@ export function MapPage() {
 
   const shortcuts = useMemo<ShortcutDefinition[]>(
     () => [
-      { id: "search", label: "Focus Search", keys: "/" },
-      { id: "marker", label: "Focus Marker Label", keys: "M" },
-      { id: "camera", label: "Post Camera Marker", keys: "C" },
-      { id: "recenter", label: "Recenter", keys: "R" },
-      { id: "zoom-in", label: "Zoom In", keys: "+" },
-      { id: "zoom-out", label: "Zoom Out", keys: "-" },
-      { id: "marker-prev", label: "Previous Marker", keys: "[" },
-      { id: "marker-next", label: "Next Marker", keys: "]" },
-      { id: "filters", label: "Filters", keys: "1-4" },
-      { id: "close", label: "Close Panels", keys: "Esc" },
+      { id: "search", label: "Aramaya odaklan", keys: "/" },
+      { id: "marker", label: "İşaret etiketi", keys: "M" },
+      { id: "camera", label: "Kamerayı işaretle", keys: "C" },
+      { id: "recenter", label: "Obaya dön", keys: "R" },
+      { id: "zoom-in", label: "Yakınlaş", keys: "+" },
+      { id: "zoom-out", label: "Uzaklaş", keys: "-" },
+      { id: "marker-prev", label: "Önceki işaret", keys: "[" },
+      { id: "marker-next", label: "Sonraki işaret", keys: "]" },
+      { id: "filters", label: "Filtreler", keys: "1-4" },
+      { id: "close", label: "Panelleri kapat", keys: "Esc" },
     ],
     [],
   );
@@ -1868,7 +1908,7 @@ export function MapPage() {
   }
 
   if (!worldChunk) {
-    return <div className={styles.hero}>Opening map...</div>;
+    return <div className={styles.hero}>Harita açılıyor...</div>;
   }
 
   const handleComposerConfirm = async () => {
@@ -1921,13 +1961,13 @@ export function MapPage() {
                 <section className={styles.intelPanel}>
                   <div className={styles.intelPanelHeader}>
                     <div>
-                      <p className={styles.hudEyebrow}>Active Selection</p>
+                      <p className={styles.hudEyebrow}>Aktif Seçim</p>
                       <h3 className={styles.hudTitle}>{selectedTargetName}</h3>
                     </div>
                     <div className={styles.statusCluster}>
                       <Badge tone={overlaySelectionTone}>{overlaySelectionLabel}</Badge>
                       {selectedTargetDistance != null ? (
-                        <p className={styles.hudMeta}>{formatNumber(selectedTargetDistance)} tiles</p>
+                        <p className={styles.hudMeta}>{formatNumber(selectedTargetDistance)} karo</p>
                       ) : null}
                     </div>
                   </div>
@@ -1951,7 +1991,7 @@ export function MapPage() {
                     aria-label={copy.map.zoomOut}
                     onClick={() => mapCommandRef.current?.zoomOut()}
                   >
-                    −
+                    -
                   </Button>
                   <Button
                     type="button"
@@ -1967,7 +2007,7 @@ export function MapPage() {
                     Hepsi
                   </Button>
                   <Button type="button" size="small" variant={filter === "CITIES" ? "primary" : "secondary"} onClick={() => setFilter("CITIES")}>
-                    Şehirler
+                    Obalar
                   </Button>
                   <Button type="button" size="small" variant={filter === "CAMPS" ? "primary" : "secondary"} onClick={() => setFilter("CAMPS")}>
                     Kamplar
@@ -2007,17 +2047,26 @@ export function MapPage() {
                   className={styles.minimap}
                   viewBox={`0 0 ${worldChunk.size} ${worldChunk.size}`}
                   role="img"
-                  aria-label="World minimap"
+                  aria-label="Bozkır minimap"
                 >
                   {minimapCells.map((cell) => (
-                    <rect
-                      key={`${cell.x}:${cell.y}`}
-                      x={cell.x}
-                      y={cell.y}
-                      width={minimapStep}
-                      height={minimapStep}
-                      fill={getMinimapStateColor(cell.state)}
-                    />
+                    <g key={`${cell.x}:${cell.y}`}>
+                      <rect
+                        x={cell.x}
+                        y={cell.y}
+                        width={minimapStep}
+                        height={minimapStep}
+                        fill={getMinimapStateColor(cell.state)}
+                      />
+                      <rect
+                        x={cell.x}
+                        y={cell.y}
+                        width={minimapStep}
+                        height={minimapStep}
+                        fill={cell.region.color}
+                        opacity={getMinimapRegionOpacity(cell.state)}
+                      />
+                    </g>
                   ))}
                   <circle
                     cx={minimapWorldSize / 2}
@@ -2046,7 +2095,7 @@ export function MapPage() {
                         height={region.y1 - region.y0 + 1}
                         fill="none"
                         stroke={region.color}
-                        strokeOpacity="0.18"
+                        strokeOpacity="0.28"
                         strokeWidth="0.6"
                         strokeDasharray="1.2 1.4"
                       />
@@ -2054,11 +2103,11 @@ export function MapPage() {
                         x={region.anchorX}
                         y={region.anchorY}
                         textAnchor="middle"
-                        fontSize="2.7"
+                        fontSize="2.35"
                         fill={region.color}
-                        opacity="0.45"
+                        opacity="0.72"
                       >
-                        {region.label}
+                        {region.shortLabel}
                       </text>
                     </g>
                   ))}
@@ -2167,12 +2216,12 @@ export function MapPage() {
                 <button
                   type="button"
                   className={styles.minimapHotspot}
-                  aria-label="Re-center with minimap"
+                aria-label="Minimap ile merkeze al"
                   onClick={handleMinimapClick}
                 />
               </div>
               <p className={styles.minimapHint}>
-                Click to re-center. Rings show tier zones; bright gates mark pass corridors through the mountain bands.
+                Renkler devletleri, halkalar tier bölgelerini, parlak kapılar da dağ geçitlerini gösterir.
               </p>
               {visibleAllianceMarkers.length > 0 ? (
                 <div className={styles.minimapMarkerRow}>
@@ -2189,7 +2238,7 @@ export function MapPage() {
                 </div>
               ) : null}
             </aside>
-            <Suspense fallback={<div className={styles.hero}>Opening map...</div>}>
+            <Suspense fallback={<div className={styles.hero}>Harita açılıyor...</div>}>
               <WorldMap
                 worldSize={worldChunk.size}
                 initialCenter={state.city.coordinates}
@@ -2265,7 +2314,7 @@ export function MapPage() {
                 <article key={item.id} className={styles.queueCard}>
                   <div className={styles.queueMeta}>
                     <strong className={styles.cardTitle}>{item.label}</strong>
-                    <Badge tone={item.value === "Idle" || item.value === "Ready" ? "warning" : "info"}>
+                    <Badge tone={item.value === "Boş" || item.value === "Hazır" ? "warning" : "info"}>
                       {item.value}
                     </Badge>
                   </div>
@@ -2278,7 +2327,7 @@ export function MapPage() {
           <SectionCard kicker={copy.map.activeMarches} title="Sefer Defteri" className={styles.marchSection}>
             <div className={styles.marchList}>
               {state.city.activeMarches.length === 0 ? (
-                <p className={styles.commandHint}>No active military operations.</p>
+                <p className={styles.commandHint}>Aktif sefer yok.</p>
               ) : null}
               {state.city.activeMarches.map((march) => {
                 const troopTotal = Object.values(march.troops).reduce((sum, value) => sum + value, 0);
@@ -2301,8 +2350,8 @@ export function MapPage() {
                     }}
                   >
                     <div className={styles.marchMeta}>
-                      <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Target"}</strong>
-                      <Badge tone={getMarchStatusTone(march.state)}>{march.state.toLowerCase()}</Badge>
+                      <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Hedef"}</strong>
+                      <Badge tone={getMarchStatusTone(march.state)}>{getMarchStateLabel(march.state)}</Badge>
                     </div>
                     <div className={styles.marchSignalRow}>
                       <span className={styles.marchObjectivePill}>{getMarchObjectiveLabel(march.objective)}</span>
@@ -2312,10 +2361,10 @@ export function MapPage() {
                       <span style={{ width: `${progressPercent}%` }} />
                     </div>
                     <p className={styles.muted}>
-                      {getMarchTimingLabel(march, now)} | Distance {formatNumber(march.distance)} tiles
+                      {getMarchTimingLabel(march, now)} | Mesafe {formatNumber(march.distance)} karo
                     </p>
                     <div className={styles.marchFootnote}>
-                      <span>{formatNumber(troopTotal)} troops</span>
+                      <span>{formatNumber(troopTotal)} birlik</span>
                       <span>{cargoSummary}</span>
                     </div>
                     <div className={styles.actionRow}>
@@ -2329,7 +2378,7 @@ export function MapPage() {
                           recallMarch(march.id);
                         }}
                       >
-                        {isRecallingMarch ? "Please wait" : "Recall"}
+                        {isRecallingMarch ? "Bekle" : "Geri çağır"}
                       </Button>
                       <Button
                         type="button"
@@ -2358,7 +2407,7 @@ export function MapPage() {
             <article className={styles.commandCard}>
               <div className={styles.commandHeader}>
                 <strong className={styles.cardTitle}>Bozkır Arama</strong>
-                <Badge tone="info">{searchResults.length} matches</Badge>
+                <Badge tone="info">{searchResults.length} eşleşme</Badge>
               </div>
               <input
                 ref={searchInputRef}
@@ -2366,7 +2415,7 @@ export function MapPage() {
                 type="search"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search cities, camps, nodes, or markers"
+                placeholder="Oba, kamp, kaynak veya işaret ara"
               />
               {searchResults.length > 0 ? (
                 <div className={styles.searchResults}>
@@ -2386,13 +2435,13 @@ export function MapPage() {
                   ))}
                 </div>
               ) : (
-                <p className={styles.commandHint}>Search the current chunk to jump between cities, POIs, and alliance markers.</p>
+                <p className={styles.commandHint}>Mevcut bölgedeki obalar, hedefler ve toy işaretleri arasında hızlı geçiş yap.</p>
               )}
             </article>
             <article className={styles.commandCard}>
               <div className={styles.commandHeader}>
                 <strong className={styles.cardTitle}>Toy Sancakları</strong>
-                <Badge tone={alliance ? "success" : "warning"}>{alliance ? alliance.tag : "No alliance"}</Badge>
+                <Badge tone={alliance ? "success" : "warning"}>{alliance ? alliance.tag : "Toy yok"}</Badge>
               </div>
               <input
                 ref={markerInputRef}
@@ -2400,7 +2449,7 @@ export function MapPage() {
                 type="text"
                 value={markerDraft}
                 onChange={(event) => setMarkerDraft(event.target.value)}
-                placeholder={selectedMarkerTarget ? `Label for ${selectedMarkerTarget.label}` : "Marker label"}
+                placeholder={selectedMarkerTarget ? `${selectedMarkerTarget.label} etiketi` : "İşaret etiketi"}
               />
               <div className={styles.actionRow}>
                 <Button
@@ -2410,7 +2459,7 @@ export function MapPage() {
                   disabled={createMarkerMutation.isPending}
                   onClick={() => handleQuickMarkerCreate("CAMERA")}
                 >
-                  {createMarkerMutation.isPending ? "Posting" : "Mark Camera"}
+                  {createMarkerMutation.isPending ? "Gönderiliyor" : "Kamerayı işaretle"}
                 </Button>
                 <Button
                   type="button"
@@ -2419,20 +2468,20 @@ export function MapPage() {
                   disabled={createMarkerMutation.isPending || !selectedMarkerTarget}
                   onClick={() => handleQuickMarkerCreate("TARGET")}
                 >
-                  Mark Target
+                  Hedefi işaretle
                 </Button>
               </div>
               <p className={styles.commandHint}>
                 {selectedMarkerTarget
-                  ? `Selected target: ${selectedMarkerTarget.label} at ${selectedMarkerTarget.x}, ${selectedMarkerTarget.y}.`
-                  : "Select a city or POI to post a focused target marker."}
+                  ? `Seçili hedef: ${selectedMarkerTarget.label} | ${selectedMarkerTarget.x}, ${selectedMarkerTarget.y}.`
+                  : "Odaklı işaret bırakmak için bir oba veya POI seç."}
               </p>
               {mapNotice ? <p className={styles.commandNotice}>{mapNotice}</p> : null}
             </article>
             <article className={styles.commandCard}>
               <div className={styles.commandHeader}>
-                <strong className={styles.cardTitle}>Rapid Orders</strong>
-                <Badge tone="info">{recentAllianceMarkers.length} markers</Badge>
+                <strong className={styles.cardTitle}>Hızlı Buyruklar</strong>
+                <Badge tone="info">{recentAllianceMarkers.length} işaret</Badge>
               </div>
               <div className={styles.shortcutGrid}>
                 {shortcuts.map((shortcut) => (
@@ -2450,7 +2499,7 @@ export function MapPage() {
                         <strong>{marker.label}</strong>
                         <span className={styles.markerMeta}>
                           {marker.x}, {marker.y} / {formatMarkerAge(marker.createdAt, now)}
-                          {marker.expiresAt ? ` / ${formatTimeRemaining(marker.expiresAt, now)} left` : ""}
+                          {marker.expiresAt ? ` / ${formatTimeRemaining(marker.expiresAt, now)} kaldı` : ""}
                         </span>
                       </button>
                       {marker.canDelete ? (
@@ -2461,13 +2510,13 @@ export function MapPage() {
                           disabled={deleteMarkerMutation.isPending}
                           onClick={(event) => handleMarkerDelete(event, marker)}
                         >
-                          Remove
+                          Kaldır
                         </Button>
                       ) : null}
                     </div>
                   ))
                 ) : (
-                  <p className={styles.commandHint}>Alliance markers posted from the map will appear here for rapid focus.</p>
+                  <p className={styles.commandHint}>Haritadan bırakılan toy işaretleri hızlı odak için burada görünür.</p>
                 )}
               </div>
             </article>
@@ -2496,10 +2545,10 @@ export function MapPage() {
           ) : null}
 
           {showReports ? (
-            <SectionCard kicker="Report Beacons" title="Visible history">
+            <SectionCard kicker="Rapor İşaretleri" title="Görünür geçmiş">
               <div className={styles.intelList}>
                 {reportMarkers.length === 0 ? (
-                  <p className={styles.commandHint}>Resolved battles and returns inside the current visible chunk will appear here.</p>
+                  <p className={styles.commandHint}>Bu görünür bölgede çözülen savaş ve dönüşler burada belirir.</p>
                 ) : (
                   reportMarkers.slice(0, 6).map((report) => (
                     <button
@@ -2511,15 +2560,15 @@ export function MapPage() {
                       <div className={styles.intelHeader}>
                         <Badge tone={report.resultTone}>
                           {report.kind === "CITY_BATTLE"
-                            ? "Siege"
+                            ? "Kuşatma"
                             : report.kind === "BARBARIAN_BATTLE"
-                              ? "Camp"
-                              : "Return"}
+                              ? "Kamp"
+                              : "Dönüş"}
                         </Badge>
                         <span className={styles.intelMeta}>{report.x}, {report.y}</span>
                       </div>
                       <strong className={styles.cardTitle}>{report.label}</strong>
-                      <p className={styles.commandHint}>{report.kind.toLowerCase().replaceAll("_", " ")} beacon inside the active lens.</p>
+                      <p className={styles.commandHint}>{getReportKindLabel(report.kind)} işareti etkin mercekte.</p>
                     </button>
                   ))
                 )}
@@ -2533,7 +2582,7 @@ export function MapPage() {
 
       <BottomSheet
         open={targetSheetVisible || Boolean(composerMode)}
-        title={composerMode ? composerTitle : `Command Tray: ${selectedTargetName ?? "-"}`}
+        title={composerMode ? composerTitle : `Buyruk Tepsisi: ${selectedTargetName ?? "-"}`}
         onClose={() => {
           if (composerMode) {
             setComposerMode(null);
@@ -2546,7 +2595,7 @@ export function MapPage() {
           composerMode ? (
             <>
               <Button type="button" variant="ghost" onClick={() => setComposerMode(null)}>
-                Cancel
+                Vazgeç
               </Button>
               <Button
                 type="button"
@@ -2568,8 +2617,8 @@ export function MapPage() {
             <>
               <section className={styles.composerHero}>
                 <div>
-                  <p className={styles.hudEyebrow}>Command Composer</p>
-                  <strong className={styles.cardTitle}>{selectedTargetName ?? "Select a target"}</strong>
+                  <p className={styles.hudEyebrow}>Buyruk Hazırlığı</p>
+                  <strong className={styles.cardTitle}>{selectedTargetName ?? "Hedef seç"}</strong>
                   <p className={styles.muted}>{selectedTargetSubtitle}</p>
                 </div>
                 <Badge
@@ -2582,41 +2631,41 @@ export function MapPage() {
                   }
                 >
                   {composerMode === "SCOUT"
-                    ? "Recon"
+                    ? "Keşif"
                     : composerMode === "RESOURCE_GATHER"
-                      ? "Gather"
+                      ? "Hasat"
                       : composerMode === "RALLY"
-                        ? "Rally"
-                        : "Attack"}
+                        ? "Toy"
+                        : "Akın"}
                 </Badge>
               </section>
               <div className={styles.composerStats}>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Distance</span>
+                  <span className={styles.composerStatLabel}>Mesafe</span>
                   <strong className={styles.composerStatValue}>
-                    {selectedTargetDistance != null ? `${formatNumber(selectedTargetDistance)} tiles` : "-"}
+                    {selectedTargetDistance != null ? `${formatNumber(selectedTargetDistance)} karo` : "-"}
                   </strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Report" : "ETA"}</span>
+                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Rapor" : "ETA"}</span>
                   <strong className={styles.composerStatValue}>
                     {composerMode === "SCOUT"
-                      ? "Mail Intel"
+                      ? "Ulak bilgisi"
                       : estimatedMarchEtaMs != null
                         ? formatTimeRemaining(new Date(now + estimatedMarchEtaMs).toISOString(), now)
-                        : "Await troops"}
+                        : "Birlik bekliyor"}
                   </strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Coverage" : "Power"}</span>
+                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Kapsam" : "Güç"}</span>
                   <strong className={styles.composerStatValue}>
-                    {composerMode === "SCOUT" ? "Target Readout" : formatNumber(estimatedPower)}
+                    {composerMode === "SCOUT" ? "Hedef okuması" : formatNumber(estimatedPower)}
                   </strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Sweep" : "Carry"}</span>
+                  <span className={styles.composerStatLabel}>{composerMode === "SCOUT" ? "Tarama" : "Taşıma"}</span>
                   <strong className={styles.composerStatValue}>
-                    {composerMode === "SCOUT" ? "High Detail" : formatNumber(estimatedCarry)}
+                    {composerMode === "SCOUT" ? "Yüksek detay" : formatNumber(estimatedCarry)}
                   </strong>
                 </article>
               </div>
@@ -2624,8 +2673,8 @@ export function MapPage() {
                 <>
                   <section className={styles.commanderCard}>
                     <div className={styles.composerRow}>
-                      <span className={styles.muted}>Commander</span>
-                      <select aria-label="Commander" value={commanderId} onChange={(event) => setCommanderId(event.target.value)}>
+                      <span className={styles.muted}>Başbuğ</span>
+                      <select aria-label="Başbuğ" value={commanderId} onChange={(event) => setCommanderId(event.target.value)}>
                         {state.city.commanders.map((commander) => (
                           <option key={commander.id} value={commander.id}>
                             {commander.name} L{commander.level}
@@ -2634,9 +2683,9 @@ export function MapPage() {
                       </select>
                     </div>
                     <p className={styles.commanderMeta}>
-                      March +{selectedCommander?.marchSpeedBonusPct ?? 0}% / Carry +
-                      {selectedCommander?.carryBonusPct ?? 0}% / Attack +{selectedCommander?.attackBonusPct ?? 0}% /
-                      Defense +{selectedCommander?.defenseBonusPct ?? 0}%
+                      Sefer +{selectedCommander?.marchSpeedBonusPct ?? 0}% / Taşıma +
+                      {selectedCommander?.carryBonusPct ?? 0}% / Akın +{selectedCommander?.attackBonusPct ?? 0}% /
+                      Kalkan +{selectedCommander?.defenseBonusPct ?? 0}%
                     </p>
                   </section>
                   <div className={styles.troopDeck}>
@@ -2646,7 +2695,7 @@ export function MapPage() {
                           <span>
                             <strong>{troop.label}</strong>
                             <span className={styles.sliderMeta}>
-                              Reserve {formatNumber(troop.quantity)} / Carry {formatNumber(troop.carry)}
+                              Yedek {formatNumber(troop.quantity)} / Taşıma {formatNumber(troop.carry)}
                             </span>
                           </span>
                           <strong>{formatNumber(troopPayload[troop.type])}</strong>
@@ -2667,8 +2716,8 @@ export function MapPage() {
                         />
                         <p className={styles.sliderFooter}>
                           {troop.quantity > 0
-                            ? `${Math.round((troopPayload[troop.type] / troop.quantity) * 100)}% committed`
-                            : "No units available"}
+                            ? `%${Math.round((troopPayload[troop.type] / troop.quantity) * 100)} ayrıldı`
+                            : "Birlik yok"}
                         </p>
                       </article>
                     ))}
@@ -2677,12 +2726,12 @@ export function MapPage() {
               ) : (
                 <section className={styles.commanderCard}>
                   <div className={styles.composerRow}>
-                    <span className={styles.muted}>Scout cost</span>
-                    <strong>No troops</strong>
+                    <span className={styles.muted}>Keşif bedeli</span>
+                    <strong>Birlik yok</strong>
                   </div>
                   {selectedPoi?.resourceType ? (
                     <div className={styles.composerRow}>
-                      <span className={styles.muted}>Resource</span>
+                      <span className={styles.muted}>Kaynak</span>
                       <strong>{copy.poiResources[selectedPoi.resourceType]}</strong>
                     </div>
                   ) : null}
@@ -2693,32 +2742,32 @@ export function MapPage() {
             <>
               <section className={styles.composerHero}>
                 <div>
-                  <p className={styles.hudEyebrow}>Siege Target</p>
+                  <p className={styles.hudEyebrow}>Kuşatma Hedefi</p>
                   <strong className={styles.cardTitle}>{selectedTargetName}</strong>
                   <p className={styles.muted}>{selectedTargetSubtitle}</p>
                 </div>
                 <Badge tone={selectedCity.projectedOutcome === "ATTACKER_WIN" ? "success" : "warning"}>
-                  {selectedCity.projectedOutcome === "ATTACKER_WIN" ? "Favorable" : "Resistant"}
+                  {selectedCity.projectedOutcome === "ATTACKER_WIN" ? "Elverişli" : "Dirençli"}
                 </Badge>
               </section>
               <section className={styles.commandActionGrid}>
                 <article className={styles.commandActionCard}>
-                  <p className={styles.commandActionEyebrow}>Recon Sweep</p>
-                  <strong className={styles.commandActionTitle}>Open scout channel</strong>
+                  <p className={styles.commandActionEyebrow}>Keşif Taraması</p>
+                  <strong className={styles.commandActionTitle}>Keşif hattını aç</strong>
                   <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
                     {copy.map.scout}
                   </Button>
                 </article>
                 <article className={styles.commandActionCard}>
-                  <p className={styles.commandActionEyebrow}>Alliance Lead</p>
-                  <strong className={styles.commandActionTitle}>Raise a rally banner</strong>
+                  <p className={styles.commandActionEyebrow}>Toy Çağrısı</p>
+                  <strong className={styles.commandActionTitle}>Sancak kaldır</strong>
                   <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
                     {copy.map.rally}
                   </Button>
                 </article>
                 <article className={styles.commandActionCard}>
-                  <p className={styles.commandActionEyebrow}>Primary Order</p>
-                  <strong className={styles.commandActionTitle}>Commit siege formation</strong>
+                  <p className={styles.commandActionEyebrow}>Ana Buyruk</p>
+                  <strong className={styles.commandActionTitle}>Kuşatma düzenini gönder</strong>
                   <Button type="button" variant="primary" onClick={() => openComposer(targetPrimaryMode)}>
                     {targetPrimaryActionLabel}
                   </Button>
@@ -2726,13 +2775,13 @@ export function MapPage() {
               </section>
               <div className={styles.composerStats}>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Defense</span>
+                  <span className={styles.composerStatLabel}>Savunma</span>
                   <strong className={styles.composerStatValue}>{formatNumber(selectedCity.defensePower)}</strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Distance</span>
+                  <span className={styles.composerStatLabel}>Mesafe</span>
                   <strong className={styles.composerStatValue}>
-                    {selectedCity.distance != null ? `${formatNumber(selectedCity.distance)} tiles` : "-"}
+                    {selectedCity.distance != null ? `${formatNumber(selectedCity.distance)} karo` : "-"}
                   </strong>
                 </article>
                 <article className={styles.composerStatCard}>
@@ -2744,7 +2793,7 @@ export function MapPage() {
                   </strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Power</span>
+                  <span className={styles.composerStatLabel}>Güç</span>
                   <strong className={styles.composerStatValue}>{formatNumber(previewPower)}</strong>
                 </article>
               </div>
@@ -2753,35 +2802,35 @@ export function MapPage() {
             <>
               <section className={styles.composerHero}>
                 <div>
-                  <p className={styles.hudEyebrow}>Field Objective</p>
+                  <p className={styles.hudEyebrow}>Saha Hedefi</p>
                   <strong className={styles.cardTitle}>{selectedTargetName}</strong>
                   <p className={styles.muted}>{selectedTargetSubtitle}</p>
                 </div>
                 <Badge tone={selectedPoi.kind === "RESOURCE_NODE" ? "info" : "warning"}>
-                  {selectedPoi.kind === "RESOURCE_NODE" ? "Harvestable" : "Resistant"}
+                  {selectedPoi.kind === "RESOURCE_NODE" ? "Hasada açık" : "Dirençli"}
                 </Badge>
               </section>
               <section className={styles.commandActionGrid}>
                 <article className={styles.commandActionCard}>
-                  <p className={styles.commandActionEyebrow}>Recon Sweep</p>
-                  <strong className={styles.commandActionTitle}>Read the objective</strong>
+                  <p className={styles.commandActionEyebrow}>Keşif Taraması</p>
+                  <strong className={styles.commandActionTitle}>Hedefi oku</strong>
                   <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
                     {copy.map.scout}
                   </Button>
                 </article>
                 {selectedPoi.kind === "BARBARIAN_CAMP" ? (
                   <article className={styles.commandActionCard}>
-                    <p className={styles.commandActionEyebrow}>Alliance Lead</p>
-                    <strong className={styles.commandActionTitle}>Open a rally channel</strong>
+                    <p className={styles.commandActionEyebrow}>Toy Çağrısı</p>
+                    <strong className={styles.commandActionTitle}>Toy hattı aç</strong>
                     <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
                       {copy.map.rally}
                     </Button>
                   </article>
                 ) : null}
                 <article className={styles.commandActionCard}>
-                  <p className={styles.commandActionEyebrow}>Primary Order</p>
+                  <p className={styles.commandActionEyebrow}>Ana Buyruk</p>
                   <strong className={styles.commandActionTitle}>
-                    {selectedPoi.kind === "BARBARIAN_CAMP" ? "Commit strike package" : "Open harvest formation"}
+                    {selectedPoi.kind === "BARBARIAN_CAMP" ? "Akın kolunu gönder" : "Hasat düzenini aç"}
                   </strong>
                   <Button type="button" variant="primary" onClick={() => openComposer(targetPrimaryMode)}>
                     {targetPrimaryActionLabel}
@@ -2790,21 +2839,21 @@ export function MapPage() {
               </section>
               <div className={styles.composerStats}>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Level</span>
+                  <span className={styles.composerStatLabel}>Seviye</span>
                   <strong className={styles.composerStatValue}>L{selectedPoi.level}</strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Distance</span>
+                  <span className={styles.composerStatLabel}>Mesafe</span>
                   <strong className={styles.composerStatValue}>
-                    {selectedPoi.distance != null ? `${formatNumber(selectedPoi.distance)} tiles` : "-"}
+                    {selectedPoi.distance != null ? `${formatNumber(selectedPoi.distance)} karo` : "-"}
                   </strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>State</span>
-                  <strong className={styles.composerStatValue}>{selectedPoi.state.toLowerCase()}</strong>
+                  <span className={styles.composerStatLabel}>Durum</span>
+                  <strong className={styles.composerStatValue}>{getPoiStateLabel(selectedPoi.state)}</strong>
                 </article>
                 <article className={styles.composerStatCard}>
-                  <span className={styles.composerStatLabel}>Amount</span>
+                  <span className={styles.composerStatLabel}>Miktar</span>
                   <strong className={styles.composerStatValue}>
                     {selectedPoi.remainingAmount != null ? formatNumber(selectedPoi.remainingAmount) : "-"}
                   </strong>
@@ -2817,18 +2866,18 @@ export function MapPage() {
 
       <BottomSheet
         open={fieldCommandVisible}
-        title={`Field Command: ${fieldCommand?.label ?? "-"}`}
+        title={`Saha Buyruğu: ${fieldCommand?.label ?? "-"}`}
         onClose={() => setFieldCommand(null)}
         mode="aside"
         actions={
           fieldCommand ? (
             <>
               <Button type="button" variant="secondary" onClick={handleFieldCommandFocus}>
-                Focus Position
+                Konuma odaklan
               </Button>
               {fieldCommandCanOpenTarget ? (
                 <Button type="button" variant="ghost" onClick={handleFieldCommandOpenTarget}>
-                  Open Target
+                  Hedefi aç
                 </Button>
               ) : null}
               {fieldCommandCanScout ? (
@@ -2844,70 +2893,70 @@ export function MapPage() {
           <div className={styles.composerGrid}>
             <section className={styles.composerHero}>
               <div>
-                <p className={styles.hudEyebrow}>Field Command</p>
+                <p className={styles.hudEyebrow}>Saha Buyruğu</p>
                 <strong className={styles.cardTitle}>{fieldCommand.label}</strong>
                 <p className={styles.muted}>
-                  {fieldCommand.kind.toLowerCase()} objective at {fieldCommand.x}, {fieldCommand.y}
+                  {getFieldCommandKindLabel(fieldCommand.kind)} hedefi | {fieldCommand.x}, {fieldCommand.y}
                 </p>
               </div>
               <Badge tone={fieldCommand.kind === "TILE" ? "info" : fieldCommand.kind === "CITY" ? "warning" : "success"}>
-                {fieldCommand.kind === "TILE" ? "Map ping" : fieldCommand.kind === "CITY" ? "Siege target" : "Field objective"}
+                {fieldCommand.kind === "TILE" ? "Harita işareti" : fieldCommand.kind === "CITY" ? "Kuşatma hedefi" : "Saha hedefi"}
               </Badge>
             </section>
             <section className={styles.commandPreviewGrid}>
               <article className={styles.commandPreviewCard}>
-                <span className={styles.commandPreviewLabel}>Kind</span>
-                <strong className={styles.commandPreviewValue}>{fieldCommand.kind}</strong>
+                <span className={styles.commandPreviewLabel}>Tür</span>
+                <strong className={styles.commandPreviewValue}>{getFieldCommandKindLabel(fieldCommand.kind)}</strong>
               </article>
               <article className={styles.commandPreviewCard}>
-                <span className={styles.commandPreviewLabel}>Coordinates</span>
+                <span className={styles.commandPreviewLabel}>Koordinat</span>
                 <strong className={styles.commandPreviewValue}>{fieldCommand.x}, {fieldCommand.y}</strong>
               </article>
               <article className={styles.commandPreviewCard}>
-                <span className={styles.commandPreviewLabel}>Distance</span>
+                <span className={styles.commandPreviewLabel}>Mesafe</span>
                 <strong className={styles.commandPreviewValue}>
-                  {fieldCommandDistance != null ? `${formatNumber(fieldCommandDistance)} tiles` : "-"}
+                  {fieldCommandDistance != null ? `${formatNumber(fieldCommandDistance)} karo` : "-"}
                 </strong>
               </article>
             </section>
             <section className={styles.commandActionGrid}>
               <article className={styles.commandActionCard}>
-                <p className={styles.commandActionEyebrow}>Camera Control</p>
-                <strong className={styles.commandActionTitle}>Pin the battlefield</strong>
+                <p className={styles.commandActionEyebrow}>Kamera Kontrolü</p>
+                <strong className={styles.commandActionTitle}>Sahayı sabitle</strong>
                 <p className={styles.commandActionCopy}>
-                  Snap the camera onto this coordinate when you need to read terrain, routes, or report beacons around it.
+                  Araziyi, rotayı veya rapor işaretlerini okumak için kamerayı bu koordinata al.
                 </p>
                 <Button type="button" variant="secondary" onClick={handleFieldCommandFocus}>
-                  Focus Position
+                  Konuma odaklan
                 </Button>
               </article>
               <article className={styles.commandActionCard}>
-                <p className={styles.commandActionEyebrow}>Target Bridge</p>
+                <p className={styles.commandActionEyebrow}>Hedef Köprüsü</p>
                 <strong className={styles.commandActionTitle}>
-                  {fieldCommandCanOpenTarget ? "Open the full target tray" : "Awaiting a real target"}
+                  {fieldCommandCanOpenTarget ? "Hedef tepsisini aç" : "Gerçek hedef bekliyor"}
                 </strong>
                 <p className={styles.commandActionCopy}>
-                  City and POI field commands can jump straight into the richer target tray with scout, rally, and march decisions.
+                  Oba ve POI saha buyrukları keşif, toy ve sefer kararlarına doğrudan atlar.
                 </p>
                 <Button type="button" variant="ghost" disabled={!fieldCommandCanOpenTarget} onClick={handleFieldCommandOpenTarget}>
-                  Open Target
+                  Hedefi aç
                 </Button>
               </article>
               <article className={styles.commandActionCard}>
-                <p className={styles.commandActionEyebrow}>Alliance Beacon</p>
-                <strong className={styles.commandActionTitle}>Turn the ping into doctrine</strong>
+                <p className={styles.commandActionEyebrow}>Toy İşareti</p>
+                <strong className={styles.commandActionTitle}>İşareti buyruk yap</strong>
                 <p className={styles.commandActionCopy}>
-                  Post this exact location into alliance markers so the same coordinate stays readable after the camera moves.
+                  Bu konumu toy işaretlerine yaz; kamera kayınca bile koordinat okunur kalsın.
                 </p>
                 <Button type="button" onClick={() => void handleFieldMarkerCreate()} disabled={createMarkerMutation.isPending}>
-                  {createMarkerMutation.isPending ? "Posting" : "Post Marker"}
+                  {createMarkerMutation.isPending ? "Gönderiliyor" : "İşaret bırak"}
                 </Button>
               </article>
             </section>
-            <SectionCard kicker="Beacon Label" title="Alliance marker dispatch">
+            <SectionCard kicker="İşaret Etiketi" title="Toy işareti gönderimi">
               <div className={styles.fieldCommandMeta}>
                 <label className={styles.fieldCommandLabel}>
-                  <span className={styles.commandPreviewLabel}>Marker label</span>
+                  <span className={styles.commandPreviewLabel}>İşaret etiketi</span>
                   <input
                     className={styles.commandInput}
                     type="text"
@@ -2917,7 +2966,7 @@ export function MapPage() {
                   />
                 </label>
                 <p className={styles.commandHint}>
-                  Use short labels so the minimap and alliance rails stay readable at high density.
+                  Kısa etiket kullan; minimap ve toy hattı kalabalıkta okunur kalsın.
                 </p>
               </div>
             </SectionCard>
@@ -2927,14 +2976,14 @@ export function MapPage() {
 
       <BottomSheet
         open={selectedMarchVisible}
-        title={`March Ledger: ${selectedMarch?.targetPoiName ?? selectedMarch?.targetCityName ?? "-"}`}
+        title={`Sefer Defteri: ${selectedMarch?.targetPoiName ?? selectedMarch?.targetCityName ?? "-"}`}
         onClose={() => setSelectedMarchId(null)}
         mode="aside"
         actions={
           selectedMarch ? (
             <>
               <Button type="button" variant="secondary" onClick={() => mapCommandRef.current?.focusMarch(selectedMarch.id)}>
-                Track Route
+                Rotayı izle
               </Button>
               <Button
                 type="button"
@@ -2945,7 +2994,7 @@ export function MapPage() {
                   setSelectedMarchId(null);
                 }}
               >
-                {isRecallingMarch ? "Please wait" : "Recall"}
+                {isRecallingMarch ? "Bekle" : "Geri çağır"}
               </Button>
               <Button
                 type="button"
@@ -2968,62 +3017,62 @@ export function MapPage() {
           <div className={styles.composerGrid}>
             <section className={styles.composerHero}>
               <div>
-                <p className={styles.hudEyebrow}>Active March</p>
-                <strong className={styles.cardTitle}>{selectedMarch.targetPoiName ?? selectedMarch.targetCityName ?? "Target"}</strong>
-                <p className={styles.muted}>{selectedMarch.commanderName} leads this column across the frontier.</p>
+                <p className={styles.hudEyebrow}>Aktif Sefer</p>
+                <strong className={styles.cardTitle}>{selectedMarch.targetPoiName ?? selectedMarch.targetCityName ?? "Hedef"}</strong>
+                <p className={styles.muted}>{selectedMarch.commanderName} bu kolu bozkırda yönetiyor.</p>
               </div>
               <Badge tone={selectedMarch.state === "STAGING" ? "warning" : selectedMarch.state === "RETURNING" ? "info" : "success"}>
-                {selectedMarch.state.toLowerCase()}
+                {getMarchStateLabel(selectedMarch.state)}
               </Badge>
             </section>
             <section className={styles.commandPreviewGrid}>
               <article className={styles.commandPreviewCard}>
-                <span className={styles.commandPreviewLabel}>Timing</span>
+                <span className={styles.commandPreviewLabel}>Süre</span>
                 <strong className={styles.commandPreviewValue}>{getMarchTimingLabel(selectedMarch, now)}</strong>
               </article>
               <article className={styles.commandPreviewCard}>
-                <span className={styles.commandPreviewLabel}>Objective</span>
-                <strong className={styles.commandPreviewValue}>{selectedMarch.objective.toLowerCase().replaceAll("_", " ")}</strong>
+                <span className={styles.commandPreviewLabel}>Hedef</span>
+                <strong className={styles.commandPreviewValue}>{getMarchObjectiveLabel(selectedMarch.objective)}</strong>
               </article>
               <article className={styles.commandPreviewCard}>
-                <span className={styles.commandPreviewLabel}>Cargo</span>
+                <span className={styles.commandPreviewLabel}>Yük</span>
                 <strong className={styles.commandPreviewValue}>{selectedMarchCargoLabel}</strong>
               </article>
             </section>
             <div className={styles.composerStats}>
               <article className={styles.composerStatCard}>
-                <span className={styles.composerStatLabel}>Troops</span>
+                <span className={styles.composerStatLabel}>Birlik</span>
                 <strong className={styles.composerStatValue}>{formatNumber(selectedMarchTroopTotal)}</strong>
               </article>
               <article className={styles.composerStatCard}>
-                <span className={styles.composerStatLabel}>Distance</span>
-                <strong className={styles.composerStatValue}>{formatNumber(selectedMarch.distance)} tiles</strong>
+                <span className={styles.composerStatLabel}>Mesafe</span>
+                <strong className={styles.composerStatValue}>{formatNumber(selectedMarch.distance)} karo</strong>
               </article>
               <article className={styles.composerStatCard}>
-                <span className={styles.composerStatLabel}>Origin</span>
+                <span className={styles.composerStatLabel}>Çıkış</span>
                 <strong className={styles.composerStatValue}>{selectedMarch.origin.x}, {selectedMarch.origin.y}</strong>
               </article>
               <article className={styles.composerStatCard}>
-                <span className={styles.composerStatLabel}>Target</span>
+                <span className={styles.composerStatLabel}>Hedef</span>
                 <strong className={styles.composerStatValue}>{selectedMarch.target.x}, {selectedMarch.target.y}</strong>
               </article>
             </div>
             <section className={styles.commandActionGrid}>
               <article className={styles.commandActionCard}>
-                <p className={styles.commandActionEyebrow}>Route Focus</p>
-                <strong className={styles.commandActionTitle}>Stay with the column</strong>
+                <p className={styles.commandActionEyebrow}>Rota Odağı</p>
+                <strong className={styles.commandActionTitle}>Kolun yanında kal</strong>
                 <p className={styles.commandActionCopy}>
-                  Recenter on the active march to inspect nearby threats, alliance beacons, and battle windows around the route.
+                  Yakın tehdit, toy işareti ve savaş pencerelerini okumak için aktif sefere odaklan.
                 </p>
                 <Button type="button" variant="secondary" onClick={() => mapCommandRef.current?.focusMarch(selectedMarch.id)}>
-                  Track Route
+                  Rotayı izle
                 </Button>
               </article>
               <article className={styles.commandActionCard}>
-                <p className={styles.commandActionEyebrow}>Recall Control</p>
-                <strong className={styles.commandActionTitle}>Abort the order</strong>
+                <p className={styles.commandActionEyebrow}>Geri Çağırma</p>
+                <strong className={styles.commandActionTitle}>Buyruğu boz</strong>
                 <p className={styles.commandActionCopy}>
-                  Pull the column back if a better objective appears or if the current window turns against you.
+                  Daha iyi hedef çıkarsa veya pencere aleyhine dönerse kolu geri çek.
                 </p>
                 <Button
                   type="button"
@@ -3034,14 +3083,14 @@ export function MapPage() {
                     setSelectedMarchId(null);
                   }}
                 >
-                  {isRecallingMarch ? "Please wait" : "Recall"}
+                  {isRecallingMarch ? "Bekle" : "Geri çağır"}
                 </Button>
               </article>
               <article className={styles.commandActionCard}>
-                <p className={styles.commandActionEyebrow}>Retarget</p>
-                <strong className={styles.commandActionTitle}>{selectedMarchRetargetable ? selectedMarchRetargetLabel : "Select a new objective"}</strong>
+                <p className={styles.commandActionEyebrow}>Yön Değiştir</p>
+                <strong className={styles.commandActionTitle}>{selectedMarchRetargetable ? selectedMarchRetargetLabel : "Yeni hedef seç"}</strong>
                 <p className={styles.commandActionCopy}>
-                  Keep a city or POI selected in the background, then redirect this march without reopening the full composer.
+                  Arkada bir oba veya POI seçili kalsın; composer açmadan seferi yeniden yönlendir.
                 </p>
                 <Button
                   type="button"

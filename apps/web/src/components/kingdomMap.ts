@@ -30,25 +30,25 @@ export interface KingdomSanctuary {
 export const KINGDOM_TIER_DEFINITIONS: Record<KingdomTierId, KingdomTierDefinition> = {
   TIER_1: {
     id: "TIER_1",
-    label: "Tier 1 Outer Provinces",
-    shortLabel: "T1 Outer",
-    description: "Starting lands and early alliance resource rushes.",
+    label: "Tier 1 Dış Obalar",
+    shortLabel: "T1 Dış",
+    description: "Başlangıç yurtları ve erken toy kaynak baskısı.",
     color: "#6cb1a6",
     fill: 0x293d34,
   },
   TIER_2: {
     id: "TIER_2",
-    label: "Tier 2 Gate Belt",
-    shortLabel: "T2 Belt",
-    description: "Mid-kingdom lands gated by alliance-held passes.",
+    label: "Tier 2 Geçit Kuşağı",
+    shortLabel: "T2 Kuşak",
+    description: "Toyların tuttuğu geçitlerle açılan orta bozkır.",
     color: "#6ca7d8",
     fill: 0x29384a,
   },
   TIER_3: {
     id: "TIER_3",
-    label: "Tier 3 Crown Core",
-    shortLabel: "T3 Core",
-    description: "Central objective lands around the kingdom temple.",
+    label: "Tier 3 Kut Merkezi",
+    shortLabel: "T3 Kut",
+    description: "Kut tapınağı çevresindeki merkezi hedef toprakları.",
     color: "#a888d8",
     fill: 0x3a304f,
   },
@@ -122,7 +122,7 @@ export function getKingdomPasses(worldSize: number): KingdomPass[] {
     const point = projectRingTile(worldSize, INNER_RING_RATIO, angle);
     return {
       id: `tier-3-pass-${index}`,
-      label: `Crown Pass ${index + 1}`,
+      label: `Kut Geçidi ${index + 1}`,
       tier: "TIER_3" as const,
       x: point.x,
       y: point.y,
@@ -135,7 +135,7 @@ export function getKingdomPasses(worldSize: number): KingdomPass[] {
     const point = projectRingTile(worldSize, OUTER_RING_RATIO, angle);
     return {
       id: `tier-2-pass-${index}`,
-      label: `Gate Pass ${index + 1}`,
+      label: `Dağ Geçidi ${index + 1}`,
       tier: "TIER_2" as const,
       x: point.x,
       y: point.y,
@@ -170,10 +170,10 @@ export function getKingdomSanctuaries(worldSize: number): KingdomSanctuary[] {
   };
   const shrineRadius = maxRadius * 0.18;
   const shrines = [
-    { id: "north-altar", label: "North Altar", angle: -Math.PI / 2, color: "#85d0a1" },
-    { id: "east-altar", label: "East Altar", angle: 0, color: "#e2bb72" },
-    { id: "south-altar", label: "South Altar", angle: Math.PI / 2, color: "#d47b5a" },
-    { id: "west-altar", label: "West Altar", angle: Math.PI, color: "#72ced1" },
+    { id: "north-altar", label: "Kuzey Sunağı", angle: -Math.PI / 2, color: "#85d0a1" },
+    { id: "east-altar", label: "Doğu Sunağı", angle: 0, color: "#e2bb72" },
+    { id: "south-altar", label: "Güney Sunağı", angle: Math.PI / 2, color: "#d47b5a" },
+    { id: "west-altar", label: "Batı Sunağı", angle: Math.PI, color: "#72ced1" },
   ].map((entry) => ({
     id: entry.id,
     label: entry.label,
@@ -186,7 +186,7 @@ export function getKingdomSanctuaries(worldSize: number): KingdomSanctuary[] {
   return [
     {
       id: "crown-temple",
-      label: "Crown Temple",
+      label: "Kut Tapınağı",
       tier: "TIER_3",
       x: crown.x,
       y: crown.y,
@@ -218,4 +218,3 @@ export function isKingdomMountainTile(x: number, y: number, worldSize: number) {
 
   return innerRidge || outerRidge || spur;
 }
-

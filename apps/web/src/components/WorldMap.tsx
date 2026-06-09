@@ -32,7 +32,7 @@ import {
   tileToWorld,
   worldToTile,
 } from "./worldMapShared";
-import { getWorldRegions } from "./worldRegions";
+import { getWorldRegionForTile, getWorldRegions } from "./worldRegions";
 
 const poiResourceLabels: Record<PoiResourceType, string> = {
   WOOD: "Wood",
@@ -967,6 +967,7 @@ class FrontierMapScene extends Phaser.Scene {
       const terrainAlpha = tile.state === "VISIBLE" ? 0.98 : tile.state === "DISCOVERED" ? 0.92 : 1;
       this.terrainGraphics.fillStyle(getTerrainFill(tile, this.worldSize), terrainAlpha);
       this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
+      this.drawPoliticalTileOverlay(tile, x, y);
 
       const pass = getNearestKingdomPass(tile.x, tile.y, this.worldSize, 0.72);
       const isMountain = !pass && isKingdomMountainTile(tile.x, tile.y, this.worldSize);
@@ -995,6 +996,7 @@ class FrontierMapScene extends Phaser.Scene {
       }
     }
 
+    this.drawWorldRegionBorders();
     this.drawKingdomBoundaryRings();
 
     if (this.currentDetailLevel === "near") {
@@ -1014,6 +1016,98 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     this.syncAmbientMotes();
+  }
+
+  private drawPoliticalTileOverlay(tile: FogTileView, x: number, y: number) {
+    if (!this.terrainGraphics) {
+      return;
+    }
+
+    const region = getWorldRegionForTile(tile.x, tile.y, this.worldSize);
+    const alpha = tile.state === "VISIBLE" ? 0.115 : tile.state === "DISCOVERED" ? 0.075 : 0.028;
+    this.terrainGraphics.fillStyle(region.fill, alpha);
+    this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
+
+    if (this.currentDetailLevel !== "near" && tile.state !== "HIDDEN") {
+      const hash = hashCoordinate(tile.x + region.capitalX, tile.y + region.capitalY);
+      if (hash % 5 === 0) {
+        this.terrainGraphics.fillStyle(region.fill, alpha * 0.9);
+        this.terrainGraphics.fillCircle(x + 28 + (hash % 72), y + 26 + (Math.floor(hash / 11) % 72), 18);
+      }
+    }
+  }
+
+  private drawWorldRegionBorders() {
+    if (!this.gridGraphics) {
+      return;
+    }
+
+    const tileKeys = new Set(this.tiles.map((tile) => `${tile.x}:${tile.y}`));
+    const alpha = this.currentDetailLevel === "far" ? 0.34 : this.currentDetailLevel === "mid" ? 0.28 : 0.2;
+    const brightAlpha = this.currentDetailLevel === "far" ? 0.42 : this.currentDetailLevel === "mid" ? 0.34 : 0.26;
+    const shadowWidth = this.currentDetailLevel === "near" ? 4 : 6;
+    const lineWidth = this.currentDetailLevel === "near" ? 1.4 : 2.2;
+
+    for (const tile of this.tiles) {
+      const region = getWorldRegionForTile(tile.x, tile.y, this.worldSize);
+      const x = tile.x * MAP_TILE_WORLD_SIZE;
+      const y = tile.y * MAP_TILE_WORLD_SIZE;
+      const stateAlpha = tile.state === "HIDDEN" ? 0.36 : tile.state === "DISCOVERED" ? 0.68 : 1;
+      const rightKey = `${tile.x + 1}:${tile.y}`;
+      const downKey = `${tile.x}:${tile.y + 1}`;
+
+      if (tile.x < this.worldSize - 1 && tileKeys.has(rightKey)) {
+        const rightRegion = getWorldRegionForTile(tile.x + 1, tile.y, this.worldSize);
+        if (rightRegion.id !== region.id) {
+          this.drawWorldRegionBorderLine(
+            x + MAP_TILE_WORLD_SIZE,
+            y,
+            x + MAP_TILE_WORLD_SIZE,
+            y + MAP_TILE_WORLD_SIZE,
+            shadowWidth,
+            lineWidth,
+            alpha * stateAlpha,
+            brightAlpha * stateAlpha,
+          );
+        }
+      }
+
+      if (tile.y < this.worldSize - 1 && tileKeys.has(downKey)) {
+        const downRegion = getWorldRegionForTile(tile.x, tile.y + 1, this.worldSize);
+        if (downRegion.id !== region.id) {
+          this.drawWorldRegionBorderLine(
+            x,
+            y + MAP_TILE_WORLD_SIZE,
+            x + MAP_TILE_WORLD_SIZE,
+            y + MAP_TILE_WORLD_SIZE,
+            shadowWidth,
+            lineWidth,
+            alpha * stateAlpha,
+            brightAlpha * stateAlpha,
+          );
+        }
+      }
+    }
+  }
+
+  private drawWorldRegionBorderLine(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    shadowWidth: number,
+    lineWidth: number,
+    shadowAlpha: number,
+    lineAlpha: number,
+  ) {
+    if (!this.gridGraphics) {
+      return;
+    }
+
+    this.gridGraphics.lineStyle(shadowWidth, 0x0b0d10, shadowAlpha);
+    this.gridGraphics.lineBetween(x1, y1, x2, y2);
+    this.gridGraphics.lineStyle(lineWidth, 0xf8e2a8, lineAlpha);
+    this.gridGraphics.lineBetween(x1, y1, x2, y2);
   }
 
   private drawTerrainDecoration(tile: FogTileView, x: number, y: number) {
@@ -1343,7 +1437,7 @@ class FrontierMapScene extends Phaser.Scene {
           0.5,
           0.5,
         );
-        regionLabel.setAlpha(this.currentDetailLevel === "far" ? 0.18 : 0.24);
+        regionLabel.setAlpha(this.currentDetailLevel === "far" ? 0.28 : 0.42);
       }
     }
 
@@ -1696,7 +1790,7 @@ class FrontierMapScene extends Phaser.Scene {
     const tierLabels = [
       {
         id: "tier-3",
-        label: "TIER 3\nCROWN CORE",
+        label: "TIER 3\nKUT MERKEZİ",
         x: centerTile,
         y: Math.max(2, centerTile - 9),
         color: "#d7b4ff",
@@ -1704,7 +1798,7 @@ class FrontierMapScene extends Phaser.Scene {
       },
       {
         id: "tier-2",
-        label: "TIER 2\nGATE BELT",
+        label: "TIER 2\nGEÇİT KUŞAĞI",
         x: centerTile,
         y: Math.max(2, centerTile - 19),
         color: "#9fd2ff",
@@ -1712,7 +1806,7 @@ class FrontierMapScene extends Phaser.Scene {
       },
       {
         id: "tier-1",
-        label: "TIER 1\nOUTER PROVINCES",
+        label: "TIER 1\nDIŞ OBALAR",
         x: Math.max(3, Math.floor(this.worldSize * 0.22)),
         y: Math.max(3, Math.floor(this.worldSize * 0.16)),
         color: "#9eddb0",
@@ -1752,7 +1846,7 @@ class FrontierMapScene extends Phaser.Scene {
         `sanctuary-glyph:${sanctuary.id}`,
         point.x,
         point.y - 10,
-        sanctuary.id === "crown-temple" ? "C" : "A",
+        sanctuary.id === "crown-temple" ? "K" : "S",
         {
           color: sanctuary.color,
           fontFamily: "'Cinzel', 'Palatino Linotype', serif",
@@ -1801,7 +1895,7 @@ class FrontierMapScene extends Phaser.Scene {
         `kingdom-pass:${pass.id}`,
         point.x,
         point.y - 38,
-        pass.tier === "TIER_3" ? "Crown Pass" : "Gate Pass",
+        pass.tier === "TIER_3" ? "Kut Geçidi" : "Dağ Geçidi",
         {
           color: passColor,
           fontFamily: "'Inter', sans-serif",

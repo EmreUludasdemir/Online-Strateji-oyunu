@@ -218,7 +218,7 @@ function createQueueItems(state: GameStateResponse["city"]): QueueSummaryItem[] 
       : {
           id: "upgrade",
           label: "Yapı",
-          value: "Idle",
+          value: "Boş",
           hint: "Yeni oba buyruğuna hazır",
         },
     state.activeTraining
@@ -231,7 +231,7 @@ function createQueueItems(state: GameStateResponse["city"]): QueueSummaryItem[] 
       : {
           id: "training",
           label: "Ordu",
-          value: "Ready",
+          value: "Hazır",
           hint: "Yeni talim buyruğuna hazır",
         },
     state.activeResearch
@@ -361,8 +361,8 @@ export function GameLayout() {
       navigate("/login", { replace: true });
     },
     onError: (error) => {
-      const message = error instanceof ApiClientError ? error.message : "Failed to logout";
-      enqueueToast({ tone: "error", title: "Logout Failed", body: message });
+      const message = error instanceof ApiClientError ? error.message : "Çıkış yapılamadı";
+      enqueueToast({ tone: "error", title: "Çıkış Hatası", body: message });
     },
   });
 
@@ -377,13 +377,13 @@ export function GameLayout() {
       }
       enqueueToast({
         tone: "success",
-        title: "Upgrade Started",
-        body: "A new build order has been placed in the city queue.",
+        title: "Yükseltme Başladı",
+        body: "Yeni yapı buyruğu oba kuyruğuna alındı.",
       });
     },
     onError: (error) => {
-      const message = error instanceof ApiClientError ? error.message : "Failed to start upgrade";
-      enqueueToast({ tone: "error", title: "Upgrade Failed", body: message });
+      const message = error instanceof ApiClientError ? error.message : "Yükseltme başlatılamadı";
+      enqueueToast({ tone: "error", title: "Yükseltme Hatası", body: message });
     },
   });
 
@@ -399,13 +399,13 @@ export function GameLayout() {
       }
       enqueueToast({
         tone: "success",
-        title: "Training Queued",
-        body: "New troops have been entered into the barracks queue.",
+        title: "Talim Kuyruğa Alındı",
+        body: "Yeni birlikler kışla kuyruğuna girdi.",
       });
     },
     onError: (error) => {
-      const message = error instanceof ApiClientError ? error.message : "Failed to queue training";
-      enqueueToast({ tone: "error", title: "Training Failed", body: message });
+      const message = error instanceof ApiClientError ? error.message : "Talim kuyruğa alınamadı";
+      enqueueToast({ tone: "error", title: "Talim Hatası", body: message });
     },
   });
 
@@ -419,13 +419,13 @@ export function GameLayout() {
       });
       enqueueToast({
         tone: "info",
-        title: "Research Started",
-        body: "The academy has started a new doctrine study.",
+        title: "Töre Çalışması Başladı",
+        body: "Bilge ocağı yeni çalışmaya başladı.",
       });
     },
     onError: (error) => {
-      const message = error instanceof ApiClientError ? error.message : "Failed to start research";
-      enqueueToast({ tone: "error", title: "Research Failed", body: message });
+      const message = error instanceof ApiClientError ? error.message : "Töre çalışması başlatılamadı";
+      enqueueToast({ tone: "error", title: "Bilge Hatası", body: message });
     },
   });
 
@@ -447,16 +447,16 @@ export function GameLayout() {
         target: march.targetPoiName ?? march.targetCityName ?? "unknown",
       });
       const targetName = march.targetPoiName ?? march.targetCityName ?? "target";
-      const missionLabel = march.objective === "RESOURCE_GATHER" ? "Gather March" : "March Dispatched";
+      const missionLabel = march.objective === "RESOURCE_GATHER" ? "Hasat Seferi" : "Sefer Gönderildi";
       enqueueToast({
         tone: "info",
         title: missionLabel,
-        body: `${targetName} departure confirmed. ETA ${march.remainingSeconds}s.`,
+        body: `${targetName} çıkışı onaylandı. ETA ${march.remainingSeconds}s.`,
       });
     },
     onError: (error) => {
-      const message = error instanceof ApiClientError ? error.message : "Failed to dispatch march";
-      enqueueToast({ tone: "error", title: "March Failed", body: message });
+      const message = error instanceof ApiClientError ? error.message : "Sefer gönderilemedi";
+      enqueueToast({ tone: "error", title: "Sefer Hatası", body: message });
     },
   });
 
@@ -469,13 +469,13 @@ export function GameLayout() {
       ]);
       enqueueToast({
         tone: "warning",
-        title: "March Recalled",
-        body: "Troops are returning to the city.",
+        title: "Sefer Geri Çağrıldı",
+        body: "Birlikler obaya dönüyor.",
       });
     },
     onError: (error) => {
-      const message = error instanceof ApiClientError ? error.message : "Failed to recall march";
-      enqueueToast({ tone: "error", title: "Recall Failed", body: message });
+      const message = error instanceof ApiClientError ? error.message : "Sefer geri çağrılamadı";
+      enqueueToast({ tone: "error", title: "Geri Çağırma Hatası", body: message });
     },
   });
 
@@ -874,7 +874,7 @@ export function GameLayout() {
             <div>
               <h1 className={styles.brandKicker}>Bozkır Kağanlığı</h1>
               <p className={[styles.topReleaseMeta, styles.desktopOnly].join(" ")}>
-                Frontier Dominion | <span data-release-badge>{releaseLabel}</span> | <span data-version-stamp>v{__APP_VERSION__}</span>
+                Bozkır Kağanlığı | <span data-release-badge>{releaseLabel}</span> | <span data-version-stamp>v{__APP_VERSION__}</span>
               </p>
             </div>
             <span className={styles.desktopOnly}>
