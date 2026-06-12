@@ -15,7 +15,7 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-heavy);
-  animation: slideInRight 260ms var(--motion-smooth) both;
+  animation: notifyBounce 440ms var(--motion-dramatic) both;
 }
 
 .success {

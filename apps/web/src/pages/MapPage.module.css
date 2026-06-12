@@ -24,7 +24,7 @@
 }
 
 .page {
-  animation: fadeSlideUp 400ms var(--motion-smooth) both;
+  animation: cinematicReveal 500ms var(--motion-dramatic) both;
 }
 
 .hero,
@@ -40,9 +40,11 @@
   background: var(--surface-card-panel);
   transition:
     background var(--motion-base),
-    box-shadow var(--motion-base),
-    transform var(--motion-smooth);
-  animation: liftIn 420ms var(--motion-smooth) both;
+    box-shadow var(--motion-decel),
+    transform var(--motion-snappy),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
 }
 
 .hero::after,
@@ -73,7 +75,7 @@
 .marchCard:focus-within::after,
 .commandCard:focus-within::after,
 .campaignCard:focus-within::after {
-  animation: tacticalSweep 1150ms var(--motion-smooth);
+  animation: tacticalSweep 900ms var(--motion-decel);
 }
 
 .hero,
@@ -166,7 +168,9 @@
 
 .campaignCard:hover {
   background: var(--surface-card-panel-active);
-  box-shadow: var(--shadow-gold-soft);
+  box-shadow: var(--shadow-gold-strong), inset 0 0 0 1px rgba(233, 193, 118, 0.22);
+  transform: translateY(-1px) scale(1.002);
+  filter: brightness(1.03);
 }
 
 .campaignHeader {
@@ -329,7 +333,7 @@
     0 10px 24px rgba(0, 0, 0, 0.45),
     inset 0 0 0 1px rgba(255, 246, 216, 0.16);
   pointer-events: none;
-  animation: mapCompassFloat 4200ms ease-in-out infinite;
+  animation: gentleSway 5s ease-in-out infinite;
 }
 
 .mapCompassRing {
@@ -661,7 +665,7 @@
   width: min(248px, calc(100% - 2rem));
   padding: 0.75rem;
   border-radius: var(--radius-sm);
-  animation: liftIn 420ms var(--motion-smooth) both;
+  animation: liftIn 500ms var(--motion-dramatic) both;
 }
 
 .minimapHeader {
@@ -796,8 +800,8 @@
 
 .commandInput:focus-visible,
 .composerRow select:focus-visible {
-  outline: 2px solid var(--color-primary-fixed-dim);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-950), 0 0 0 4px var(--color-primary-fixed-dim);
 }
 
 .searchResults,

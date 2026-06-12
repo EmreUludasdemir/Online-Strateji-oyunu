@@ -23,7 +23,7 @@
   box-shadow: var(--shadow-heavy), inset 0 0 0 1px var(--color-panel-line);
   display: grid;
   grid-template-rows: auto 1fr auto;
-  animation: slideUp 320ms var(--motion-smooth) both;
+  animation: springBounce 420ms var(--motion-dramatic) both;
   overflow: hidden;
 }
 

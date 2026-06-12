@@ -1,4 +1,4 @@
-﻿@import "../components/ui/InboxDrawer.module.css";
+@import "../components/ui/InboxDrawer.module.css";
 
 .page,
 .dispatchBoard {
@@ -8,7 +8,7 @@
 
 .page {
   align-content: start;
-  animation: fadeSlideUp 400ms var(--motion-smooth) both;
+  animation: cinematicReveal 500ms var(--motion-dramatic) both;
 }
 
 .commandBar {
@@ -97,6 +97,7 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
+  animation: heroReveal 700ms var(--motion-dramatic) both;
 }
 
 .heroTop,
@@ -179,6 +180,23 @@
   padding: 1rem;
   border-radius: var(--radius-sm);
   background: var(--surface-card-panel);
+  transition:
+    background var(--motion-base),
+    box-shadow var(--motion-decel),
+    transform var(--motion-snappy),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
+}
+
+.summaryCard:hover,
+.boardCard:hover,
+.dispatchCell:hover,
+.routeCard:hover {
+  transform: translateY(-3px) scale(1.005);
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .summaryValue,

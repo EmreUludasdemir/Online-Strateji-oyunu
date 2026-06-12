@@ -65,6 +65,20 @@
   border-radius: var(--radius-sm);
   background: var(--surface-card-panel);
   box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--color-panel-line);
+  transition:
+    transform var(--motion-snappy),
+    background var(--motion-base),
+    box-shadow var(--motion-decel),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
+}
+
+.panelStatCard:hover {
+  transform: translateY(-2px) scale(1.01);
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .panelStatGridCompact .panelStatCard {
@@ -149,6 +163,20 @@
   border-radius: var(--radius-sm);
   background: var(--surface-card-panel);
   box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--color-panel-line);
+  transition:
+    transform var(--motion-snappy),
+    background var(--motion-base),
+    box-shadow var(--motion-decel),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
+}
+
+.feedCardShell:hover {
+  transform: translateY(-2px) scale(1.01);
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .feedCardShellInfo {

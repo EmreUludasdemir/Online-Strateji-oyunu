@@ -7,6 +7,10 @@
   gap: 1rem;
 }
 
+.page {
+  animation: cinematicReveal 500ms var(--motion-dramatic) both;
+}
+
 .hero {
   display: grid;
   gap: 1rem;
@@ -16,6 +20,7 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
+  animation: heroReveal 700ms var(--motion-dramatic) both;
 }
 
 .hero::before {
@@ -76,7 +81,24 @@
   overflow: hidden;
   padding: 1rem;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-container-high);
+  background: var(--surface-card-panel);
+  transition:
+    transform var(--motion-snappy),
+    background var(--motion-base),
+    box-shadow var(--motion-decel),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
+}
+
+.summaryCard:hover,
+.memberCard:hover,
+.donationRow:hover,
+.rankRow:hover {
+  transform: translateY(-2px) scale(1.01);
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .summaryValue {

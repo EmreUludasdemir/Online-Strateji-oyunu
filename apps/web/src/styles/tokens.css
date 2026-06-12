@@ -228,14 +228,26 @@
   --motion-fast: 140ms ease;
   --motion-base: 220ms ease;
   --motion-slow: 460ms ease;
-  --motion-spring: 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-spring: 420ms cubic-bezier(0.175, 0.885, 0.32, 1.15);
   --motion-smooth: 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --motion-elastic: 500ms cubic-bezier(0.34, 1.15, 0.64, 1);
+  --motion-dramatic: 800ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-snappy: 200ms cubic-bezier(0.2, 0, 0, 1);
+  --motion-decel: 350ms cubic-bezier(0, 0, 0.2, 1);
+  --stagger-1: 0ms;
+  --stagger-2: 20ms;
+  --stagger-3: 40ms;
+  --stagger-4: 60ms;
+  --stagger-5: 80ms;
+  --stagger-6: 100ms;
+  --stagger-7: 120ms;
+  --stagger-8: 140ms;
 
   /* Glows */
-  --glow-gold: 0 0 24px rgba(233, 193, 118, 0.45), 0 0 64px rgba(233, 193, 118, 0.2);
-  --glow-teal: 0 0 24px rgba(184, 201, 211, 0.35), 0 0 64px rgba(184, 201, 211, 0.15);
-  --glow-danger: 0 0 24px rgba(255, 180, 171, 0.45), 0 0 64px rgba(255, 180, 171, 0.18);
-  --glow-success: 0 0 24px rgba(84, 169, 120, 0.45), 0 0 64px rgba(84, 169, 120, 0.18);
+  --glow-gold: 0 0 16px rgba(233, 193, 118, 0.35), 0 0 42px rgba(233, 193, 118, 0.12);
+  --glow-teal: 0 0 16px rgba(184, 201, 211, 0.25), 0 0 42px rgba(184, 201, 211, 0.10);
+  --glow-danger: 0 0 16px rgba(255, 180, 171, 0.35), 0 0 42px rgba(255, 180, 171, 0.12);
+  --glow-success: 0 0 16px rgba(84, 169, 120, 0.35), 0 0 42px rgba(84, 169, 120, 0.12);
   --color-map-allied: #72ced1;
   --color-map-hostile: #d47b5a;
   --color-map-neutral: #f4d79c;
@@ -419,10 +431,10 @@
   --surface-chip-danger: rgba(155, 34, 27, 0.12);
   --surface-glass: rgba(255, 250, 242, 0.76);
   --glass-blur: blur(10px);
-  --glow-gold: 0 0 20px rgba(139, 93, 24, 0.28), 0 0 54px rgba(139, 93, 24, 0.12);
-  --glow-teal: 0 0 20px rgba(52, 87, 102, 0.24), 0 0 54px rgba(52, 87, 102, 0.10);
-  --glow-danger: 0 0 20px rgba(155, 34, 27, 0.26), 0 0 54px rgba(155, 34, 27, 0.10);
-  --glow-success: 0 0 20px rgba(40, 114, 70, 0.24), 0 0 54px rgba(40, 114, 70, 0.10);
+  --glow-gold: 0 0 14px rgba(139, 93, 24, 0.20), 0 0 36px rgba(139, 93, 24, 0.08);
+  --glow-teal: 0 0 14px rgba(52, 87, 102, 0.18), 0 0 36px rgba(52, 87, 102, 0.08);
+  --glow-danger: 0 0 14px rgba(155, 34, 27, 0.20), 0 0 36px rgba(155, 34, 27, 0.08);
+  --glow-success: 0 0 14px rgba(40, 114, 70, 0.18), 0 0 36px rgba(40, 114, 70, 0.08);
   --color-map-allied: #2f7d84;
   --color-map-hostile: #a84f30;
   --color-map-neutral: #8b5d18;
@@ -460,8 +472,8 @@
   --color-panel-edge: rgba(255, 255, 255, 0.34);
   --color-panel-line: rgba(255, 255, 255, 0.18);
   --color-overlay: rgba(0, 0, 0, 0.72);
-  --glow-gold: 0 0 18px rgba(255, 209, 102, 0.4), 0 0 52px rgba(255, 209, 102, 0.14);
-  --glow-teal: 0 0 18px rgba(125, 211, 252, 0.4), 0 0 52px rgba(125, 211, 252, 0.14);
+  --glow-gold: 0 0 12px rgba(255, 209, 102, 0.3), 0 0 32px rgba(255, 209, 102, 0.10);
+  --glow-teal: 0 0 12px rgba(125, 211, 252, 0.3), 0 0 32px rgba(125, 211, 252, 0.10);
   --surface-shell-bg: linear-gradient(180deg, rgba(2, 2, 2, 0.98), rgba(8, 8, 8, 1));
   --surface-shell-sidebar: linear-gradient(180deg, rgba(8, 8, 8, 0.98), rgba(2, 2, 2, 1));
   --surface-shell-topbar: linear-gradient(180deg, rgba(8, 8, 8, 0.98), rgba(2, 2, 2, 0.98));

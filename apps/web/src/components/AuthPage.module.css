@@ -15,7 +15,7 @@
   justify-content: center;
   gap: 1.25rem;
   color: var(--color-on-surface);
-  animation: fadeSlideUp 560ms var(--motion-smooth) both;
+  animation: heroReveal 700ms var(--motion-dramatic) both;
 }
 
 .hero::before {
@@ -131,7 +131,8 @@
   background: var(--color-surface-container-high);
   box-shadow: var(--shadow-soft);
   color: var(--color-on-surface);
-  animation: scaleIn 440ms var(--motion-spring) both;
+  animation: elasticIn 600ms var(--motion-spring) both;
+  will-change: transform, opacity;
 }
 
 .cardHeader {
@@ -210,19 +211,20 @@
   text-transform: uppercase;
   font-size: 0.75rem;
   cursor: pointer;
-  box-shadow: var(--shadow-gold-soft);
-  transition: transform var(--motion-base), box-shadow var(--motion-base);
+  box-shadow: var(--shadow-gold-strong);
+  transition: transform var(--motion-snappy), box-shadow var(--motion-decel);
 }
 
 .submitButton:hover:not(:disabled),
 .demoButton:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-gold-strong);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--shadow-gold-strong), 0 0 18px rgba(233, 193, 118, 0.2);
 }
 
 .submitButton:active:not(:disabled),
 .demoButton:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.96);
+  transition-duration: 80ms;
 }
 
 .submitButton:disabled,

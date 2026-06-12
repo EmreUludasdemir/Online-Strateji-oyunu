@@ -1,4 +1,4 @@
-﻿.embassyStatRow {
+.embassyStatRow {
   display: flex;
   justify-content: space-between;
   margin-bottom: 0.5rem;
@@ -12,6 +12,10 @@
 .rosterList {
   display: grid;
   gap: 1rem;
+}
+
+.page {
+  animation: cinematicReveal 500ms var(--motion-dramatic) both;
 }
 
 .commandBar {
@@ -129,6 +133,20 @@
   padding: 1rem;
   border-radius: var(--radius-sm);
   background: var(--surface-card-panel);
+  transition:
+    background var(--motion-base),
+    box-shadow var(--motion-decel),
+    transform var(--motion-snappy),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
+}
+
+.rosterRow:hover {
+  transform: translateY(-3px) scale(1.005);
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .treasuryTotal strong {

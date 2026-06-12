@@ -1,8 +1,12 @@
-﻿.page,
+.page,
 .rosterList,
 .mainColumn {
   display: grid;
   gap: 1rem;
+}
+
+.page {
+  animation: cinematicReveal 500ms var(--motion-dramatic) both;
 }
 
 .commandBar {
@@ -96,6 +100,7 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-soft);
+  animation: heroReveal 700ms var(--motion-dramatic) both;
 }
 
 .hero::before {
@@ -188,6 +193,22 @@
   padding: 1rem;
   border-radius: var(--radius-sm);
   background: var(--surface-card-panel);
+  transition:
+    background var(--motion-base),
+    box-shadow var(--motion-decel),
+    transform var(--motion-snappy),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
+}
+
+.summaryCard:hover,
+.stageCard:hover,
+.attributeCard:hover {
+  transform: translateY(-3px) scale(1.005);
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .summaryValue,
@@ -218,14 +239,18 @@
   text-align: left;
   cursor: pointer;
   transition:
-    transform var(--motion-base),
+    transform var(--motion-snappy),
     background var(--motion-base),
-    box-shadow var(--motion-base);
+    box-shadow var(--motion-decel),
+    filter var(--motion-base);
+  will-change: transform, box-shadow;
 }
 
 .rosterCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.01);
   background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .rosterCardActive {

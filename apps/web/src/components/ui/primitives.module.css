@@ -22,26 +22,31 @@
   text-transform: uppercase;
   font-size: 0.75rem;
   transition:
-    transform var(--motion-fast),
+    transform var(--motion-snappy),
     box-shadow var(--motion-base),
-    background var(--motion-fast),
+    background var(--motion-snappy),
     opacity var(--motion-fast),
-    color var(--motion-fast);
+    color var(--motion-fast),
+    filter var(--motion-base);
   cursor: pointer;
-  will-change: transform;
+  will-change: transform, box-shadow;
   position: relative;
   overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .button:hover:not(:disabled),
 .iconButton:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.01);
+  filter: brightness(1.04);
 }
 
 .button:active:not(:disabled),
 .iconButton:active:not(:disabled) {
   transform: translateY(0) scale(0.98);
   transition-duration: 80ms;
+  filter: brightness(0.92);
 }
 
 .button:disabled,
@@ -52,8 +57,15 @@
 
 .button:focus-visible,
 .iconButton:focus-visible {
-  outline: 2px solid var(--color-primary-fixed-dim);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-950), 0 0 0 4px var(--color-primary-fixed-dim);
+}
+
+.button svg,
+.iconButton svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
 }
 
 .button {
@@ -82,46 +94,54 @@
 
 .button:hover::after,
 .iconButton:hover::after {
-  animation: sheenSweep 900ms var(--motion-smooth);
+  animation: sheenSweep 800ms var(--motion-decel);
 }
 
 .primary {
   background: linear-gradient(180deg, var(--color-primary-fixed), var(--color-primary-fixed-dim));
   color: var(--color-on-primary-fixed);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
 }
 
 .primary:hover:not(:disabled) {
   background: linear-gradient(180deg, var(--color-primary-fixed-dim), var(--color-primary-fixed));
-  box-shadow: var(--shadow-gold-soft);
+  box-shadow: var(--shadow-gold-strong), inset 0 0 12px rgba(255, 255, 255, 0.5);
 }
 
 .secondary {
-  background: var(--surface-shell-card);
-  color: var(--color-on-surface);
+  background: var(--color-surface-container-low);
+  color: var(--color-ink-200);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 0 0 1px var(--color-panel-line);
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--surface-shell-card-strong);
-  box-shadow: var(--shadow-teal-soft);
+  background: var(--color-surface-container);
+  color: var(--color-ink-100);
+  box-shadow: var(--shadow-teal-soft), inset 0 0 8px rgba(184, 201, 211, 0.12);
 }
 
 .ghost {
-  background: rgba(233, 193, 118, 0.04);
-  color: var(--color-on-surface);
-  box-shadow: inset 0 0 0 1px var(--color-panel-line);
+  background: transparent;
+  color: var(--color-ink-300);
+  box-shadow: none;
 }
 
 .ghost:hover:not(:disabled) {
-  background: var(--surface-shell-nav);
+  background: rgba(233, 193, 118, 0.08);
+  color: var(--color-ink-100);
 }
 
 .danger {
-  background: var(--surface-state-hostile);
-  color: var(--color-error);
+  background: rgba(42, 10, 8, 0.96);
+  color: var(--color-red-500);
+  border: 1px solid rgba(147, 0, 10, 0.5);
+  box-shadow: inset 0 0 12px rgba(255, 180, 171, 0.05);
 }
 
 .danger:hover:not(:disabled) {
-  box-shadow: var(--glow-danger);
+  background: rgba(60, 15, 12, 0.98);
+  border-color: rgba(147, 0, 10, 0.8);
+  box-shadow: var(--glow-danger), inset 0 0 16px rgba(255, 180, 171, 0.1);
 }
 
 .small {
@@ -149,19 +169,19 @@
 
 .iconButton:hover:not(:disabled) {
   background: var(--surface-shell-card-strong);
-  box-shadow: var(--shadow-gold-soft);
+  box-shadow: var(--shadow-gold-soft), inset 0 0 8px rgba(233, 193, 118, 0.15);
 }
 
 .iconButton svg {
   transition:
-    transform var(--motion-smooth),
+    transform var(--motion-spring),
     filter var(--motion-base),
     opacity var(--motion-base);
 }
 
 .iconButton:hover:not(:disabled) svg {
-  transform: scale(1.05);
-  filter: drop-shadow(0 0 6px rgba(233, 193, 118, 0.25));
+  transform: scale(1.12) rotate(-2deg);
+  filter: drop-shadow(0 0 8px rgba(233, 193, 118, 0.35));
 }
 
 .badge,
@@ -203,7 +223,7 @@
 .timerChip {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  animation: pulseGold 2.8s ease-in-out infinite;
+  animation: energyPulse 3.2s ease-in-out infinite;
   background: var(--surface-chip-warning);
   color: var(--color-primary-fixed);
 }
@@ -219,19 +239,23 @@
 }
 
 .sectionCard {
-  padding: 1.25rem;
+  padding: 1.5rem;
   border-radius: var(--radius-sm);
   border: none;
   transition:
-    box-shadow var(--motion-base),
-    transform var(--motion-smooth);
-  animation: liftIn 420ms var(--motion-smooth) both;
+    box-shadow var(--motion-decel),
+    transform var(--motion-snappy),
+    background var(--motion-base),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
 }
 
 .sectionCard:hover {
   background: var(--surface-card-panel-active);
-  box-shadow: var(--shadow-gold-soft);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-gold-soft), inset 0 0 0 1px rgba(233, 193, 118, 0.22);
+  transform: translateY(-1px) scale(1.002);
+  filter: brightness(1.03);
 }
 
 .sectionCard::after,
@@ -257,7 +281,7 @@
 
 .sectionCard:hover::before,
 .resourcePill:hover::before {
-  animation: sheenSweep 1200ms var(--motion-smooth);
+  animation: sheenSweep 1000ms var(--motion-decel);
 }
 
 .sectionHeader {
@@ -299,15 +323,19 @@
   background: var(--surface-shell-card);
   border-left: 2px solid var(--surface-panel-border-strong);
   transition:
-    box-shadow var(--motion-base),
-    transform var(--motion-fast);
-  animation: fadeSlideDown 460ms var(--motion-smooth) both;
+    box-shadow var(--motion-decel),
+    transform var(--motion-snappy),
+    background var(--motion-fast),
+    filter var(--motion-base);
+  animation: fadeSlideDown 460ms var(--motion-dramatic) both;
+  will-change: transform;
 }
 
 .resourcePill:hover {
   background: var(--surface-shell-card-strong);
-  box-shadow: var(--shadow-gold-soft);
-  transform: translateY(-1px);
+  box-shadow: var(--shadow-gold-soft), inset 0 0 0 1px rgba(233, 193, 118, 0.22);
+  transform: translateY(-1px) scale(1.01);
+  filter: brightness(1.04);
 }
 
 .resourcePillCompact {
@@ -364,12 +392,12 @@
   display: block;
   flex: 0 0 auto;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
-  transition: transform var(--motion-fast), filter var(--motion-base);
+  transition: transform var(--motion-spring), filter var(--motion-base);
 }
 
 .resourcePill:hover .resourceIcon {
-  transform: scale(1.08);
-  filter: drop-shadow(0 0 6px rgba(233, 193, 118, 0.35));
+  transform: scale(1.15) rotate(-5deg);
+  filter: drop-shadow(0 0 8px rgba(233, 193, 118, 0.45));
 }
 
 .resourceLabel {
@@ -409,21 +437,49 @@
 }
 
 .emptyState {
-  padding: 1.25rem;
+  padding: 1.5rem;
   border-radius: var(--radius-sm);
   color: var(--color-on-surface-variant);
-  border: none;
-  background: var(--surface-card-panel);
+  border: 1px dashed var(--color-panel-line);
+  background: rgba(17, 19, 22, 0.4);
+  backdrop-filter: blur(4px);
+  text-align: center;
+}
+
+.errorState {
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-error);
+  border: 1px dashed var(--surface-panel-border-strong);
+  background: var(--surface-state-hostile);
+  backdrop-filter: blur(4px);
+  text-align: center;
+  box-shadow: inset 0 0 12px rgba(255, 180, 171, 0.05);
 }
 
 .emptyTitle {
   font-family: var(--font-display);
   font-size: 1.125rem;
-  color: var(--color-primary-fixed);
+  font-weight: 700;
+  color: var(--color-ink-200);
+  font-style: italic;
+}
+
+.errorTitle {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-error);
   font-style: italic;
 }
 
 .emptyBody {
   margin-top: 0.5rem;
   color: var(--color-outline);
+}
+
+.errorBody {
+  margin-top: 0.5rem;
+  color: var(--color-error);
+  opacity: 0.8;
 }

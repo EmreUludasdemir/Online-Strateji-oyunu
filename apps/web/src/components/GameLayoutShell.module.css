@@ -1,4 +1,4 @@
-﻿.shell {
+.shell {
   min-height: 100vh;
   height: 100vh;
   display: grid;
@@ -203,8 +203,9 @@
 .navLink:hover {
   background: var(--surface-shell-nav-active);
   border-color: var(--surface-panel-border-strong);
-  transform: translateX(4px);
+  transform: translateX(4px) scale(1.005);
   box-shadow: var(--shadow-soft), inset 3px 0 0 var(--surface-panel-border-strong);
+  filter: brightness(1.02);
 }
 
 .navIcon {
@@ -349,11 +350,12 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 1rem;
-  padding: 0 1.4rem;
+  gap: 1.5rem;
+  padding: 0.25rem 1.75rem 0;
   background: var(--surface-shell-topbar);
   border-bottom: 1px solid var(--color-panel-line);
   z-index: var(--z-sticky);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .topBrand {
@@ -366,7 +368,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
+  gap: 0.75rem;
   min-width: 0;
   overflow: hidden;
   flex-wrap: nowrap;
@@ -375,7 +377,7 @@
 .resourceRow > * {
   flex: 1 1 0;
   min-width: 0;
-  max-width: 190px;
+  max-width: 200px;
 }
 
 .quickActions {
@@ -401,8 +403,9 @@
 
 .queueCard:hover {
   border-color: var(--surface-panel-border-strong);
-  box-shadow: var(--shadow-soft), 0 0 18px rgba(81, 163, 161, 0.12);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft), 0 0 16px rgba(81, 163, 161, 0.16);
+  transform: translateY(-1px) scale(1.002);
+  filter: brightness(1.03);
 }
 
 .queueLabel {
@@ -607,11 +610,25 @@
   }
 
   .resourceRow {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    width: 100%;
-    gap: 0.4rem;
-  }
+  display: flex;
+  width: 100%;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+  justify-content: flex-start;
+}
+
+.resourceRow::-webkit-scrollbar {
+  display: none;
+}
+
+.resourceRow > * {
+  flex: 0 0 auto;
+  width: 23%; /* Keep them roughly 4-across but allow shrink/scroll if needed */
+  max-width: none;
+}
 
   .quickActions {
     gap: 0.45rem;

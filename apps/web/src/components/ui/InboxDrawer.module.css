@@ -1,4 +1,4 @@
-﻿.layout {
+.layout {
   display: grid;
   grid-template-columns: minmax(300px, 0.4fr) minmax(0, 0.6fr);
   gap: 1rem;
@@ -71,13 +71,17 @@
   border: none;
   transition:
     background var(--motion-base),
-    transform var(--motion-base),
-    box-shadow var(--motion-base);
+    transform var(--motion-snappy),
+    box-shadow var(--motion-decel),
+    filter var(--motion-base);
+  will-change: transform, box-shadow;
 }
 
 .entryButton:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.01);
   background: var(--color-surface-container-highest);
+  box-shadow: var(--shadow-gold-soft);
+  filter: brightness(1.04);
 }
 
 .entryButtonActive {

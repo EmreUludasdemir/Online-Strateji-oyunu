@@ -32,7 +32,7 @@
 .page {
   display: grid;
   gap: 1rem;
-  animation: fadeSlideUp 400ms var(--motion-smooth) both;
+  animation: cinematicReveal 500ms var(--motion-dramatic) both;
 }
 
 .cityHome {
@@ -237,9 +237,9 @@
 
 .citySceneShortcut:hover,
 .citySceneShortcut:focus-visible {
-  transform: translateY(-2px);
+  transform: translateY(-1px) scale(1.02);
   background: rgba(27, 29, 23, 0.82);
-  box-shadow: var(--shadow-gold-soft);
+  box-shadow: var(--shadow-gold-strong), inset 0 0 0 1px rgba(233, 193, 118, 0.3);
   outline: none;
 }
 
@@ -281,8 +281,8 @@
 .citySceneNode:hover,
 .citySceneNode:focus-visible,
 .citySceneNodeSelected {
-  transform: translate(-50%, calc(-50% - 5px));
-  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.26));
+  transform: translate(-50%, calc(-50% - 6px));
+  filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.32)) brightness(1.08);
   outline: none;
 }
 
@@ -645,17 +645,20 @@
   cursor: pointer;
   box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--color-panel-line);
   transition:
-    transform var(--motion-base),
-    box-shadow var(--motion-base),
-    background var(--motion-base);
+    transform var(--motion-snappy),
+    box-shadow var(--motion-decel),
+    background var(--motion-base),
+    filter var(--motion-base);
+  will-change: transform;
 }
 
 .commandPanelButton:hover,
 .commandPanelButton:focus-visible {
-  transform: translateY(-2px);
+  transform: translateY(-1px) scale(1.005);
   background: var(--surface-card-panel-active);
-  box-shadow: var(--shadow-gold-soft);
+  box-shadow: var(--shadow-gold-strong), inset 0 0 0 1px rgba(233, 193, 118, 0.3);
   outline: none;
+  filter: brightness(1.04);
 }
 
 .commandPanelButtonActive {
@@ -721,9 +724,11 @@
   background: var(--surface-card-panel);
   transition:
     background var(--motion-base),
-    box-shadow var(--motion-base),
-    transform var(--motion-smooth);
-  animation: liftIn 420ms var(--motion-smooth) both;
+    box-shadow var(--motion-decel),
+    transform var(--motion-snappy),
+    filter var(--motion-base);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
 }
 
 .signalCard:hover,
@@ -735,9 +740,10 @@
 .cityRailCard:hover,
 .cityStageStatCard:hover,
 .cityStageCostRow:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px) scale(1.002);
   background: var(--surface-card-panel-active);
-  box-shadow: var(--shadow-gold-soft);
+  box-shadow: var(--shadow-gold-soft), inset 0 0 0 1px rgba(233, 193, 118, 0.22);
+  filter: brightness(1.03);
 }
 
 .statLabel,
