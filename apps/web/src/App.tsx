@@ -1,4 +1,4 @@
-﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
@@ -54,6 +54,11 @@ const MarketPage = lazy(async () => {
   return { default: module.MarketPage };
 });
 
+const ArmyPage = lazy(async () => {
+  const module = await import("./pages/ArmyPage");
+  return { default: module.ArmyPage };
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -91,6 +96,7 @@ export default function App() {
                     <Route path="leaderboards" element={<LeaderboardPage />} />
                     <Route path="messages" element={<MessageCenterPage />} />
                     <Route path="market" element={<MarketPage />} />
+                    <Route path="army" element={<ArmyPage />} />
                     <Route path="alliance" element={<AlliancePage />} />
                     <Route path="alliance/roles" element={<AllianceRolesPage />} />
                   </Route>

@@ -369,10 +369,9 @@ export function DashboardPage() {
           disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
         },
         {
-          label: state.city.activeTraining ? "Talim" : "Talim Et",
-          onClick: () => void train(selectedTroopType, trainingQuantity),
+          label: state.city.activeTraining ? "Kışla" : "Kışlaya Git",
+          onClick: () => navigate("/app/army"),
           variant: "secondary",
-          disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
         },
       ],
     },
@@ -434,10 +433,9 @@ export function DashboardPage() {
       disabled: !selectedDistrict || isUpgrading || selectedDistrict.isUpgradeActive || Boolean(activeUpgrade),
     },
     {
-      label: state.city.activeTraining ? "Talim" : "Talim Et",
-      onClick: () => void train(selectedTroopType, trainingQuantity),
+      label: state.city.activeTraining ? "Kışla" : "Kışlaya Git",
+      onClick: () => navigate("/app/army"),
       variant: "secondary",
-      disabled: isTraining || Boolean(state.city.activeTraining) || trainingQuantity < 1,
     },
     {
       label: activeResearch ? "Töre" : "Araştır",

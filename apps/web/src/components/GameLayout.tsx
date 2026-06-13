@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AllianceStateResponse,
   BuildingType,
@@ -34,10 +34,11 @@ import { Button } from "./ui/Button";
 import { InboxDrawer } from "./ui/InboxDrawer";
 import { SectionCard } from "./ui/SectionCard";
 import { ToastStack, type ToastItem } from "./ui/ToastStack";
+import { TooltipTitle, TooltipBody, TooltipMetric } from "./ui/Tooltip";
 
 interface HudState {
-  activeRoute: "dashboard" | "map" | "reports" | "alliance";
-  queueItems: QueueSummaryItem[];
+  activeRoute: "dashboard" | "map" | "reports" | "alliance" | "army";
+  queueItems: readonly QueueSummaryItem[];
 }
 
 export interface GameLayoutContext {
@@ -202,6 +203,9 @@ function getHudRoute(pathname: string): HudState["activeRoute"] {
   }
   if (pathname.includes("/alliance")) {
     return "alliance";
+  }
+  if (pathname.includes("/army")) {
+    return "army";
   }
   return "dashboard";
 }
@@ -554,7 +558,7 @@ export function GameLayout() {
       bootstrap: bootstrapQuery.data,
       state: stateQuery.data,
       hud: {
-        activeRoute: getHudRoute(location.pathname),
+        activeRoute: getHudRoute(location.pathname) as HudState["activeRoute"],
         queueItems: createQueueItems(stateQuery.data.city),
       },
       notifications: {
@@ -816,10 +820,50 @@ export function GameLayout() {
   }
 
   const resources = [
-    { label: copy.resources.wood, value: contextValue.state.city.resources.wood },
-    { label: copy.resources.stone, value: contextValue.state.city.resources.stone },
-    { label: copy.resources.food, value: contextValue.state.city.resources.food },
-    { label: copy.resources.gold, value: contextValue.state.city.resources.gold },
+    {
+      label: copy.resources.wood,
+      value: contextValue.state.city.resources.wood,
+      tooltip: (
+        <>
+          <TooltipTitle>{copy.resources.wood} Deposu</TooltipTitle>
+          <TooltipBody>Orman kamplarından ve kalas atölyelerinden toplanan ham kereste. Temel yapılar için gereklidir.</TooltipBody>
+          <TooltipMetric label="Saatlik Üretim" value="+15.0K / sa" />
+        </>
+      ),
+    },
+    {
+      label: copy.resources.stone,
+      value: contextValue.state.city.resources.stone,
+      tooltip: (
+        <>
+          <TooltipTitle>{copy.resources.stone} Taş Ocağı</TooltipTitle>
+          <TooltipBody>Güçlü surlar ve ileri düzey savunma yapıları inşa etmek için işlenen sağlam kayaçlar.</TooltipBody>
+          <TooltipMetric label="Saatlik Üretim" value="+8.2K / sa" />
+        </>
+      ),
+    },
+    {
+      label: copy.resources.food,
+      value: contextValue.state.city.resources.food,
+      tooltip: (
+        <>
+          <TooltipTitle>{copy.resources.food} Ambarı</TooltipTitle>
+          <TooltipBody>Askerlerin talimi, beslenmesi ve sefere çıkmaları için vazgeçilmez temel erzak.</TooltipBody>
+          <TooltipMetric label="Saatlik Üretim" value="+32.4K / sa" />
+        </>
+      ),
+    },
+    {
+      label: copy.resources.gold,
+      value: contextValue.state.city.resources.gold,
+      tooltip: (
+        <>
+          <TooltipTitle>{copy.resources.gold} Hazinesi</TooltipTitle>
+          <TooltipBody>Kervanlardan toplanan ve değerli ticari mallara dayalı servet. Bilge ocağı araştırmaları için elzemdir.</TooltipBody>
+          <TooltipMetric label="Saatlik Üretim" value="+2.1K / sa" />
+        </>
+      ),
+    },
   ];
   const storeEnabled = contextValue.bootstrap.storeEnabled;
   const releaseLabel = getLaunchPhaseLabel(contextValue.bootstrap);
@@ -854,6 +898,7 @@ export function GameLayout() {
     { id: "map", to: "/app/map", eyebrow: "Bozkır Sahası", label: "Sefer Haritası", code: "MAP" },
     { id: "alliance", to: "/app/alliance", eyebrow: "Toy Divanı", label: "Toy Meclisi", code: "TOY" },
     { id: "dashboard", to: "/app/dashboard", eyebrow: "Oba Yurdu", label: "Oba Merkezi", code: "OBA" },
+    { id: "army", to: "/app/army", eyebrow: "Talimgah", label: "Kışla", code: "ORD" },
     { id: "reports", to: "/app/reports", eyebrow: "Akın Defteri", label: "Savaş Divanı", code: "AKN" },
   ] as const;
   const archiveItems = [

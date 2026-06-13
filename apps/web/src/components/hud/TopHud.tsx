@@ -17,7 +17,7 @@ export function TopHud({
   actions,
 }: {
   brand?: ReactNode;
-  resources: Array<{ label: string; value: number }>;
+  resources: Array<{ label: string; value: number; tooltip?: ReactNode }>;
   actions: ReactNode;
 }) {
   return (
@@ -25,7 +25,13 @@ export function TopHud({
       {brand && <div className={styles.topBrand}>{brand}</div>}
       <div className={styles.resourceRow}>
         {resources.map((resource) => (
-          <ResourcePill key={resource.label} label={resource.label} value={resource.value} compact />
+          <ResourcePill
+            key={resource.label}
+            label={resource.label}
+            value={resource.value}
+            compact
+            tooltip={resource.tooltip}
+          />
         ))}
       </div>
       <div className={styles.quickActions}>{actions}</div>

@@ -1,0 +1,89 @@
+.tooltipPortal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: var(--z-toast, 9999);
+}
+
+.tooltipContent {
+  position: absolute;
+  pointer-events: none;
+  background: var(--surface-shell-card-strong);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--surface-panel-border-strong);
+  box-shadow: var(--shadow-heavy);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  min-width: 200px;
+  max-width: 320px;
+  color: var(--color-ink-200);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  animation: tooltipReveal 200ms var(--motion-snappy) forwards;
+  will-change: transform, opacity;
+  transform-origin: top center;
+}
+
+.tooltipContent.above {
+  transform-origin: bottom center;
+  animation: tooltipRevealAbove 200ms var(--motion-snappy) forwards;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary-fixed);
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.body {
+  color: var(--color-ink-200);
+}
+
+.metricRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-panel-line);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--color-ink-100);
+}
+
+.metricLabel {
+  color: var(--color-ink-300);
+  font-family: var(--font-body);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.6875rem;
+}
+
+@keyframes tooltipReveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.96) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) translateY(0);
+  }
+}
+
+@keyframes tooltipRevealAbove {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.96) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1) translateY(0);
+  }
+}

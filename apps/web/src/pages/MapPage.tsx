@@ -2327,7 +2327,13 @@ export function MapPage() {
           <SectionCard kicker={copy.map.activeMarches} title="Sefer Defteri" className={styles.marchSection}>
             <div className={styles.marchList}>
               {state.city.activeMarches.length === 0 ? (
-                <p className={styles.commandHint}>Aktif sefer yok.</p>
+                <div className={styles.marchEmptyState}>
+                  <span className={styles.marchEmptyIcon} aria-hidden="true">⚔️</span>
+                  <p className={styles.marchEmptyText}>
+                    Henüz aktif sefer yok.<br />
+                    Haritadan hedef seçerek ordu gönderin.
+                  </p>
+                </div>
               ) : null}
               {state.city.activeMarches.map((march) => {
                 const troopTotal = Object.values(march.troops).reduce((sum, value) => sum + value, 0);
@@ -2349,20 +2355,36 @@ export function MapPage() {
                       }
                     }}
                   >
-                    <div className={styles.marchMeta}>
-                      <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Hedef"}</strong>
+                    <div className={styles.marchHeader}>
+                      <div className={styles.marchTargetInfo}>
+                        <div className={styles.marchTargetIcon}>
+                          {march.objective === "RESOURCE_GATHER" ? "🌾" : "⚔️"}
+                        </div>
+                        <strong className={styles.cardTitle}>{march.targetPoiName ?? march.targetCityName ?? "Hedef"}</strong>
+                      </div>
                       <Badge tone={getMarchStatusTone(march.state)}>{getMarchStateLabel(march.state)}</Badge>
                     </div>
                     <div className={styles.marchSignalRow}>
                       <span className={styles.marchObjectivePill}>{getMarchObjectiveLabel(march.objective)}</span>
                       <span className={styles.marchSignalMeta}>{march.commanderName}</span>
                     </div>
-                    <div className={styles.progressRail} aria-hidden="true">
-                      <span style={{ width: `${progressPercent}%` }} />
+                    <div className={styles.marchProgressBar} aria-hidden="true">
+                      <div 
+                        className={[
+                          styles.marchProgressFill,
+                          march.state === "ENROUTE" ? styles.marchProgressFillEnroute :
+                          march.state === "GATHERING" ? styles.marchProgressFillGathering :
+                          march.state === "RETURNING" ? styles.marchProgressFillReturning :
+                          styles.marchProgressFillCombat
+                        ].filter(Boolean).join(" ")}
+                        style={{ width: `${progressPercent}%` }} 
+                      />
                     </div>
-                    <p className={styles.muted}>
-                      {getMarchTimingLabel(march, now)} | Mesafe {formatNumber(march.distance)} karo
-                    </p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.2rem" }}>
+                      <span className={styles.marchTimer}>{getMarchTimingLabel(march, now)}</span>
+                      <span className={styles.muted}>Mesafe {formatNumber(march.distance)} karo</span>
+                    </div>
+                    {march.state === "STAGING" && <span className={styles.marchWarningText}>⚔️ Hedefte savaş var!</span>}
                     <div className={styles.marchFootnote}>
                       <span>{formatNumber(troopTotal)} birlik</span>
                       <span>{cargoSummary}</span>

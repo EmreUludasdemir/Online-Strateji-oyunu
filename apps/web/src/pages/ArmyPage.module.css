@@ -1,0 +1,377 @@
+.page {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 100%;
+}
+
+.heroContent {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.heroStats {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.heroStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.heroStatLabel {
+  font-size: 0.75rem;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.heroStatValue {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-primary-fixed);
+  font-weight: 700;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Troop Cards --- */
+.troopGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.troopCard {
+  background: var(--surface-shell-bg);
+  border: 1px solid var(--color-panel-line);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.troopCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(233, 193, 118, 0.2);
+  border-color: rgba(233, 193, 118, 0.3);
+}
+
+.troopHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.troopTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.troopName {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--color-on-surface);
+  margin: 0;
+}
+
+.troopDesc {
+  font-size: 0.85rem;
+  color: var(--color-on-surface-variant);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.troopIconBox {
+  width: 48px;
+  height: 48px;
+  background: radial-gradient(circle at center, rgba(233, 193, 118, 0.15) 0%, transparent 70%);
+  border: 1px solid rgba(233, 193, 118, 0.2);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--color-primary-fixed);
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+}
+
+.troopStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-panel-line);
+}
+
+.troopStatItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.troopStatItem span:first-child {
+  font-size: 0.7rem;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+}
+
+.troopStatItem span:last-child {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--color-on-surface);
+}
+
+/* --- Range Slider --- */
+.sliderControl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sliderHeader label {
+  font-size: 0.85rem;
+  color: var(--color-on-surface-variant);
+  font-weight: 600;
+}
+
+.sliderValue {
+  font-family: var(--font-display);
+  color: var(--color-primary-fixed);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.sliderInput {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--color-panel-line);
+  border-radius: 3px;
+  outline: none;
+  transition: background 0.2s;
+}
+
+.sliderInput::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary-fixed);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(233, 193, 118, 0.5);
+  border: 2px solid var(--surface-hero-panel);
+}
+
+.sliderInput::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary-fixed);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(233, 193, 118, 0.5);
+  border: 2px solid var(--surface-hero-panel);
+}
+
+.costRow {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.costItem {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-family: var(--font-display);
+}
+
+.costItem.affordable {
+  color: var(--color-on-surface);
+}
+
+.costItem.expensive {
+  color: var(--color-danger);
+}
+
+.costItemIcon {
+  color: var(--color-on-surface-variant);
+}
+
+.costItem.expensive .costItemIcon {
+  color: var(--color-danger);
+}
+
+/* --- Queue Sidebar --- */
+.queuePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.queueCard {
+  background: var(--surface-hero-panel);
+  border: 1px solid var(--color-panel-line);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.queueHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.queueTitle {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--color-on-surface);
+  margin: 0;
+}
+
+.queueContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.queueItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-panel-line);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.queueItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.queueItemName {
+  font-weight: 600;
+  color: var(--color-on-surface);
+  font-size: 0.9rem;
+}
+
+.queueItemCount {
+  font-size: 0.8rem;
+  color: var(--color-primary-fixed);
+}
+
+.progressBarContainer {
+  height: 4px;
+  background: var(--color-panel-line);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: var(--color-primary-fixed);
+  transition: width 1s linear;
+}
+
+/* --- Army Composition Panel --- */
+.compBars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.compBarRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.compLabel {
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.compBarTrack {
+  height: 8px;
+  background: var(--color-panel-line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.compBarFill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.compBarFill.infantry { background: #e07a5f; }
+.compBarFill.archer { background: #81b29a; }
+.compBarFill.cavalry { background: #f2cc8f; }
+
+.compValue {
+  text-align: right;
+  font-family: var(--font-display);
+  color: var(--color-on-surface);
+}
+
+.tacticalWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.tacticalWarning span {
+  font-size: 1.1rem;
+}

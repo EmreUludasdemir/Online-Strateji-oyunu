@@ -28,6 +28,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { PageNotice } from "../components/ui/PageNotice";
 import { SectionCard } from "../components/ui/SectionCard";
 import { TimerChip } from "../components/ui/TimerChip";
+import { Tooltip, TooltipTitle, TooltipBody, TooltipMetric } from "../components/ui/Tooltip";
 import { formatNumber } from "../lib/formatters";
 import { useNow } from "../lib/useNow";
 import styles from "./ResearchPage.module.css";
@@ -262,29 +263,38 @@ export function ResearchPage() {
                       const isSelected = entry.type === selectedResearch.type;
                       const isCapped = entry.level >= entry.maxLevel;
 
+                      const tooltipContent = (
+                        <>
+                          <TooltipTitle>{entry.label}</TooltipTitle>
+                          <TooltipBody>{RESEARCH_BRIEFS[entry.type].effect}</TooltipBody>
+                          <TooltipMetric label="Mevcut Bonus" value={getResearchBonusLabel(entry.type, entry.level)} />
+                        </>
+                      );
+
                       return (
-                        <button
-                          key={entry.type}
-                          type="button"
-                          className={[
-                            styles.node,
-                            isSelected ? styles.nodeActive : "",
-                            entry.isActive ? styles.nodeRunning : "",
-                            isCapped ? styles.nodeComplete : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={() => setSelectedResearchType(entry.type)}
-                        >
-                          <span className={styles.nodeTier}>T{entry.nextLevel}</span>
-                          <strong className={styles.nodeTitle}>{entry.label}</strong>
-                          <span className={styles.nodeMeta}>
-                            Kademe {entry.level}/{entry.maxLevel}
-                          </span>
-                          <span className={styles.nodeProgress}>
-                            <span style={{ width: `${progressPercent}%` }} />
-                          </span>
-                        </button>
+                        <Tooltip key={entry.type} content={tooltipContent}>
+                          <button
+                            type="button"
+                            className={[
+                              styles.node,
+                              isSelected ? styles.nodeActive : "",
+                              entry.isActive ? styles.nodeRunning : "",
+                              isCapped ? styles.nodeComplete : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() => setSelectedResearchType(entry.type)}
+                          >
+                            <span className={styles.nodeTier}>T{entry.nextLevel}</span>
+                            <strong className={styles.nodeTitle}>{entry.label}</strong>
+                            <span className={styles.nodeMeta}>
+                              Kademe {entry.level}/{entry.maxLevel}
+                            </span>
+                            <span className={styles.nodeProgress}>
+                              <span style={{ width: `${progressPercent}%` }} />
+                            </span>
+                          </button>
+                        </Tooltip>
                       );
                     })}
                   </div>

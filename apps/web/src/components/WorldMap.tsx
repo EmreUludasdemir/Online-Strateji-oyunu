@@ -339,21 +339,21 @@ function getTerrainFill(tile: FogTileView, worldSize: number): number {
   const tier = getKingdomTier(tile.x, tile.y, worldSize).id;
   if (tile.state === "HIDDEN") {
     if (tier === "TIER_3") {
-      return [0x15121c, 0x171420, 0x12101a, 0x191620][hash];
+      return [0x0e0b12, 0x100d14, 0x0c0a10, 0x110e15][hash];
     }
     if (tier === "TIER_2") {
-      return [0x111920, 0x121b23, 0x10171e, 0x151d24][hash];
+      return [0x0a1015, 0x0c1218, 0x090e13, 0x0e141a][hash];
     }
-    return [0x101612, 0x121915, 0x0f1411, 0x141a16][hash];
+    return [0x090e0c, 0x0b110e, 0x080c0a, 0x0c120e][hash];
   }
   if (tile.state === "DISCOVERED") {
     if (tier === "TIER_3") {
-      return [0x2c2438, 0x30283e, 0x292333, 0x342a41][hash];
+      return [0x1f192b, 0x221c2e, 0x1c1726, 0x251e33][hash];
     }
     if (tier === "TIER_2") {
-      return [0x243344, 0x27384a, 0x22303e, 0x2a3a49][hash];
+      return [0x192534, 0x1b2838, 0x17212e, 0x1e2b3c][hash];
     }
-    return [0x223129, 0x26362d, 0x202d26, 0x29382f][hash];
+    return [0x19241d, 0x1b2820, 0x17211b, 0x1d2b22][hash];
   }
   if (tier === "TIER_3") {
     return [0x403252, 0x47395a, 0x3a2e4c, 0x4a3a5a][hash];
@@ -454,6 +454,10 @@ class FrontierMapScene extends Phaser.Scene {
   private unitLayer?: Phaser.GameObjects.Layer;
   private fxLayer?: Phaser.GameObjects.Layer;
   private uiLayer?: Phaser.GameObjects.Layer;
+  private cloudLayer?: Phaser.GameObjects.Layer;
+
+  private noiseSprite?: Phaser.GameObjects.TileSprite;
+  private cloudSprite?: Phaser.GameObjects.TileSprite;
 
   private terrainGraphics?: Phaser.GameObjects.Graphics;
   private gridGraphics?: Phaser.GameObjects.Graphics;
@@ -542,6 +546,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.routeLayer = this.add.layer();
     this.unitLayer = this.add.layer();
     this.fxLayer = this.add.layer();
+    this.cloudLayer = this.add.layer();
     this.uiLayer = this.add.layer();
 
     this.terrainGraphics = this.add.graphics();
@@ -559,6 +564,43 @@ class FrontierMapScene extends Phaser.Scene {
     this.syncSelectionFx();
     this.syncMarchEntities();
     this.syncScoutTrails();
+    // 1. Terrain Noise Texture
+    const noiseGraphics = this.make.graphics({ x: 0, y: 0 });
+    noiseGraphics.fillStyle(0xffffff, 0.035);
+    for (let i = 0; i < 6000; i++) {
+      noiseGraphics.fillRect(randomBetween(0, 512), randomBetween(0, 512), randomBetween(1, 3), randomBetween(1, 3));
+    }
+    noiseGraphics.generateTexture("terrain-noise", 512, 512);
+    noiseGraphics.destroy();
+
+    this.noiseSprite = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, "terrain-noise");
+    this.noiseSprite.setOrigin(0, 0);
+    this.noiseSprite.setScrollFactor(0);
+    this.noiseSprite.setBlendMode(Phaser.BlendModes.ADD);
+    if (this.terrainLayer) {
+      this.terrainLayer.add(this.noiseSprite);
+    }
+
+    // 2. Cloud Shadows Texture
+    const cloudGraphics = this.make.graphics({ x: 0, y: 0 });
+    cloudGraphics.fillStyle(0x000000, 0.15);
+    for (let i = 0; i < 40; i++) {
+      cloudGraphics.fillCircle(
+        randomFloatBetween(0, 1024),
+        randomFloatBetween(0, 1024),
+        randomFloatBetween(80, 250)
+      );
+    }
+    cloudGraphics.generateTexture("cloud-shadows", 1024, 1024);
+    cloudGraphics.destroy();
+
+    this.cloudSprite = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, "cloud-shadows");
+    this.cloudSprite.setOrigin(0, 0);
+    this.cloudSprite.setScrollFactor(0);
+    if (this.cloudLayer) {
+      this.cloudLayer.add(this.cloudSprite);
+    }
+
     this.emitCameraState(true);
   }
 
@@ -581,6 +623,21 @@ class FrontierMapScene extends Phaser.Scene {
     this.updateMarchEntities();
     this.updateScoutTrails();
     this.updateSelectionFxPosition();
+
+    if (this.noiseSprite) {
+      this.noiseSprite.width = this.scale.width;
+      this.noiseSprite.height = this.scale.height;
+      this.noiseSprite.tilePositionX = this.cameras.main.scrollX * 0.9;
+      this.noiseSprite.tilePositionY = this.cameras.main.scrollY * 0.9;
+    }
+
+    if (this.cloudSprite) {
+      this.cloudSprite.width = this.scale.width;
+      this.cloudSprite.height = this.scale.height;
+      this.cloudSprite.tilePositionX = this.cameras.main.scrollX * 0.6 + this.time.now * 0.012;
+      this.cloudSprite.tilePositionY = this.cameras.main.scrollY * 0.6 + this.time.now * 0.008;
+    }
+
     this.applyCameraInertia();
     this.emitCameraState();
   }
@@ -2713,6 +2770,12 @@ class FrontierMapScene extends Phaser.Scene {
         if (phase === "staging") {
           entity.stagingRing.setScale(1 + Math.sin(this.time.now / 160) * 0.08);
           entity.stagingRing.setAlpha(0.55 + Math.sin(this.time.now / 180) * 0.2);
+
+          if ((march.objective === "CITY_ATTACK" || march.objective === "BARBARIAN_ATTACK") && !this.reducedMotion) {
+            if (Math.random() < 0.12) this.spawnCombatSlashFx(destinationX, destinationY);
+            if (Math.random() < 0.08) this.spawnFloatingDamage(destinationX, destinationY, Math.random() < 0.5);
+            if (Math.random() < 0.25) this.spawnCombatSmoke(destinationX, destinationY);
+          }
         }
         if (phase === "gathering") {
           entity.gatherSpinner.rotation += 0.08;
@@ -2914,10 +2977,76 @@ class FrontierMapScene extends Phaser.Scene {
       }
       this.spawnSparkBurst(x, y, MAP_COLOR_REPORT, objective === "CITY_ATTACK" ? 10 : 8, 30, 520);
       this.spawnSparkBurst(x, y, color, objective === "CITY_ATTACK" ? 7 : 6, 38, 640);
+      if (!this.reducedMotion && this.isCameraReady()) {
+        this.cameras.main.shake(180, 0.0035);
+      }
       return;
     }
 
     this.spawnPulse(x, y, color, 22);
+  }
+
+  private spawnCombatSlashFx(x: number, y: number) {
+    if (!this.fxLayer) return;
+    const angle = randomFloatBetween(0, Math.PI * 2);
+    const slash = this.add.rectangle(x + randomBetween(-8, 8), y + randomBetween(-8, 8), randomBetween(20, 35), randomBetween(2, 4), 0xffecc6, 1);
+    slash.setRotation(angle);
+    this.fxLayer.add(slash);
+    
+    this.tweens.add({
+      targets: slash,
+      scaleX: 1.6,
+      scaleY: 0.1,
+      alpha: 0,
+      duration: 180,
+      ease: "Sine.easeOut",
+      onComplete: () => slash.destroy()
+    });
+  }
+
+  private spawnFloatingDamage(x: number, y: number, isEnemy: boolean = true) {
+    if (!this.fxLayer) return;
+    const amount = randomBetween(45, 320);
+    const isCrit = Math.random() < 0.2;
+    const textStr = isCrit ? `CRIT! -${amount}` : `-${amount}`;
+    const color = isEnemy ? "#ef4444" : "#facc15";
+    const fontSize = isCrit ? "14px" : "11px";
+
+    const label = this.add.text(x + randomBetween(-15, 15), y - randomBetween(10, 20), textStr, {
+      fontFamily: "'Inter', sans-serif",
+      fontSize: fontSize,
+      fontStyle: isCrit ? "800" : "600",
+      color: color,
+      stroke: "#000000",
+      strokeThickness: 3
+    });
+    label.setOrigin(0.5, 0.5);
+    this.fxLayer.add(label);
+
+    this.tweens.add({
+      targets: label,
+      y: label.y - randomBetween(25, 45),
+      alpha: { from: 1, to: 0 },
+      duration: 1200,
+      ease: "Cubic.easeOut",
+      onComplete: () => label.destroy()
+    });
+  }
+
+  private spawnCombatSmoke(x: number, y: number) {
+    if (!this.fxLayer) return;
+    const smoke = this.add.circle(x + randomBetween(-10, 10), y + randomBetween(-10, 10), randomFloatBetween(4, 8), 0x000000, 0.4);
+    this.fxLayer.add(smoke);
+    
+    this.tweens.add({
+      targets: smoke,
+      y: smoke.y - randomBetween(20, 40),
+      scale: randomFloatBetween(1.8, 2.5),
+      alpha: 0,
+      duration: randomBetween(800, 1400),
+      ease: "Sine.easeOut",
+      onComplete: () => smoke.destroy()
+    });
   }
 
   private spawnShockwave(x: number, y: number, color: number, radius: number) {

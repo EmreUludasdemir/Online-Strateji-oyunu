@@ -1,4 +1,5 @@
 import { formatNumber } from "../../lib/formatters";
+import { Tooltip } from "./Tooltip";
 import styles from "./primitives.module.css";
 
 export type ResourceKind = "wood" | "stone" | "food" | "gold";
@@ -31,15 +32,18 @@ export function ResourcePill({
   value,
   kind,
   compact = false,
+  tooltip,
 }: {
   label: string;
   value: number;
   kind?: ResourceKind;
   compact?: boolean;
+  tooltip?: React.ReactNode;
 }) {
   const resolvedKind = resolveKind(label, kind);
   const iconSrc = resolvedKind ? RESOURCE_ICONS[resolvedKind] : undefined;
-  return (
+  
+  const pill = (
     <div
       className={[styles.resourcePill, compact ? styles.resourcePillCompact : ""].filter(Boolean).join(" ")}
       data-resource={resolvedKind}
@@ -56,4 +60,10 @@ export function ResourcePill({
       <strong className={styles.resourceValue}>{formatNumber(value)}</strong>
     </div>
   );
+
+  if (tooltip) {
+    return <Tooltip content={tooltip}>{pill}</Tooltip>;
+  }
+
+  return pill;
 }
