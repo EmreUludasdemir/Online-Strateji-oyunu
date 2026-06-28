@@ -33,6 +33,7 @@ import {
   worldToTile,
 } from "./worldMapShared";
 import { getWorldRegionForTile, getWorldRegions } from "./worldRegions";
+import { getProvinceResourceValue, getRealmIdentity, type MapMode } from "../lib/politicalMap";
 
 const poiResourceLabels: Record<PoiResourceType, string> = {
   WOOD: "Wood",
@@ -66,7 +67,7 @@ export interface MapReportMarkerView {
   resultTone: "success" | "warning" | "info";
 }
 
-export type MapHoverKind = "city" | "poi-camp" | "poi-node" | "march" | "report" | "alliance-marker";
+export type MapHoverKind = "city" | "poi-camp" | "poi-node" | "march" | "report" | "alliance-marker" | "province";
 
 export interface MapHoverState {
   id: string;
@@ -92,6 +93,7 @@ interface WorldMapProps {
   reportMarkers: MapReportMarkerView[];
   playerCityBuildings?: ReadonlyArray<PlayerCityDistrictView>;
   filter: MapFilter;
+  mapMode: MapMode;
   showPaths: boolean;
   showScoutTrails: boolean;
   showReports: boolean;
@@ -101,11 +103,13 @@ interface WorldMapProps {
   selectedCityId: string | null;
   selectedPoiId: string | null;
   selectedMarchId: string | null;
+  selectedProvinceTile?: { x: number; y: number } | null;
   onSelectCity: (cityId: string) => void;
   onSelectPoi: (poiId: string) => void;
   onSelectMarch: (marchId: string) => void;
   onOpenReport?: (reportId: string) => void;
   onOpenFieldCommand?: (command: MapFieldCommand) => void;
+  onSelectProvince?: (x: number, y: number) => void;
   onCameraChange: (state: MapCameraState) => void;
   onHoverChange?: (state: MapHoverState | null) => void;
   commandHandleRef?: MutableRefObject<WorldMapHandle | null>;
@@ -312,6 +316,7 @@ interface SceneConfig {
   reportMarkers: MapReportMarkerView[];
   playerCityBuildings: ReadonlyArray<PlayerCityDistrictView>;
   filter: MapFilter;
+  mapMode: MapMode;
   showPaths: boolean;
   showScoutTrails: boolean;
   showReports: boolean;
@@ -321,11 +326,13 @@ interface SceneConfig {
   selectedCityId: string | null;
   selectedPoiId: string | null;
   selectedMarchId: string | null;
+  selectedProvinceTile?: { x: number; y: number } | null;
   onSelectCity: (cityId: string) => void;
   onSelectPoi: (poiId: string) => void;
   onSelectMarch: (marchId: string) => void;
   onOpenReport?: (reportId: string) => void;
   onOpenFieldCommand?: (command: MapFieldCommand) => void;
+  onSelectProvince?: (x: number, y: number) => void;
   onCameraChange: (state: MapCameraState) => void;
   onHoverChange?: (state: MapHoverState | null) => void;
 }
@@ -426,6 +433,7 @@ class FrontierMapScene extends Phaser.Scene {
   private scoutTrails: ScoutTrailView[] = [];
   private reportMarkers: MapReportMarkerView[] = [];
   private filter: MapFilter = "ALL";
+  private mapMode: MapMode = "POLITICAL";
   private showPaths = true;
   private showScoutTrails = true;
   private showReports = true;
@@ -435,11 +443,13 @@ class FrontierMapScene extends Phaser.Scene {
   private selectedCityId: string | null = null;
   private selectedPoiId: string | null = null;
   private selectedMarchId: string | null = null;
+  private selectedProvinceTile: { x: number; y: number } | null = null;
   private onSelectCity: (cityId: string) => void = () => undefined;
   private onSelectPoi: (poiId: string) => void = () => undefined;
   private onSelectMarch: (marchId: string) => void = () => undefined;
   private onOpenReport: (reportId: string) => void = () => undefined;
   private onOpenFieldCommand: (command: MapFieldCommand) => void = () => undefined;
+  private onSelectProvince: (x: number, y: number) => void = () => undefined;
   private onCameraChange: (state: MapCameraState) => void = () => undefined;
   private onHoverChange: (state: MapHoverState | null) => void = () => undefined;
 
@@ -456,8 +466,8 @@ class FrontierMapScene extends Phaser.Scene {
   private uiLayer?: Phaser.GameObjects.Layer;
   private cloudLayer?: Phaser.GameObjects.Layer;
 
-  private noiseSprite?: Phaser.GameObjects.TileSprite;
-  private cloudSprite?: Phaser.GameObjects.TileSprite;
+  private noiseSprite?: Phaser.GameObjects.Image;
+  private cloudSprite?: Phaser.GameObjects.Image;
 
   private terrainGraphics?: Phaser.GameObjects.Graphics;
   private gridGraphics?: Phaser.GameObjects.Graphics;
@@ -573,9 +583,10 @@ class FrontierMapScene extends Phaser.Scene {
     noiseGraphics.generateTexture("terrain-noise", 512, 512);
     noiseGraphics.destroy();
 
-    this.noiseSprite = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, "terrain-noise");
+    this.noiseSprite = this.add.image(0, 0, "terrain-noise");
     this.noiseSprite.setOrigin(0, 0);
     this.noiseSprite.setScrollFactor(0);
+    this.noiseSprite.setDisplaySize(this.scale.width, this.scale.height);
     this.noiseSprite.setBlendMode(Phaser.BlendModes.ADD);
     if (this.terrainLayer) {
       this.terrainLayer.add(this.noiseSprite);
@@ -594,9 +605,10 @@ class FrontierMapScene extends Phaser.Scene {
     cloudGraphics.generateTexture("cloud-shadows", 1024, 1024);
     cloudGraphics.destroy();
 
-    this.cloudSprite = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, "cloud-shadows");
+    this.cloudSprite = this.add.image(0, 0, "cloud-shadows");
     this.cloudSprite.setOrigin(0, 0);
     this.cloudSprite.setScrollFactor(0);
+    this.cloudSprite.setDisplaySize(this.scale.width, this.scale.height);
     if (this.cloudLayer) {
       this.cloudLayer.add(this.cloudSprite);
     }
@@ -625,17 +637,12 @@ class FrontierMapScene extends Phaser.Scene {
     this.updateSelectionFxPosition();
 
     if (this.noiseSprite) {
-      this.noiseSprite.width = this.scale.width;
-      this.noiseSprite.height = this.scale.height;
-      this.noiseSprite.tilePositionX = this.cameras.main.scrollX * 0.9;
-      this.noiseSprite.tilePositionY = this.cameras.main.scrollY * 0.9;
+      this.noiseSprite.setDisplaySize(this.scale.width, this.scale.height);
     }
 
     if (this.cloudSprite) {
-      this.cloudSprite.width = this.scale.width;
-      this.cloudSprite.height = this.scale.height;
-      this.cloudSprite.tilePositionX = this.cameras.main.scrollX * 0.6 + this.time.now * 0.012;
-      this.cloudSprite.tilePositionY = this.cameras.main.scrollY * 0.6 + this.time.now * 0.008;
+      this.cloudSprite.setDisplaySize(this.scale.width, this.scale.height);
+      this.cloudSprite.setAlpha(this.reducedMotion ? 0.12 : 0.1 + Math.sin(this.time.now / 4600) * 0.025);
     }
 
     this.applyCameraInertia();
@@ -656,6 +663,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.reportMarkers = config.reportMarkers;
     this.playerCityBuildings = config.playerCityBuildings;
     this.filter = config.filter;
+    this.mapMode = config.mapMode;
     this.showPaths = config.showPaths;
     this.showScoutTrails = config.showScoutTrails;
     this.showReports = config.showReports;
@@ -665,11 +673,13 @@ class FrontierMapScene extends Phaser.Scene {
     this.selectedCityId = config.selectedCityId;
     this.selectedPoiId = config.selectedPoiId;
     this.selectedMarchId = config.selectedMarchId;
+    this.selectedProvinceTile = config.selectedProvinceTile ?? null;
     this.onSelectCity = config.onSelectCity;
     this.onSelectPoi = config.onSelectPoi;
     this.onSelectMarch = config.onSelectMarch;
     this.onOpenReport = config.onOpenReport ?? (() => undefined);
     this.onOpenFieldCommand = config.onOpenFieldCommand ?? (() => undefined);
+    this.onSelectProvince = config.onSelectProvince ?? (() => undefined);
     this.onCameraChange = config.onCameraChange;
     this.onHoverChange = config.onHoverChange ?? (() => undefined);
 
@@ -1081,17 +1091,51 @@ class FrontierMapScene extends Phaser.Scene {
     }
 
     const region = getWorldRegionForTile(tile.x, tile.y, this.worldSize);
-    const alpha = tile.state === "VISIBLE" ? 0.115 : tile.state === "DISCOVERED" ? 0.075 : 0.028;
-    this.terrainGraphics.fillStyle(region.fill, alpha);
+    const overlay = this.getMapModeTileOverlay(tile, region);
+    this.terrainGraphics.fillStyle(overlay.fill, overlay.alpha);
     this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
 
     if (this.currentDetailLevel !== "near" && tile.state !== "HIDDEN") {
       const hash = hashCoordinate(tile.x + region.capitalX, tile.y + region.capitalY);
       if (hash % 5 === 0) {
-        this.terrainGraphics.fillStyle(region.fill, alpha * 0.9);
+        this.terrainGraphics.fillStyle(overlay.fill, overlay.alpha * 0.9);
         this.terrainGraphics.fillCircle(x + 28 + (hash % 72), y + 26 + (Math.floor(hash / 11) % 72), 18);
       }
     }
+  }
+
+  private getMapModeTileOverlay(tile: FogTileView, region: ReturnType<typeof getWorldRegionForTile>) {
+    const visibilityScale = tile.state === "VISIBLE" ? 1 : tile.state === "DISCOVERED" ? 0.64 : 0.24;
+
+    if (this.mapMode === "TERRAIN") {
+      return { fill: region.fill, alpha: 0.035 * visibilityScale };
+    }
+
+    if (this.mapMode === "THREAT") {
+      const nearbyCampCount = this.pois.filter((poi) => poi.kind === "BARBARIAN_CAMP" && Math.hypot(poi.x - tile.x, poi.y - tile.y) <= 4.8).length;
+      const relation = getRealmIdentity(region).relation;
+      const fill = relation === "hostile" || nearbyCampCount > 1 ? 0x9b2f2f : relation === "rival" || nearbyCampCount > 0 ? 0xb36a2e : 0x25523b;
+      return { fill, alpha: (0.12 + nearbyCampCount * 0.04) * visibilityScale };
+    }
+
+    if (this.mapMode === "RESOURCE") {
+      const resources = getProvinceResourceValue(tile.x, tile.y, this.worldSize, this.pois);
+      const best = Object.entries(resources).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "food";
+      const fill = best === "wood" ? 0x3d7a4a : best === "stone" ? 0x7f8992 : best === "gold" ? 0xb98a2f : 0x8c7a2f;
+      return { fill, alpha: 0.13 * visibilityScale };
+    }
+
+    if (this.mapMode === "ALLIANCE") {
+      const relation = getRealmIdentity(region).relation;
+      const fill = relation === "friendly" ? 0x2b8f98 : relation === "hostile" ? 0x9b2f2f : relation === "rival" ? 0x8f5d2b : relation === "unknown" ? 0x4a4d55 : 0x5a6254;
+      return { fill, alpha: 0.12 * visibilityScale };
+    }
+
+    if (this.mapMode === "MARCH") {
+      return { fill: this.showPaths ? 0x2f5f78 : region.fill, alpha: this.showPaths ? 0.08 * visibilityScale : 0.045 * visibilityScale };
+    }
+
+    return { fill: region.fill, alpha: (this.currentDetailLevel === "far" ? 0.16 : 0.115) * visibilityScale };
   }
 
   private drawWorldRegionBorders() {
@@ -1145,6 +1189,21 @@ class FrontierMapScene extends Phaser.Scene {
         }
       }
     }
+
+    this.drawSelectedProvinceTile();
+  }
+
+  private drawSelectedProvinceTile() {
+    if (!this.gridGraphics || !this.selectedProvinceTile) {
+      return;
+    }
+
+    const x = this.selectedProvinceTile.x * MAP_TILE_WORLD_SIZE;
+    const y = this.selectedProvinceTile.y * MAP_TILE_WORLD_SIZE;
+    this.gridGraphics.lineStyle(5, 0x000000, 0.46);
+    this.gridGraphics.strokeRect(x + 6, y + 6, MAP_TILE_WORLD_SIZE - 12, MAP_TILE_WORLD_SIZE - 12);
+    this.gridGraphics.lineStyle(2.5, 0xf8e2a8, 0.92);
+    this.gridGraphics.strokeRect(x + 8, y + 8, MAP_TILE_WORLD_SIZE - 16, MAP_TILE_WORLD_SIZE - 16);
   }
 
   private drawWorldRegionBorderLine(
@@ -3226,7 +3285,12 @@ class FrontierMapScene extends Phaser.Scene {
     if (city) {
       this.spawnFocusBeacon(city.worldX, city.worldY, city.data.isCurrentPlayer ? MAP_COLOR_HOME : MAP_COLOR_NEUTRAL, 16);
       this.onSelectCity(city.data.cityId);
+      return;
     }
+
+    const tile = worldToTile(worldPoint.x, worldPoint.y, this.worldSize);
+    this.spawnFocusBeacon((tile.x + 0.5) * MAP_TILE_WORLD_SIZE, (tile.y + 0.5) * MAP_TILE_WORLD_SIZE, MAP_COLOR_PASS, 12);
+    this.onSelectProvince(tile.x, tile.y);
   }
 
   private handlePointerCommand(pointer: Phaser.Input.Pointer) {
@@ -3486,7 +3550,29 @@ class FrontierMapScene extends Phaser.Scene {
       return;
     }
 
-    this.clearHover();
+    const tile = worldToTile(worldPoint.x, worldPoint.y, this.worldSize);
+    const region = getWorldRegionForTile(tile.x, tile.y, this.worldSize);
+    const realm = getRealmIdentity(region);
+    const tone =
+      realm.relation === "friendly"
+        ? "success"
+        : realm.relation === "hostile" || realm.relation === "rival"
+          ? "danger"
+          : realm.relation === "unknown"
+            ? "warning"
+            : "info";
+    this.applyHover({
+      id: `${region.id}:${tile.x}:${tile.y}`,
+      kind: "province",
+      label: `${region.label} Hududu`,
+      subtitle: `${realm.shortTag} | ${realm.identity}`,
+      tone,
+      worldX: (tile.x + 0.5) * MAP_TILE_WORLD_SIZE,
+      worldY: (tile.y + 0.5) * MAP_TILE_WORLD_SIZE,
+      screenX: pointer.x,
+      screenY: pointer.y,
+      ringRadius: 30,
+    });
   }
 
   private applyHover(payload: {
@@ -3535,6 +3621,7 @@ export default function WorldMap({
   reportMarkers,
   playerCityBuildings,
   filter,
+  mapMode,
   showPaths,
   showScoutTrails,
   showReports,
@@ -3544,11 +3631,13 @@ export default function WorldMap({
   selectedCityId,
   selectedPoiId,
   selectedMarchId,
+  selectedProvinceTile,
   onSelectCity,
   onSelectPoi,
   onSelectMarch,
   onOpenReport,
   onOpenFieldCommand,
+  onSelectProvince,
   onCameraChange,
   onHoverChange,
   commandHandleRef,
@@ -3668,6 +3757,7 @@ export default function WorldMap({
       reportMarkers,
       playerCityBuildings: playerCityBuildings ?? [],
       filter,
+      mapMode,
       showPaths,
       showScoutTrails,
       showReports,
@@ -3677,17 +3767,20 @@ export default function WorldMap({
       selectedCityId,
       selectedPoiId,
       selectedMarchId,
+      selectedProvinceTile,
       onSelectCity,
       onSelectPoi,
       onSelectMarch,
       onOpenReport,
       onOpenFieldCommand,
+      onSelectProvince,
       onCameraChange,
       onHoverChange,
     });
   }, [
     cities,
     filter,
+    mapMode,
     reportMarkers,
     playerCityBuildings,
     showPaths,
@@ -3701,6 +3794,7 @@ export default function WorldMap({
     onCameraChange,
     onHoverChange,
     onOpenFieldCommand,
+    onSelectProvince,
     onSelectCity,
     onSelectMarch,
     onSelectPoi,
@@ -3709,6 +3803,7 @@ export default function WorldMap({
     scoutTrails,
     selectedCityId,
     selectedMarchId,
+    selectedProvinceTile,
     selectedPoiId,
     tiles,
     worldSize,

@@ -8,11 +8,15 @@
 .detailList,
 .marchList,
 .composerGrid,
+.provincePanel,
 .commandStrip,
 .searchResults,
 .composerStats,
 .commandActionGrid,
 .commandPreviewGrid,
+.provinceStatGrid,
+.provinceResourceGrid,
+.provinceActionGrid,
 .commandStepGrid,
 .troopDeck,
 .cameraGuideMetrics,
@@ -106,6 +110,8 @@
 .commandHeader,
 .statusCluster,
 .composerHero,
+.provinceHero,
+.provinceBadgeStack,
 .sliderLabelRow,
 .cameraGuideHeader,
 .operationHead,
@@ -116,6 +122,112 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
+}
+
+.provincePanel {
+  gap: 0.8rem;
+}
+
+.provinceHero {
+  justify-content: space-between;
+  padding: 0.9rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(135deg, rgba(244, 215, 156, 0.08), transparent 48%),
+    var(--surface-card-panel);
+}
+
+.provinceRealmMark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(248, 240, 221, 0.42);
+  border-radius: var(--radius-xs);
+  color: #120d08;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.18), var(--shadow-soft);
+}
+
+.provinceBadgeStack {
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.provinceStatGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.provinceResourceGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.provinceResourceChip,
+.provinceIntelRow span {
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xs);
+  background: var(--surface-card-panel);
+}
+
+.provinceResourceChip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  color: var(--color-outline);
+  font-size: 0.72rem;
+}
+
+.provinceResourceChip strong {
+  color: var(--color-primary-fixed);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.provinceIntelRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.provinceIntelRow span {
+  padding: 0.42rem 0.6rem;
+  color: var(--color-outline);
+  font-size: 0.72rem;
+}
+
+.provinceAdvisor,
+.provinceLore {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.provinceAdvisor {
+  padding: 0.75rem 0.85rem;
+  border-left: 3px solid var(--color-primary-fixed-dim);
+  border-radius: var(--radius-xs);
+  background: rgba(244, 215, 156, 0.08);
+  color: var(--color-on-surface);
+  font-size: 0.86rem;
+}
+
+.provinceLore {
+  color: var(--color-outline);
+  font-size: 0.78rem;
+}
+
+.provinceActionGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .heroTop {
@@ -540,6 +652,7 @@
 .controlsDeck,
 .controls,
 .chipRow,
+.mapModeRail,
 .dockCard,
 .cameraGuideCard {
   pointer-events: auto;
@@ -548,6 +661,7 @@
 .intelPanel,
 .controls,
 .chipRow,
+.mapModeRail,
 .minimapCard,
 .dockCard {
   background: var(--surface-rail-panel);
@@ -672,7 +786,19 @@
   border-radius: var(--radius-sm);
 }
 
-.chipRow button {
+.mapModeRail {
+  display: flex;
+  max-width: min(100%, 680px);
+  gap: 0.35rem;
+  justify-content: flex-end;
+  overflow-x: auto;
+  padding: 0.45rem;
+  border-radius: var(--radius-sm);
+  scrollbar-width: thin;
+}
+
+.chipRow button,
+.mapModeRail button {
   min-height: 42px;
 }
 
@@ -1468,12 +1594,16 @@
   }
 
   .controls,
-  .chipRow {
+  .chipRow,
+  .mapModeRail {
     justify-content: flex-start;
   }
 
   .composerStats,
   .commandPreviewGrid,
+  .provinceStatGrid,
+  .provinceResourceGrid,
+  .provinceActionGrid,
   .commandStepGrid,
   .commandCueGrid,
   .selectionReadoutGrid {
@@ -1489,6 +1619,9 @@
   .rail,
   .commandActionGrid,
   .commandPreviewGrid,
+  .provinceStatGrid,
+  .provinceResourceGrid,
+  .provinceActionGrid,
   .commandStepGrid,
   .commandCueGrid,
   .selectionReadoutGrid,
@@ -1506,6 +1639,7 @@
   .heroTop,
   .intelPanelHeader,
   .composerHero,
+  .provinceHero,
   .statusCluster {
     flex-direction: column;
     align-items: flex-start;

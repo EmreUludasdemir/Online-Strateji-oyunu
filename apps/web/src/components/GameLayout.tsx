@@ -110,6 +110,9 @@ declare global {
       fieldCommandKind: string | null;
       fieldCommandLabel: string | null;
       fieldCommandOpenSource: "canvas" | "automation-hook" | null;
+      mapMode?: string;
+      selectedProvinceId?: string | null;
+      selectedProvinceRealm?: string | null;
     } | null;
     frontierMapKingdom?: {
       currentTier: {

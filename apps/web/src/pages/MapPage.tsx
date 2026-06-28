@@ -38,6 +38,16 @@ import {
 import { trackAnalyticsEvent } from "../lib/analytics";
 import { copy } from "../lib/i18n";
 import { formatNumber, formatRelativeTimer, formatTimeRemaining } from "../lib/formatters";
+import {
+  buildProvinceIntel,
+  getMapModeLabel,
+  type MapMode,
+  type ProvinceAction,
+  type ProvinceIntel,
+  type ProvinceRiskLevel,
+  type ProvinceStatus,
+  type ProvinceTerrain,
+} from "../lib/politicalMap";
 import { useNow } from "../lib/useNow";
 import styles from "./MapPage.module.css";
 
@@ -68,6 +78,8 @@ const detailGuideSteps: Array<{ id: MapDetailLevel; label: string; hint: string 
   { id: "mid", label: "Bozkır Okuması", hint: "Sis blokları, rotalar, hedefler ve raporlar" },
   { id: "near", label: "Kuşatma Odağı", hint: "Taktik karolar, keşif izleri ve geçitler" },
 ];
+
+const mapModeOptions: MapMode[] = ["TERRAIN", "POLITICAL", "THREAT", "RESOURCE", "ALLIANCE", "MARCH"];
 
 function createTroopPayload(stateTroops: Array<{ type: TroopType; quantity: number }>): TroopStock {
   return {
@@ -376,6 +388,65 @@ function getMinimapRegionOpacity(state: "VISIBLE" | "DISCOVERED" | "HIDDEN") {
   return 0.12;
 }
 
+function getProvinceStatusLabel(status: ProvinceStatus) {
+  const labels: Record<ProvinceStatus, string> = {
+    friendly: "Dost",
+    neutral: "Tarafsız",
+    hostile: "Hasım",
+    contested: "Çekişmeli",
+    unknown: "Bilinmiyor",
+  };
+  return labels[status];
+}
+
+function getProvinceRiskLabel(risk: ProvinceRiskLevel) {
+  const labels: Record<ProvinceRiskLevel, string> = {
+    low: "Düşük",
+    guarded: "Nöbetli",
+    dangerous: "Tehlikeli",
+    deadly: "Ölümcül",
+    unknown: "Sisli",
+  };
+  return labels[risk];
+}
+
+function getProvinceTerrainLabel(terrain: ProvinceTerrain) {
+  const labels: Record<ProvinceTerrain, string> = {
+    steppe: "Bozkır",
+    mountain: "Dağ",
+    pass: "Kapı",
+    sanctuary: "Otağ",
+    borderland: "Hudut",
+  };
+  return labels[terrain];
+}
+
+function getProvinceActionLabel(action: ProvinceAction) {
+  const labels: Record<ProvinceAction, string> = {
+    SCOUT: "Keşif",
+    MARCH: "Sefer",
+    RAID: "Akın",
+    CLAIM: "Sancak",
+    SUPPORT: "Destek",
+    TRADE: "Ticaret",
+    VIEW_REALM: "Devleti Gör",
+  };
+  return labels[action];
+}
+
+function getProvinceBadgeTone(status: ProvinceStatus): "success" | "warning" | "info" | "danger" {
+  if (status === "friendly") return "success";
+  if (status === "hostile" || status === "contested") return "danger";
+  if (status === "unknown") return "warning";
+  return "info";
+}
+
+function getRiskBadgeTone(risk: ProvinceRiskLevel): "success" | "warning" | "info" | "danger" {
+  if (risk === "low") return "success";
+  if (risk === "guarded" || risk === "unknown") return "warning";
+  return "danger";
+}
+
 function isEditableElement(target: EventTarget | null) {
   return (
     target instanceof HTMLInputElement ||
@@ -445,6 +516,7 @@ export function MapPage() {
   const lastFetchErrorAtRef = useRef<string | null>(null);
 
   const [filter, setFilter] = useState<MapFilter>("ALL");
+  const [mapMode, setMapMode] = useState<MapMode>("POLITICAL");
   const [showPaths, setShowPaths] = useState(true);
   const [showScoutTrails, setShowScoutTrails] = useState(true);
   const [showReports, setShowReports] = useState(true);
@@ -458,6 +530,7 @@ export function MapPage() {
   const [mapNotice, setMapNotice] = useState<string | null>(null);
   const [fieldCommand, setFieldCommand] = useState<MapFieldCommand | null>(null);
   const [fieldCommandOpenSource, setFieldCommandOpenSource] = useState<"canvas" | "automation-hook" | null>(null);
+  const [selectedProvinceTile, setSelectedProvinceTile] = useState<{ x: number; y: number } | null>(null);
   const [fieldMarkerDraft, setFieldMarkerDraft] = useState("");
   const [cameraView, setCameraView] = useState<MapCameraState>(() =>
     createInitialCameraState(state.city.coordinates.x, state.city.coordinates.y),
@@ -903,6 +976,24 @@ export function MapPage() {
     () => worldChunk?.pois.find((poi) => poi.id === selectedPoiId) ?? null,
     [selectedPoiId, worldChunk],
   );
+  const selectedProvince = useMemo<ProvinceIntel | null>(() => {
+    if (!worldChunk || !selectedProvinceTile) {
+      return null;
+    }
+
+    const tile = worldChunk.tiles.find((entry) => entry.x === selectedProvinceTile.x && entry.y === selectedProvinceTile.y);
+    const region = getWorldRegionForTile(selectedProvinceTile.x, selectedProvinceTile.y, worldChunk.size);
+
+    return buildProvinceIntel({
+      x: selectedProvinceTile.x,
+      y: selectedProvinceTile.y,
+      worldSize: worldChunk.size,
+      region,
+      fogState: tile?.state ?? "HIDDEN",
+      pois: worldChunk.pois,
+      tiles: worldChunk.tiles,
+    });
+  }, [selectedProvinceTile, worldChunk]);
   const selectedMarch = useMemo(
     () => state.city.activeMarches.find((march) => march.id === selectedMarchId) ?? null,
     [selectedMarchId, state.city.activeMarches],
@@ -1171,7 +1262,8 @@ export function MapPage() {
           ? "Kamp hedefi"
           : "Kaynak noktası"
         : "Serbest kamera";
-  const targetSheetVisible = targetSheetOpen && !composerMode && !fieldCommand && !selectedMarch;
+  const provincePanelVisible = Boolean(selectedProvince) && !composerMode && !fieldCommand && !selectedMarch && !targetSheetOpen;
+  const targetSheetVisible = targetSheetOpen && !composerMode && !fieldCommand && !selectedMarch && !selectedProvince;
   const fieldCommandVisible = Boolean(fieldCommand) && !composerMode && !selectedMarch;
   const selectedMarchVisible = Boolean(selectedMarch) && !composerMode && !fieldCommand;
   const alliedBattleParticipants = useMemo(() => {
@@ -1424,6 +1516,9 @@ export function MapPage() {
       fieldCommandKind: fieldCommand?.kind ?? null,
       fieldCommandLabel: fieldCommand?.label ?? null,
       fieldCommandOpenSource,
+      mapMode,
+      selectedProvinceId: selectedProvince?.id ?? null,
+      selectedProvinceRealm: selectedProvince?.realm.name ?? null,
     };
 
     return () => {
@@ -1436,9 +1531,12 @@ export function MapPage() {
     fieldCommand?.kind,
     fieldCommand?.label,
     fieldCommandOpenSource,
+    mapMode,
     selectedCity,
     selectedMarchId,
     selectedPoi,
+    selectedProvince?.id,
+    selectedProvince?.realm.name,
     selectedTargetName,
     targetSheetVisible,
   ]);
@@ -1519,6 +1617,7 @@ export function MapPage() {
       setSelectedMarchId(null);
       setComposerMode(null);
       setFieldCommand(null);
+      setSelectedProvinceTile(null);
       selectCity(city.cityId);
       setOpenedTargetKey(null);
       if (options?.focus) {
@@ -1539,6 +1638,7 @@ export function MapPage() {
       setSelectedMarchId(null);
       setComposerMode(null);
       setFieldCommand(null);
+      setSelectedProvinceTile(null);
       selectPoi(poi.id);
       setOpenedTargetKey(null);
       if (options?.focus) {
@@ -1556,6 +1656,7 @@ export function MapPage() {
     setTargetSheetOpen(false);
     setComposerMode(null);
     setFieldCommand(null);
+    setSelectedProvinceTile(null);
     setSelectedMarchId(marchId);
     mapCommandRef.current?.focusMarch(marchId);
   }, []);
@@ -1563,9 +1664,21 @@ export function MapPage() {
   const openComposer = useCallback((mode: ComposerMode) => {
     setFieldCommand(null);
     setSelectedMarchId(null);
+    setSelectedProvinceTile(null);
     setTargetSheetOpen(false);
     setComposerMode(mode);
   }, []);
+
+  const handleProvinceSelect = useCallback((x: number, y: number) => {
+    setSelectedMarchId(null);
+    setComposerMode(null);
+    setFieldCommand(null);
+    setTargetSheetOpen(false);
+    setOpenedTargetKey(null);
+    selectCity(null);
+    selectPoi(null);
+    setSelectedProvinceTile({ x, y });
+  }, [selectCity, selectPoi]);
 
   const handleMinimapClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
@@ -1676,12 +1789,14 @@ export function MapPage() {
     setComposerMode(null);
     setTargetSheetOpen(false);
     setSelectedMarchId(null);
+    setSelectedProvinceTile(null);
   }, []);
 
   const handleFieldCommandOpen = useCallback((command: MapFieldCommand) => {
     setTargetSheetOpen(false);
     setComposerMode(null);
     setSelectedMarchId(null);
+    setSelectedProvinceTile(null);
     setFieldCommandOpenSource("canvas");
     setFieldCommand(command);
     setFieldMarkerDraft(command.label);
@@ -1746,6 +1861,42 @@ export function MapPage() {
       setFieldCommand(null);
     }
   }, [fieldCommand, openComposer, selectCity, selectPoi]);
+
+  const handleProvinceAction = useCallback(
+    (action: ProvinceAction) => {
+      if (!selectedProvince) {
+        return;
+      }
+
+      if (action === "VIEW_REALM") {
+        mapCommandRef.current?.focusTile(selectedProvince.realm.capitalX, selectedProvince.realm.capitalY);
+        setMapNotice(`${selectedProvince.realm.name} sancak merkezi haritada işaretlendi.`);
+        return;
+      }
+
+      if (action === "SCOUT" || action === "CLAIM") {
+        const label =
+          action === "SCOUT"
+            ? `${selectedProvince.realm.shortTag} keşif ${selectedProvince.x},${selectedProvince.y}`
+            : `${selectedProvince.realm.shortTag} sancak ${selectedProvince.x},${selectedProvince.y}`;
+        setSelectedProvinceTile(null);
+        setFieldCommandOpenSource("canvas");
+        setFieldMarkerDraft(label);
+        setFieldCommand({
+          kind: "TILE",
+          label,
+          x: selectedProvince.x,
+          y: selectedProvince.y,
+        });
+        return;
+      }
+
+      const actionLabel = getProvinceActionLabel(action);
+      setMapNotice(`${actionLabel} buyruğu için bu yurtta somut oba, kamp veya geçit hedefi seç.`);
+      mapCommandRef.current?.focusTile(selectedProvince.x, selectedProvince.y);
+    },
+    [selectedProvince],
+  );
 
   const handleFieldMarkerCreate = useCallback(async () => {
     if (!fieldCommand) {
@@ -2058,6 +2209,19 @@ export function MapPage() {
                     Akınlar
                   </Button>
                 </div>
+                <div className={styles.mapModeRail} aria-label="Harita modu">
+                  {mapModeOptions.map((mode) => (
+                    <Button
+                      key={mode}
+                      type="button"
+                      size="small"
+                      variant={mapMode === mode ? "primary" : "secondary"}
+                      onClick={() => setMapMode(mode)}
+                    >
+                      {getMapModeLabel(mode)}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
             <aside className={styles.minimapCard}>
@@ -2276,6 +2440,7 @@ export function MapPage() {
                   level: building.level,
                 }))}
                 filter={filter}
+                mapMode={mapMode}
                 showPaths={showPaths}
                 showScoutTrails={showScoutTrails}
                 showReports={showReports}
@@ -2285,6 +2450,7 @@ export function MapPage() {
                 selectedCityId={selectedCityId}
                 selectedPoiId={selectedPoiId}
                 selectedMarchId={selectedMarchId}
+                selectedProvinceTile={selectedProvinceTile}
                 onSelectCity={(cityId) => {
                   const city = worldChunk.cities.find((entry) => entry.cityId === cityId);
                   if (city) {
@@ -2300,6 +2466,7 @@ export function MapPage() {
                 onSelectMarch={handleMarchSelect}
                 onOpenReport={handleOpenReport}
                 onOpenFieldCommand={handleFieldCommandOpen}
+                onSelectProvince={handleProvinceSelect}
                 onCameraChange={handleCameraChange}
                 onHoverChange={handleHoverChange}
                 commandHandleRef={mapCommandRef}
@@ -2624,6 +2791,79 @@ export function MapPage() {
 
         </aside>
       </section>
+
+      <BottomSheet
+        open={provincePanelVisible}
+        title={selectedProvince ? `Yurt Defteri: ${selectedProvince.name}` : "Yurt Defteri"}
+        onClose={() => setSelectedProvinceTile(null)}
+      >
+        {selectedProvince ? (
+          <div className={styles.provincePanel}>
+            <section className={styles.provinceHero} style={{ borderColor: selectedProvince.realm.borderColor }}>
+              <div className={styles.provinceRealmMark} style={{ background: selectedProvince.realm.primaryColor }}>
+                {selectedProvince.realm.shortTag}
+              </div>
+              <div>
+                <p className={styles.hudEyebrow}>Siyasi Yurt</p>
+                <strong className={styles.cardTitle}>{selectedProvince.name}</strong>
+                <p className={styles.muted}>
+                  {selectedProvince.realm.name} | {selectedProvince.realm.identity}
+                </p>
+              </div>
+              <div className={styles.provinceBadgeStack}>
+                <Badge tone={getProvinceBadgeTone(selectedProvince.status)}>{getProvinceStatusLabel(selectedProvince.status)}</Badge>
+                <Badge tone={getRiskBadgeTone(selectedProvince.riskLevel)}>{getProvinceRiskLabel(selectedProvince.riskLevel)}</Badge>
+              </div>
+            </section>
+
+            <section className={styles.provinceStatGrid}>
+              <article className={styles.commandPreviewCard}>
+                <span className={styles.commandPreviewLabel}>Arazi</span>
+                <strong className={styles.commandPreviewValue}>{getProvinceTerrainLabel(selectedProvince.terrain)}</strong>
+              </article>
+              <article className={styles.commandPreviewCard}>
+                <span className={styles.commandPreviewLabel}>Tier</span>
+                <strong className={styles.commandPreviewValue}>{selectedProvince.tierLabel}</strong>
+              </article>
+              <article className={styles.commandPreviewCard}>
+                <span className={styles.commandPreviewLabel}>Strateji</span>
+                <strong className={styles.commandPreviewValue}>{formatNumber(selectedProvince.strategicValue)}</strong>
+              </article>
+              <article className={styles.commandPreviewCard}>
+                <span className={styles.commandPreviewLabel}>Güç</span>
+                <strong className={styles.commandPreviewValue}>{formatNumber(selectedProvince.realm.strength)}</strong>
+              </article>
+            </section>
+
+            <section className={styles.provinceResourceGrid} aria-label="Yurt bereketi">
+              {Object.entries(selectedProvince.resourceValue).map(([key, value]) => (
+                <span key={key} className={styles.provinceResourceChip}>
+                  <span>{key === "wood" ? "Odun" : key === "stone" ? "Taş" : key === "food" ? "Erzak" : "Altın"}</span>
+                  <strong>{formatNumber(value)}</strong>
+                </span>
+              ))}
+            </section>
+
+            <section className={styles.provinceIntelRow}>
+              <span>{formatNumber(selectedProvince.nearbyCamps)} kamp</span>
+              <span>{formatNumber(selectedProvince.nearbyResources)} bereket</span>
+              <span>{formatNumber(selectedProvince.nearbyPasses)} kapı</span>
+              <span>{formatNumber(selectedProvince.nearbySanctuaries)} otağ</span>
+            </section>
+
+            <p className={styles.provinceAdvisor}>{selectedProvince.advisorText}</p>
+            <p className={styles.provinceLore}>{selectedProvince.realm.lore}</p>
+
+            <section className={styles.provinceActionGrid}>
+              {selectedProvince.availableActions.map((action) => (
+                <Button key={action} type="button" size="small" variant={action === "RAID" ? "primary" : "secondary"} onClick={() => handleProvinceAction(action)}>
+                  {getProvinceActionLabel(action)}
+                </Button>
+              ))}
+            </section>
+          </div>
+        ) : null}
+      </BottomSheet>
 
       <BottomSheet
         open={targetSheetVisible || Boolean(composerMode)}

@@ -328,3 +328,13 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
   - `docker compose ps` still could not connect to Docker Desktop, and `corepack pnpm smoke:field-command` was blocked because Postgres was not reachable on `localhost:5433`.
   - A Vite-only `scripts/web_game_playwright_client.js` capture of `/login` passed and was visually inspected. It cannot cover `/app/map` while the backend/DB stack is unavailable; the only browser error was the expected API `500` from the missing backend.
+- 2026-06-28: Added the next Political Map Gameplay layer. `apps/web/src/lib/politicalMap.ts` now models map modes, realm identities, province terrain/status/risk/resource value, strategic value, and available province actions. `/app/map` now supports clickable empty provinces, a `Yurt Defteri` province panel, six map modes (`Arazi`, `Devlet`, `Tehdit`, `Bereket`, `Toy`, `Sefer`), selected province outlining, and province hover intel in the Phaser world map.
+- 2026-06-28: Fixed a live Phaser runtime regression found during browser validation: the current Phaser core build did not expose `this.add.tileSprite`, so the generated noise/cloud overlays now use normal viewport-sized `Image` game objects with a subtle animated alpha instead of TileSprite tiling.
+- 2026-06-28: Added `walkthrough.md` with the current political-map/province interaction flow.
+- 2026-06-28: Validation after the Political Map Gameplay pass:
+  - `corepack pnpm --filter @frontier/web exec tsc -p tsconfig.json --noEmit` passed.
+  - `corepack pnpm --filter @frontier/web test` passed: 10 files, 27 tests.
+  - `corepack pnpm --filter @frontier/web build` passed with the existing Phaser chunk-size warning.
+  - `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file output/political-map-actions.json --iterations 1 --pause-ms 1000 --screenshot-dir output/political-map-client` passed with no console errors and generated dashboard state.
+  - A direct Playwright feature pass logged in, opened `/app/map`, clicked an empty province tile, confirmed the `Yurt Defteri` panel, switched the mode rail to `THREAT`, visually inspected the screenshots, and reported zero console/page errors.
+  - `corepack pnpm smoke:field-command` started Postgres/server/web but the older scenario timed out waiting for the old `Field Command: Barbarian Camp 5` dialog contract; this appears to be a stale smoke expectation rather than a province-map runtime failure.
