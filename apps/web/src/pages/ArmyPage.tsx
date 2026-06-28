@@ -25,7 +25,7 @@ const TROOP_DESCRIPTIONS: Record<TroopType, string> = {
 
 export function ArmyPage() {
   const now = useNow();
-  const { state, train, isTraining } = useGameLayoutContext();
+  const { state, train, isTraining, tutorialState, completeTutorialStep } = useGameLayoutContext();
 
   const [quantities, setQuantities] = useState<Record<TroopType, number>>({
     INFANTRY: 50,
@@ -40,6 +40,9 @@ export function ArmyPage() {
   const handleTrain = async (type: TroopType) => {
     if (quantities[type] > 0 && !state.city.activeTraining) {
       await train(type, quantities[type]);
+      if (tutorialState?.currentStepId === "train_troops") {
+        completeTutorialStep("train_troops");
+      }
     }
   };
 
@@ -169,6 +172,8 @@ export function ArmyPage() {
 
                 <Button
                   variant="primary"
+                  className={tutorialState?.currentStepId === "train_troops" && troop.type === "INFANTRY" ? "is-tutorial-active" : undefined}
+                  data-tutorial-target={tutorialState?.currentStepId === "train_troops" && troop.type === "INFANTRY" ? "tutorial-target-barracks-train" : undefined}
                   onClick={() => handleTrain(troop.type)}
                   disabled={!canAfford || isBusy || qty < 1}
                 >

@@ -22,9 +22,12 @@ import { formatNumber } from "../lib/formatters";
 import { summarizeRewardLines } from "../lib/rewardSummaries";
 import { copy } from "../lib/i18n";
 import { getInvalidationKeys, getSocketToast, parseSocketEvent } from "../lib/socketEvents";
+import { getSavedTutorialState, saveTutorialState, TUTORIAL_STEPS } from "../lib/tutorialFlow";
+import type { TutorialState, TutorialStepId } from "../lib/tutorialFlow";
 import { useTheme } from "./ThemeProvider";
 import type { ActiveMapChunkMeta, MapCameraState } from "./worldMapShared";
 import styles from "./GameLayoutShell.module.css";
+import { TutorialOverlay } from "./hud/TutorialOverlay";
 import { MobileBottomNav } from "./hud/MobileBottomNav";
 import { QuickActions } from "./hud/QuickActions";
 import { TopHud, type QueueSummaryItem } from "./hud/TopHud";
@@ -66,6 +69,9 @@ export interface GameLayoutContext {
   openInbox: () => void;
   openStorePreview: () => void;
   openCommanderPanel: (commanderId?: string) => void;
+  tutorialState: import("../lib/tutorialFlow").TutorialState;
+  completeTutorialStep: (stepId: import("../lib/tutorialFlow").TutorialStepId) => void;
+  skipTutorial: () => void;
 }
 
 declare global {
@@ -309,6 +315,31 @@ export function GameLayout() {
   const [commanderPanelId, setCommanderPanelId] = useState<string | null>(null);
   const [themeSheetOpen, setThemeSheetOpen] = useState(false);
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
+
+  const [tutorialState, setTutorialState] = useState<TutorialState>(getSavedTutorialState);
+  
+  const completeTutorialStep = useCallback((stepId: TutorialStepId) => {
+    setTutorialState((prev) => {
+      // Find the next step
+      const keys = Object.keys(TUTORIAL_STEPS) as TutorialStepId[];
+      const currentIndex = keys.indexOf(stepId);
+      if (currentIndex !== -1 && currentIndex < keys.length - 1) {
+        const nextStep = keys[currentIndex + 1];
+        const newState = { ...prev, currentStepId: nextStep };
+        saveTutorialState(newState);
+        return newState;
+      }
+      return prev;
+    });
+  }, []);
+
+  const skipTutorial = useCallback(() => {
+    setTutorialState((prev) => {
+      const newState = { ...prev, isSkipped: true };
+      saveTutorialState(newState);
+      return newState;
+    });
+  }, []);
   const enqueueToast = useCallback((toast: Omit<ToastItem, "id">) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setToasts((current) => [...current.slice(-3), { id, ...toast }]);
@@ -592,6 +623,9 @@ export function GameLayout() {
       openInbox,
       openStorePreview,
       openCommanderPanel,
+      tutorialState,
+      completeTutorialStep,
+      skipTutorial,
     };
   }, [
     bootstrapQuery.data,
@@ -611,6 +645,9 @@ export function GameLayout() {
     toasts.length,
     trainMutation,
     upgradeMutation,
+    tutorialState,
+    completeTutorialStep,
+    skipTutorial,
   ]);
 
   useEffect(() => {
@@ -961,20 +998,31 @@ export function GameLayout() {
         </div>
 
         <nav className={styles.nav}>
-          {navigationItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              data-nav-item={item.id}
-              className={({ isActive }) => (isActive ? styles.navLinkActive : styles.navLink)}
-            >
-              <span className={styles.navIcon}>{item.code}</span>
-              <span className={styles.navCopy}>
-                <span className={styles.navEyebrow}>{item.eyebrow}</span>
-                <span className={styles.navTitle}>{item.label}</span>
-              </span>
-            </NavLink>
-          ))}
+          {navigationItems.map((item) => {
+            const isMapTarget = tutorialState?.currentStepId === "navigate_map" && item.id === "map";
+            const isReportTarget = tutorialState?.currentStepId === "read_report" && item.id === "reports";
+            const isTutorialTarget = isMapTarget || isReportTarget;
+            const targetId = isMapTarget ? "tutorial-target-nav-map" : isReportTarget ? "tutorial-target-navigate-reports" : undefined;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                data-nav-item={item.id}
+                data-tutorial-target={targetId}
+                className={({ isActive }) => [
+                  isActive ? styles.navLinkActive : styles.navLink,
+                  isTutorialTarget ? "is-tutorial-active" : ""
+                ].filter(Boolean).join(" ")}
+              >
+                <span className={styles.navIcon}>{item.code}</span>
+                <span className={styles.navCopy}>
+                  <span className={styles.navEyebrow}>{item.eyebrow}</span>
+                  <span className={styles.navTitle}>{item.label}</span>
+                </span>
+              </NavLink>
+            );
+          })}
         </nav>
 
         <section className={styles.utilitySection}>
@@ -1042,7 +1090,7 @@ export function GameLayout() {
         <main className={styles.content}>
           <Outlet context={contextValue} />
         </main>
-        <MobileBottomNav />
+        <MobileBottomNav tutorialState={tutorialState} />
       </div>
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
@@ -1262,6 +1310,12 @@ export function GameLayout() {
           </SectionCard>
         </div>
       </BottomSheet>
+
+      <TutorialOverlay 
+        tutorialState={tutorialState} 
+        completeTutorialStep={completeTutorialStep} 
+        skipTutorial={skipTutorial} 
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ReportEntryView, TroopStock } from "@frontier/shared";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -95,9 +95,57 @@ function getCasualtyTotal(losses: TroopStock): number {
   return Object.values(losses).reduce((sum, value) => sum + value, 0);
 }
 
+function getTacticalInsight(report: ReportEntryView): { title: string; body: string } {
+  if (report.kind === "RESOURCE_GATHER") {
+    return {
+      title: "Güvenli Dönüş",
+      body: "Kervan hedeflenen kaynakları başarıyla topladı ve kayıp vermeden şehre döndü.",
+    };
+  }
+
+  const attackerLoss = getCasualtyTotal(report.attackerLosses);
+  const defenderLoss = getCasualtyTotal(report.defenderLosses);
+  const totalPower = Math.max(1, report.attackerPower + report.defenderPower);
+  const attackerRatio = report.attackerPower / totalPower;
+
+  if (report.result === "ATTACKER_WIN") {
+    if (attackerLoss === 0) {
+      return { title: "Kusursuz Zafer", body: "Ordunuz ezici bir güç farkıyla, sıfır kayıpla hedefi darmadağın etti." };
+    }
+    if (attackerRatio > 0.8) {
+      return { title: "Ağır Üstünlük", body: "Güç farkı çok yüksekti. Saldırı verimli gerçekleşti." };
+    }
+    return { title: "Zorlu Çarpışma", body: "Kazanıldı ancak savunma beklenenden dirençliydi, asker kayıplarına dikkat edilmeli." };
+  } else {
+    if (attackerRatio < 0.3) {
+      return { title: "Yetersiz Güç", body: "Ordunuz hedef için çok zayıftı. Daha büyük bir ordu toplamalı veya ittifak desteği istemelisiniz." };
+    }
+    return { title: "Kırılan Saldırı", body: "Savunma hattı aşılamadı, ağır hasar alındı. Bir dahaki sefere daha fazla okçu ve kuşatma birliği önerilir." };
+  }
+}
+
+function getCombatTimeline(report: ReportEntryView): Array<{ time: string; desc: string; major?: boolean }> {
+  if (report.kind === "RESOURCE_GATHER") {
+    return [
+      { time: "00:00", desc: "Ordu kaynak noktasına ulaştı." },
+      { time: "01:30", desc: "Kaynak toplama işlemi başarıyla tamamlandı.", major: true },
+      { time: "02:45", desc: "Kervan şehre geri döndü." }
+    ];
+  }
+
+  const isWin = report.result === "ATTACKER_WIN";
+  return [
+    { time: "00:00", desc: "Öncü birlikler hedef bölgeye ulaştı ve savaş düzeni aldı." },
+    { time: "00:15", desc: "İlk okçu atışları yapıldı, piyade hattı çarpışmaya başladı." },
+    { time: "01:45", desc: isWin ? "Düşman savunma hattında gedik açıldı." : "Düşman ağır direniş gösterdi, merkez hattımız zayıfladı.", major: true },
+    { time: "03:20", desc: isWin ? "Düşman tamamen püskürtüldü ve hedef ele geçirildi." : "Ordumuz ağır kayıplar verdi ve geri çekilme kararı alındı.", major: true }
+  ];
+}
+
+
 export function ReportsPage() {
   const navigate = useNavigate();
-  const { notifications, state } = useGameLayoutContext();
+  const { notifications, state, tutorialState, completeTutorialStep } = useGameLayoutContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [kindFilter, setKindFilter] = useState<"ALL" | ReportEntryView["kind"]>("ALL");
   const [resultFilter, setResultFilter] = useState<"ALL" | "ATTACKER_WIN" | "DEFENDER_HOLD" | "LOGISTICS">("ALL");
@@ -177,6 +225,12 @@ export function ReportsPage() {
     () => reports.find((report) => report.id === focusedReportId) ?? filteredReports[0] ?? null,
     [filteredReports, focusedReportId, reports],
   );
+
+  useEffect(() => {
+    if (activeReport && tutorialState?.currentStepId === "read_report") {
+      completeTutorialStep("read_report");
+    }
+  }, [activeReport, tutorialState?.currentStepId, completeTutorialStep]);
 
   if (reportsQuery.isPending) {
     return (
@@ -272,7 +326,12 @@ export function ReportsPage() {
                   <button
                     key={report.id}
                     type="button"
-                    className={[styles.reportCard, isActive ? styles.reportCardActive : ""].filter(Boolean).join(" ")}
+                    className={[
+                      styles.reportCard,
+                      isActive ? styles.reportCardActive : "",
+                      tutorialState?.currentStepId === "read_report" && !isActive ? "is-tutorial-active" : ""
+                    ].filter(Boolean).join(" ")}
+                    data-tutorial-target={tutorialState?.currentStepId === "read_report" && !isActive ? "tutorial-target-report-card" : undefined}
                     onClick={() => setSearchParams({ focus: report.id })}
                   >
                     <div className={styles.reportCardMeta}>
@@ -306,7 +365,14 @@ export function ReportsPage() {
             </SectionCard>
           ) : (
             <>
-              <header className={styles.detailHero}>
+              <header className={[
+                styles.detailHero,
+                activeReport.kind === "RESOURCE_GATHER" 
+                  ? styles.neutralBanner 
+                  : activeReport.result === "ATTACKER_WIN" 
+                    ? styles.victoryBanner 
+                    : styles.defeatBanner
+              ].join(" ")}>
                 <div className={styles.detailMetaRow}>
                   <Badge tone={getReportTone(activeReport)}>{getReportRibbon(activeReport)}</Badge>
                   <span className={styles.detailMetaText}>{formatDateTime(activeReport.createdAt)}</span>
@@ -427,16 +493,39 @@ export function ReportsPage() {
                       {Object.entries(activeReport.loot)
                         .filter(([, amount]) => amount > 0)
                         .map(([resource, amount]) => (
-                          <article key={resource} className={styles.statCard}>
-                            <span className={styles.statLabel}>{resource}</span>
+                          <div key={resource} className={styles.resourceChip}>
+                            <span>{resource}</span>
                             <strong>{formatNumber(amount)}</strong>
-                          </article>
+                          </div>
                         ))}
                       {Object.values(activeReport.loot).every((amount) => amount === 0) ? (
                         <p className={styles.sideText}>No spoils were recovered from this engagement.</p>
                       ) : null}
                     </div>
                   )}
+                </SectionCard>
+
+                <SectionCard kicker="Savaş Ceridesi" title="Savaş Akışı">
+                  <div className={styles.combatTimeline}>
+                    {getCombatTimeline(activeReport).map((event, i) => (
+                      <div key={i} className={[styles.timelineEvent, event.major ? styles.major : ""].filter(Boolean).join(" ")}>
+                        <span className={styles.timelineTime}>{event.time}</span>
+                        <p className={styles.timelineDesc}>{event.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+
+                <SectionCard kicker="Divan Analizi" title="Taktiksel Yorum">
+                  <div className={styles.tacticalInsight}>
+                    <div className={styles.tacticalIcon}>
+                      {activeReport.kind === "RESOURCE_GATHER" ? "🛡️" : activeReport.result === "ATTACKER_WIN" ? "⚔️" : "⚠️"}
+                    </div>
+                    <div className={styles.tacticalContent}>
+                      <h4>{getTacticalInsight(activeReport).title}</h4>
+                      <p>{getTacticalInsight(activeReport).body}</p>
+                    </div>
+                  </div>
                 </SectionCard>
 
               </div>

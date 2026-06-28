@@ -1578,6 +1578,122 @@
   }
 }
 
+/* ── Premium Composer UI ────────────────────────────── */
+
+.composerRiskBadge {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.riskLow {
+  background: rgba(129, 199, 132, 0.15);
+  color: #81c784;
+  border: 1px solid rgba(129, 199, 132, 0.3);
+}
+
+.riskBalanced {
+  background: rgba(244, 215, 156, 0.15);
+  color: #f4d79c;
+  border: 1px solid rgba(244, 215, 156, 0.3);
+}
+
+.riskDangerous {
+  background: rgba(239, 108, 0, 0.15);
+  color: #ef6c00;
+  border: 1px solid rgba(239, 108, 0, 0.3);
+}
+
+.riskDeadly {
+  background: rgba(211, 47, 47, 0.15);
+  color: #d32f2f;
+  border: 1px solid rgba(211, 47, 47, 0.3);
+}
+
+.commanderSelectionGrid {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: none; /* Firefox */
+}
+
+.commanderSelectionGrid::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.commanderCardSelectable {
+  flex: 0 0 auto;
+  width: 140px;
+  background: var(--surface-card-panel);
+  border: 1px solid var(--color-surface-container-highest);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all var(--motion-base);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.commanderCardSelectable:hover {
+  border-color: rgba(244, 215, 156, 0.4);
+  transform: translateY(-2px);
+}
+
+.commanderCardActive {
+  background: linear-gradient(145deg, rgba(38, 30, 20, 0.95), rgba(20, 16, 12, 0.98));
+  border-color: var(--color-primary-fixed);
+  box-shadow: 0 4px 12px rgba(244, 215, 156, 0.15);
+}
+
+.commanderCardName {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--color-on-surface);
+}
+
+.commanderCardActive .commanderCardName {
+  color: var(--color-primary-fixed);
+}
+
+.commanderCardLevel {
+  font-size: 0.7rem;
+  color: var(--color-outline);
+}
+
+.troopSliderControls {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.troopControlButton {
+  flex: 1;
+  background: var(--color-surface-container-highest);
+  border: 1px solid transparent;
+  color: var(--color-outline);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.3rem;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--motion-base);
+}
+
+.troopControlButton:hover {
+  background: rgba(244, 215, 156, 0.1);
+  color: var(--color-primary-fixed);
+  border-color: rgba(244, 215, 156, 0.3);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero::after,
   .mapFrame::after,

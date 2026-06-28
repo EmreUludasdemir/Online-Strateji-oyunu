@@ -152,6 +152,15 @@ function estimateTroopPower(
   }, 0);
 }
 
+function getRiskLevel(playerPower: number, targetPower: number): { label: string; tone: "Low" | "Balanced" | "Dangerous" | "Deadly" } {
+  if (targetPower === 0) return { label: "Tehdit Yok", tone: "Low" };
+  const ratio = playerPower / targetPower;
+  if (ratio > 1.5) return { label: "Kolay", tone: "Low" };
+  if (ratio > 0.8) return { label: "Dengeli", tone: "Balanced" };
+  if (ratio > 0.4) return { label: "Tehlikeli", tone: "Dangerous" };
+  return { label: "Ölümcül", tone: "Deadly" };
+}
+
 function getComposerTitle(mode: ComposerMode) {
   if (mode === "SCOUT") {
     return "Keşif Buyruğu";
@@ -419,6 +428,8 @@ export function MapPage() {
     recallMarch,
     isSendingMarch,
     isRecallingMarch,
+    tutorialState,
+    completeTutorialStep,
   } = useGameLayoutContext();
   const mapCommandRef = useRef<WorldMapHandle | null>(null);
   const scoutTrailTimersRef = useRef<number[]>([]);
@@ -1516,8 +1527,11 @@ export function MapPage() {
       if (!city.isCurrentPlayer) {
         setTargetSheetOpen(true);
       }
+      if (tutorialState?.currentStepId === "select_target") {
+        completeTutorialStep("select_target");
+      }
     },
-    [selectCity],
+    [selectCity, tutorialState, completeTutorialStep],
   );
 
   const handlePoiSelect = useCallback(
@@ -1531,8 +1545,11 @@ export function MapPage() {
         mapCommandRef.current?.focusPoi(poi.id);
       }
       setTargetSheetOpen(true);
+      if (tutorialState?.currentStepId === "select_target") {
+        completeTutorialStep("select_target");
+      }
     },
-    [selectPoi],
+    [selectPoi, tutorialState, completeTutorialStep],
   );
 
   const handleMarchSelect = useCallback((marchId: string) => {
@@ -1940,6 +1957,9 @@ export function MapPage() {
       await sendMarch({ targetCityId: selectedCity.cityId, commanderId, troops: troopPayload });
       setComposerMode(null);
       setTargetSheetOpen(false);
+      if (tutorialState?.currentStepId === "send_march") {
+        completeTutorialStep("send_march");
+      }
       return;
     }
 
@@ -1947,6 +1967,9 @@ export function MapPage() {
       await sendMarch({ objective: composerMode, targetPoiId: selectedPoi.id, commanderId, troops: troopPayload });
       setComposerMode(null);
       setTargetSheetOpen(false);
+      if (tutorialState?.currentStepId === "send_march") {
+        completeTutorialStep("send_march");
+      }
     }
   };
   handleComposerConfirmRef.current = handleComposerConfirm;
@@ -2622,6 +2645,8 @@ export function MapPage() {
               <Button
                 type="button"
                 disabled={isSendingMarch || (composerMode !== "SCOUT" && totalAssignedTroops <= 0)}
+                className={tutorialState?.currentStepId === "send_march" ? "is-tutorial-active" : undefined}
+                data-tutorial-target={tutorialState?.currentStepId === "send_march" ? "tutorial-target-composer-send" : undefined}
                 onClick={() => void handleComposerConfirm()}
               >
                 {composerActionLabel}
@@ -2693,31 +2718,41 @@ export function MapPage() {
               </div>
               {composerMode !== "SCOUT" ? (
                 <>
-                  <section className={styles.commanderCard}>
-                    <div className={styles.composerRow}>
-                      <span className={styles.muted}>Başbuğ</span>
-                      <select aria-label="Başbuğ" value={commanderId} onChange={(event) => setCommanderId(event.target.value)}>
-                        {state.city.commanders.map((commander) => (
-                          <option key={commander.id} value={commander.id}>
-                            {commander.name} L{commander.level}
-                          </option>
-                        ))}
-                      </select>
+                  <section>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                      <span className={styles.hudEyebrow}>Başbuğ Seçimi</span>
+                      <span className={styles.muted} style={{ fontSize: "0.75rem" }}>
+                        +{selectedCommander?.marchSpeedBonusPct ?? 0}% Hız, +{selectedCommander?.attackBonusPct ?? 0}% Güç
+                      </span>
                     </div>
-                    <p className={styles.commanderMeta}>
-                      Sefer +{selectedCommander?.marchSpeedBonusPct ?? 0}% / Taşıma +
-                      {selectedCommander?.carryBonusPct ?? 0}% / Akın +{selectedCommander?.attackBonusPct ?? 0}% /
-                      Kalkan +{selectedCommander?.defenseBonusPct ?? 0}%
-                    </p>
+                    <div className={styles.commanderSelectionGrid}>
+                      {state.city.commanders.map((commander) => (
+                        <button
+                          key={commander.id}
+                          type="button"
+                          className={[styles.commanderCardSelectable, commanderId === commander.id ? styles.commanderCardActive : ""].filter(Boolean).join(" ")}
+                          onClick={() => setCommanderId(commander.id)}
+                        >
+                          <div>
+                            <div className={styles.commanderCardName}>{commander.name}</div>
+                            <div className={styles.commanderCardLevel}>L{commander.level} {commander.talentTrack}</div>
+                          </div>
+                          <div style={{ fontSize: "0.65rem", color: "var(--color-outline)", marginTop: "auto" }}>
+                            Güç +{commander.attackBonusPct}%<br/>
+                            Taşıma +{commander.carryBonusPct}%
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </section>
-                  <div className={styles.troopDeck}>
+                  <div className={styles.troopDeck} style={{ marginTop: "0.5rem" }}>
                     {state.city.troops.map((troop) => (
                       <article key={troop.type} className={styles.sliderCard}>
                         <label htmlFor={`troop-${troop.type}`} className={styles.sliderLabelRow}>
                           <span>
                             <strong>{troop.label}</strong>
                             <span className={styles.sliderMeta}>
-                              Yedek {formatNumber(troop.quantity)} / Taşıma {formatNumber(troop.carry)}
+                              Yedek {formatNumber(troop.quantity)}
                             </span>
                           </span>
                           <strong>{formatNumber(troopPayload[troop.type])}</strong>
@@ -2736,11 +2771,20 @@ export function MapPage() {
                             }))
                           }
                         />
-                        <p className={styles.sliderFooter}>
-                          {troop.quantity > 0
-                            ? `%${Math.round((troopPayload[troop.type] / troop.quantity) * 100)} ayrıldı`
-                            : "Birlik yok"}
-                        </p>
+                        <div className={styles.troopSliderControls}>
+                          <button type="button" className={styles.troopControlButton} onClick={() => setTroopPayload(c => ({...c, [troop.type]: 0}))}>
+                            Sıfırla
+                          </button>
+                          <button type="button" className={styles.troopControlButton} onClick={() => setTroopPayload(c => ({...c, [troop.type]: Math.floor(troop.quantity * 0.25)}))}>
+                            %25
+                          </button>
+                          <button type="button" className={styles.troopControlButton} onClick={() => setTroopPayload(c => ({...c, [troop.type]: Math.floor(troop.quantity * 0.5)}))}>
+                            %50
+                          </button>
+                          <button type="button" className={styles.troopControlButton} onClick={() => setTroopPayload(c => ({...c, [troop.type]: troop.quantity}))}>
+                            Maksimum
+                          </button>
+                        </div>
                       </article>
                     ))}
                   </div>
@@ -2761,17 +2805,20 @@ export function MapPage() {
               )}
             </>
           ) : selectedCity ? (
-            <>
-              <section className={styles.composerHero}>
-                <div>
-                  <p className={styles.hudEyebrow}>Kuşatma Hedefi</p>
-                  <strong className={styles.cardTitle}>{selectedTargetName}</strong>
-                  <p className={styles.muted}>{selectedTargetSubtitle}</p>
-                </div>
-                <Badge tone={selectedCity.projectedOutcome === "ATTACKER_WIN" ? "success" : "warning"}>
-                  {selectedCity.projectedOutcome === "ATTACKER_WIN" ? "Elverişli" : "Dirençli"}
-                </Badge>
-              </section>
+            (() => {
+              const risk = getRiskLevel(previewPower, selectedCity.defensePower);
+              return (
+                <>
+                  <section className={styles.composerHero}>
+                    <div>
+                      <p className={styles.hudEyebrow}>Kuşatma Hedefi</p>
+                      <strong className={styles.cardTitle}>{selectedTargetName}</strong>
+                      <p className={styles.muted}>{selectedTargetSubtitle}</p>
+                    </div>
+                    <span className={[styles.composerRiskBadge, styles[`risk${risk.tone}`]].join(" ")}>
+                      {risk.tone === "Low" ? "🟢" : risk.tone === "Balanced" ? "🟡" : risk.tone === "Dangerous" ? "🟠" : "🔴"} {risk.label}
+                    </span>
+                  </section>
               <section className={styles.commandActionGrid}>
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Keşif Taraması</p>
@@ -2820,6 +2867,8 @@ export function MapPage() {
                 </article>
               </div>
             </>
+            );
+          })()
           ) : selectedPoi ? (
             <>
               <section className={styles.composerHero}>
@@ -2828,9 +2877,9 @@ export function MapPage() {
                   <strong className={styles.cardTitle}>{selectedTargetName}</strong>
                   <p className={styles.muted}>{selectedTargetSubtitle}</p>
                 </div>
-                <Badge tone={selectedPoi.kind === "RESOURCE_NODE" ? "info" : "warning"}>
-                  {selectedPoi.kind === "RESOURCE_NODE" ? "Hasada açık" : "Dirençli"}
-                </Badge>
+                <span className={[styles.composerRiskBadge, selectedPoi.kind === "RESOURCE_NODE" ? styles.riskLow : styles.riskDangerous].join(" ")}>
+                  {selectedPoi.kind === "RESOURCE_NODE" ? "🟢 Hasada açık" : "🟠 Dirençli"}
+                </span>
               </section>
               <section className={styles.commandActionGrid}>
                 <article className={styles.commandActionCard}>

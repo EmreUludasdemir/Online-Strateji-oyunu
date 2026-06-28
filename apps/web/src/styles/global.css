@@ -757,3 +757,30 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Tutorial Highlighting ── */
+[data-tutorial-target].is-tutorial-active {
+  position: relative;
+  z-index: 100 !important;
+  animation: tutorialPulseGlow 2s ease-in-out infinite alternate !important;
+  box-shadow: 0 0 0 2px var(--color-primary-fixed), 0 0 16px rgba(233, 193, 118, 0.4) !important;
+}
+
+[data-tutorial-target].is-tutorial-active::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 2px dashed rgba(233, 193, 118, 0.6);
+  border-radius: calc(var(--radius-base) + 4px);
+  pointer-events: none;
+  animation: spinSlow 12s linear infinite;
+}
+
+@keyframes tutorialPulseGlow {
+  0% {
+    box-shadow: 0 0 0 2px rgba(233, 193, 118, 0.6), 0 0 12px rgba(233, 193, 118, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(233, 193, 118, 1), 0 0 24px rgba(233, 193, 118, 0.6);
+  }
+}

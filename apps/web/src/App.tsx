@@ -59,6 +59,11 @@ const ArmyPage = lazy(async () => {
   return { default: module.ArmyPage };
 });
 
+const CityPage = lazy(async () => {
+  const module = await import("./pages/CityPage");
+  return { default: module.CityPage };
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -97,6 +102,7 @@ export default function App() {
                     <Route path="messages" element={<MessageCenterPage />} />
                     <Route path="market" element={<MarketPage />} />
                     <Route path="army" element={<ArmyPage />} />
+                    <Route path="city" element={<CityPage />} />
                     <Route path="alliance" element={<AlliancePage />} />
                     <Route path="alliance/roles" element={<AllianceRolesPage />} />
                   </Route>

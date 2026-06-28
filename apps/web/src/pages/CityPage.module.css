@@ -1,0 +1,684 @@
+/* =========================================================
+   CityPage.module.css — Başkent / City Management Premium UI
+   Dark war-room + medieval city planning board aesthetic
+   ========================================================= */
+
+.page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* ── City Overview Header ─────────────────────────────── */
+
+.cityHeader {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 1rem;
+  padding: 1.75rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(145deg, rgba(28, 24, 18, 0.96), rgba(16, 14, 12, 0.98));
+  border-top: 2px solid var(--color-primary-fixed-dim);
+  box-shadow: var(--shadow-heavy), inset 0 0 0 1px var(--color-panel-line);
+  animation: liftIn 480ms var(--motion-dramatic) both;
+}
+
+.cityHeader::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 30%, rgba(233, 193, 118, 0.06), transparent 55%);
+  pointer-events: none;
+}
+
+.cityHeaderTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cityName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  color: var(--color-primary-fixed);
+  line-height: 1.1;
+}
+
+.cityCoords {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-outline);
+  font-variant-numeric: tabular-nums;
+}
+
+.cityStatsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.65rem;
+}
+
+.cityStat {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-xs);
+  background: var(--surface-card-panel);
+  transition: transform var(--motion-base), box-shadow var(--motion-base);
+}
+
+.cityStat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-gold-soft);
+}
+
+.cityStatLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-outline);
+}
+
+.cityStatValue {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary-fixed);
+}
+
+/* ── Building Grid ────────────────────────────────────── */
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sectionKicker {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-outline);
+}
+
+.sectionHeading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.35rem;
+  color: var(--color-primary-fixed);
+}
+
+.buildingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+.buildingCard {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.15rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background var(--motion-base),
+    border-color var(--motion-base),
+    transform var(--motion-snappy),
+    box-shadow var(--motion-decel);
+  animation: liftIn 420ms var(--motion-dramatic) both;
+  will-change: transform, box-shadow;
+}
+
+.buildingCard:hover {
+  transform: translateY(-3px) scale(1.005);
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  border-color: var(--color-primary-fixed-dim);
+}
+
+.buildingCard:focus-visible {
+  outline: 2px solid var(--color-primary-fixed);
+  outline-offset: 2px;
+}
+
+.buildingCardSelected {
+  background: var(--surface-card-selected-warning);
+  border-color: var(--color-primary-fixed-dim);
+  box-shadow: var(--shadow-gold-soft);
+}
+
+.buildingCardHead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.buildingIcon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-highest);
+  padding: 6px;
+  object-fit: contain;
+}
+
+.buildingMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.buildingName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buildingDesc {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--color-outline);
+  line-height: 1.4;
+}
+
+.buildingLevel {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary-fixed-dim), var(--color-primary-fixed));
+  color: var(--color-on-primary);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(233, 193, 118, 0.3);
+}
+
+.buildingCardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.buildingStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 100px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.statusReady {
+  background: rgba(56, 142, 60, 0.18);
+  color: #81c784;
+}
+
+.statusUpgrading {
+  background: rgba(233, 193, 118, 0.18);
+  color: var(--color-primary-fixed);
+}
+
+.statusBlocked {
+  background: rgba(200, 50, 50, 0.15);
+  color: var(--color-error);
+}
+
+/* ── Upgrade Queue ────────────────────────────────────── */
+
+.upgradeQueue {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+  border-left: 3px solid var(--color-primary-fixed-dim);
+  box-shadow: var(--shadow-soft);
+}
+
+.upgradeSlot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-high);
+}
+
+.upgradeSlotIcon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-highest);
+  padding: 4px;
+  object-fit: contain;
+}
+
+.upgradeSlotInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.upgradeSlotName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.upgradeSlotDetail {
+  font-size: 0.72rem;
+  color: var(--color-outline);
+}
+
+.upgradeProgressWrap {
+  width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-panel-line);
+  overflow: hidden;
+}
+
+.upgradeProgressFill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--color-primary-fixed-dim), var(--color-primary-fixed));
+  transition: width 1s linear;
+}
+
+.upgradeTimer {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary-fixed);
+  white-space: nowrap;
+}
+
+.upgradeEmpty {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-high);
+  border: 1px dashed var(--color-outline-variant);
+  color: var(--color-outline);
+  font-size: 0.82rem;
+}
+
+.upgradeEmptyIcon {
+  font-size: 1.25rem;
+  opacity: 0.6;
+}
+
+/* ── Building Detail Panel ────────────────────────────── */
+
+.detailPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(145deg, rgba(24, 22, 18, 0.95), rgba(14, 13, 12, 0.98));
+  border-top: 2px solid var(--color-primary-fixed-dim);
+  box-shadow: var(--shadow-heavy);
+  animation: liftIn 350ms var(--motion-dramatic) both;
+}
+
+.detailHead {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.detailIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-highest);
+  padding: 8px;
+  object-fit: contain;
+}
+
+.detailHeadMeta {
+  flex: 1;
+}
+
+.detailName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--color-primary-fixed);
+}
+
+.detailDescText {
+  margin: 0.25rem 0 0;
+  color: var(--color-outline);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.detailStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+}
+
+.detailStat {
+  padding: 0.65rem;
+  border-radius: var(--radius-xs);
+  background: var(--surface-card-panel);
+}
+
+.detailStatLabel {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-outline);
+  margin-bottom: 0.2rem;
+}
+
+.detailStatValue {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-on-surface);
+}
+
+.detailCostGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+}
+
+.costChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-high);
+  border: 1px solid var(--color-outline-variant);
+  font-size: 0.82rem;
+}
+
+.costChip span {
+  text-transform: capitalize;
+  color: var(--color-outline);
+}
+
+.costChip strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.costSufficient strong {
+  color: #81c784;
+}
+
+.costInsufficient strong {
+  color: var(--color-error);
+}
+
+.detailActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Economy Panel ────────────────────────────────────── */
+
+.economyPanel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+  box-shadow: var(--shadow-soft);
+}
+
+.resourceRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-high);
+}
+
+.resourceName {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--color-on-surface);
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.resourceAmount {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary-fixed);
+  min-width: 72px;
+  text-align: right;
+}
+
+.resourceIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ── Defense Panel ────────────────────────────────────── */
+
+.defensePanel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+  box-shadow: var(--shadow-soft);
+}
+
+.defenseBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.defenseSafe {
+  background: rgba(56, 142, 60, 0.18);
+  color: #81c784;
+}
+
+.defenseWarn {
+  background: rgba(233, 193, 118, 0.18);
+  color: var(--color-primary-fixed);
+}
+
+.defenseDanger {
+  background: rgba(200, 50, 50, 0.15);
+  color: var(--color-error);
+}
+
+.defenseStatRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.65rem;
+}
+
+/* ── Advisor Panel ────────────────────────────────────── */
+
+.advisorPanel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(145deg, rgba(38, 30, 20, 0.95), rgba(20, 16, 12, 0.98));
+  box-shadow: var(--shadow-soft);
+  border-left: 3px solid #d4af37;
+}
+
+.advisorList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.advisorItem {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-container-highest);
+  align-items: flex-start;
+}
+
+.advisorIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.advisorContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.advisorMessage {
+  font-size: 0.82rem;
+  color: var(--color-on-surface);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.advisorItemUrgent {
+  background: rgba(200, 50, 50, 0.15);
+  border: 1px solid rgba(200, 50, 50, 0.3);
+}
+
+.advisorItemUrgent .advisorMessage {
+  color: var(--color-error);
+}
+
+.advisorItemArmy {
+  border-left: 2px solid var(--color-primary-fixed);
+}
+
+.advisorItemEconomy {
+  border-left: 2px solid #81c784;
+}
+
+/* ── Layout: Two-column on desktop ────────────────────── */
+
+.mainLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.leftCol {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.rightCol {
+  display: grid;
+  gap: 1.25rem;
+  position: sticky;
+  top: 1rem;
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .mainLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .rightCol {
+    position: static;
+  }
+
+  .buildingGrid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .cityHeader {
+    padding: 1.15rem;
+  }
+
+  .cityStatsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .buildingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .detailStatsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .detailCostGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cityHeaderTop {
+    flex-direction: column;
+  }
+
+  .defenseStatRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Reduced motion ───────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .buildingCard,
+  .cityHeader,
+  .detailPanel {
+    animation: none;
+  }
+
+  .buildingCard:hover {
+    transform: none;
+  }
+}
