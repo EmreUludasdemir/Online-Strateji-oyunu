@@ -724,6 +724,7 @@ export function canProposePact(diplomacy: Pick<RealmDiplomacy, "relation" | "bor
 export function canPrepareRaid(province: Pick<ProvinceIntel, "diplomacy" | "borderTension" | "status"> & { controlState?: Pick<ProvinceControlState, "playerClaimStrength" | "controlStatus" | "controllerRealmId" | "raidPrepared"> }) {
   if (province.controlState?.controllerRealmId === "player" || province.controlState?.controlStatus === "controlled") return false;
   if (province.controlState?.raidPrepared) return false;
+  if (province.status === "unknown" || province.controlState?.controlStatus === "unknown") return false;
   if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return false;
   return (
     province.status === "contested" ||
@@ -738,7 +739,8 @@ export function canClaimProvince(province: Pick<ProvinceIntel, "diplomacy" | "st
   if (province.status === "unknown" || province.riskLevel === "unknown") return false;
   if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return false;
   if (province.controlState?.controlStatus === "controlled") return false;
-  if ((province.controlState?.playerClaimStrength ?? 0) >= 70) return false;
+  if (province.controlState?.controlStatus === "occupied" || province.controlState?.controlStatus === "claimed") return false;
+  if ((province.controlState?.playerClaimStrength ?? 0) >= 42) return false;
   if (province.claims.some((claim) => claim.claimantRealmId === "player" && claim.strength >= 70)) return false;
   return province.strategicValue >= 45;
 }
@@ -960,8 +962,12 @@ function expansionActionItem(action: ExpansionAction, enabled: boolean, reason: 
 
 function getRecommendedExpansionAction(province: ProvinceIntel, controlState: ProvinceControlState): ExpansionAction {
   if (controlState.controlStatus === "unknown" || !controlState.lastScoutedAt) return "SCOUT_PROVINCE";
+  if (controlState.controllerRealmId === "player" || controlState.controlStatus === "occupied" || controlState.controlStatus === "controlled") {
+    return controlState.fortified ? "WITHDRAW_CLAIM" : "FORTIFY_BORDER";
+  }
+  if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return "FORTIFY_BORDER";
   if (getInfluenceProgress(controlState) < 28 && canEstablishInfluence(province, controlState)) return "ESTABLISH_INFLUENCE";
-  if (controlState.playerClaimStrength < 45 && canClaimProvince({ ...province, controlState })) return "CLAIM_PROVINCE";
+  if (controlState.controlStatus !== "claimed" && controlState.playerClaimStrength < 42 && canClaimProvince({ ...province, controlState })) return "CLAIM_PROVINCE";
   if (!controlState.raidPrepared && canPrepareRaid({ ...province, controlState })) return "PREPARE_RAID";
   if (canDemandSubmission(province, controlState)) return "DEMAND_SUBMISSION";
   if (canLaunchRaid(province, controlState)) return "LAUNCH_RAID";
@@ -977,6 +983,8 @@ export function getAvailableExpansionActions(province: ProvinceIntel, controlSta
   const launchRaidEnabled = canLaunchRaid(province, controlState);
   const demandEnabled = canDemandSubmission(province, controlState);
   const fortifyEnabled =
+    province.diplomacy.relation === "allied" ||
+    province.diplomacy.relation === "friendly" ||
     controlState.controlStatus === "claimed" ||
     controlState.controlStatus === "contested" ||
     controlState.controlStatus === "occupied" ||
@@ -988,13 +996,37 @@ export function getAvailableExpansionActions(province: ProvinceIntel, controlSta
     expansionActionItem("SCOUT_PROVINCE", scoutEnabled, scoutEnabled ? "Keşif, risk ve direnci netleştirir." : "Bu yurt zaten gözlenmiş.", recommended === "SCOUT_PROVINCE"),
     expansionActionItem(
       "SEND_ENVOY",
-      province.diplomacy.relation !== "allied" && province.diplomacy.relation !== "friendly",
-      province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly" ? "Dost yurtta baskı kurma önceliği yok." : "Elçi, düşük riskli nüfuz sağlar.",
+      province.diplomacy.relation !== "allied" && province.diplomacy.relation !== "friendly" && controlState.controllerRealmId !== "player",
+      province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly"
+        ? "Dost yurtta baskı değil geçit ve tahkimat önceliklidir."
+        : controlState.controllerRealmId === "player"
+          ? "Bu yurt Toy denetiminde; elçi yerine hududu yönet."
+          : "Elçi, düşük riskli nüfuz sağlar.",
       recommended === "SEND_ENVOY",
     ),
     expansionActionItem("ESTABLISH_INFLUENCE", influenceEnabled, influenceEnabled ? "Yerel beyleri Toy etkisine yaklaştır." : "Direnç, ilişki veya hudut durumu etki için uygun değil.", recommended === "ESTABLISH_INFLUENCE"),
-    expansionActionItem("CLAIM_PROVINCE", claimEnabled, claimEnabled ? "Siyasi iddiayı Toy kayıtlarına geçir." : "Dost, zayıf gerekçeli veya zaten güçlü iddialı yurt.", recommended === "CLAIM_PROVINCE"),
-    expansionActionItem("PREPARE_RAID", prepareRaidEnabled, prepareRaidEnabled ? "Akın için sancak ve rota hazırlığı yap." : "Akın için siyasi gerekçe zayıf.", recommended === "PREPARE_RAID"),
+    expansionActionItem(
+      "CLAIM_PROVINCE",
+      claimEnabled,
+      claimEnabled
+        ? "Siyasi iddiayı Toy kayıtlarına geçir."
+        : controlState.controlStatus === "claimed" || controlState.playerClaimStrength >= 42
+          ? "Sancak iddiası yeterince görünür; şimdi etki veya baskı gerekir."
+          : "Dost, zayıf gerekçeli veya zaten güçlü iddialı yurt.",
+      recommended === "CLAIM_PROVINCE",
+    ),
+    expansionActionItem(
+      "PREPARE_RAID",
+      prepareRaidEnabled,
+      prepareRaidEnabled
+        ? "Akın için sancak ve rota hazırlığı yap."
+        : controlState.raidPrepared
+          ? "Akın hazırlığı zaten yapıldı; başlat ya da geri çek."
+          : province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly"
+            ? "Dost yurda akın siyasi töreye aykırı."
+            : "Akın için siyasi gerekçe zayıf.",
+      recommended === "PREPARE_RAID",
+    ),
     expansionActionItem("LAUNCH_RAID", launchRaidEnabled, launchRaidEnabled ? "Hazırlanan akını başlat." : "Önce akın hazırlığı, iddia veya zayıf direnç gerekir.", recommended === "LAUNCH_RAID"),
     expansionActionItem("DEMAND_SUBMISSION", demandEnabled, demandEnabled ? "Güçlü iddia ve nüfuzla bağlılık iste." : "Nüfuz/iddia düşük veya direnç yüksek.", recommended === "DEMAND_SUBMISSION"),
     expansionActionItem("FORTIFY_BORDER", fortifyEnabled, fortifyEnabled ? "Hudut çizgisini pekiştir, direnci düşür." : "Önce etki veya iddia oluştur.", recommended === "FORTIFY_BORDER"),
@@ -1005,17 +1037,30 @@ export function getAvailableExpansionActions(province: ProvinceIntel, controlSta
 export function getExpansionAdvisorMessage(province: ProvinceIntel, controlState: ProvinceControlState = getInitialProvinceControlState(province)) {
   const influence = getInfluenceProgress(controlState);
   const claim = getClaimProgress(controlState);
+  const relation = province.diplomacy.relation;
   if (controlState.controlStatus === "unknown") {
-    return "Bu yurt sisli. Önce keşif yapmadan claim veya akın kararı zayıf bilgiye dayanır.";
+    return "Yurt sisli. Önce keşif veya elçi gönder; akın ve iddia kararı kör kılıçtır.";
+  }
+  if (relation === "allied" || relation === "friendly") {
+    return "Bu yurt töreye yakın. Geçit, destek ve sakin hudut tahkimatı değerli.";
+  }
+  if (controlState.controlStatus === "controlled") {
+    return "Yurt Toy denetiminde. Yeni iddia değil, direnç düşürme ve hudut pekiştirme zamanı.";
+  }
+  if (controlState.controlStatus === "occupied") {
+    return "Fiili işgal kuruldu. Direnci kırmadan bağlılık istemek erken olur; tahkimat önde.";
+  }
+  if (controlState.raidPrepared) {
+    return "Akın sancağı hazır. Başlatmadan önce iddia gücü ve direnci son kez tart.";
   }
   if (province.borderTension.level === "critical") {
-    return "Hudut zaten kritik. Yeni baskı misilleme doğurabilir; önce nüfuz veya tahkimat düşün.";
+    return "Hudut kızgın. Her yeni baskı karşı sancak doğurur; nüfuz veya tahkimat daha ölçülü.";
   }
   if (province.strategicValue >= 72 && influence < 30) {
-    return "Bu yurt stratejik ama siyasi zemin zayıf. Claimden önce etki kurmak daha güvenli.";
+    return "Yurt değerli ama zemin zayıf. Sancaktan önce beyleri Toy sözüne yaklaştır.";
   }
   if (claim > 0 && claim < 45) {
-    return "Claim zayıf. Akın başlatmadan önce elçi ve nüfuzla iddiayı güçlendir.";
+    return "Sancak zayıf. Akından önce elçi ve nüfuzla iddiayı görünür kıl.";
   }
   if (controlState.resistance <= 34 && province.realm.strength < 70) {
     return "Düşük direnç ve zayıf kontrol burayı iyi bir genişleme hedefi yapıyor.";

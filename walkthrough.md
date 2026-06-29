@@ -60,13 +60,37 @@
    - `Ahid Oner` for pact building,
    - `Hudut Gerginligi` to switch back into the `Toy` relation map mode.
 
+## Claims and Expansion Loop
+
+1. Open `Sefer Haritasi`, switch to `Toy`, and select a province.
+2. In `Yurt Defteri`, read the dossier header first:
+   - realm tag and province name,
+   - `Iliski`, `Durum`, `Hudut`, `Risk`, and `Kontrol` badges,
+   - terrain, tier, strategic value, realm strength, resources, and nearby pressure.
+3. Use `Kontrol & Etki` to judge the expansion path:
+   - `Etki` shows Toy influence in the province,
+   - `Claim` shows player claim strength,
+   - `Direnc` shows local resistance,
+   - `Kontrol` shows the current owner's hold.
+4. Choose an expansion order:
+   - unknown provinces prefer `Yurdu Kesfet`,
+   - neutral/wary/hostile provinces can move through envoy, influence, claim, raid preparation, raid, or submission depending on risk,
+   - friendly/allied provinces do not enable raid orders and should lean toward support or border fortification,
+   - claimed/occupied/controlled provinces shift away from repeat claims and toward fortify/withdraw/manage style decisions.
+5. After an order resolves, read the feedback box under `Kontrol & Etki`.
+6. Watch `Hudut Ceridesi` on the map rail:
+   - newest orders show province name, action type, result, realm reaction, tension change, and age,
+   - empty state tells the player to select a province and issue a first expansion order.
+7. Re-check `Toy` mode on the world map. Influence, claim, contested status, occupation/control, and high resistance now affect overlay marks without adding map text clutter.
+
 ## Expected Feel
 
-The map should now read closer to a browser grand-strategy layer: realms have names, colors, borders, relations, claims, treaties, and province-level strategic identity. The player can inspect provinces without needing a city, camp, or resource node under the cursor, then move from province intelligence into realm diplomacy without leaving the map.
+The map should now read closer to a browser grand-strategy layer: realms have names, colors, borders, relations, claims, treaties, province control, and province-level strategic identity. The player can inspect provinces without needing a city, camp, or resource node under the cursor, then move from province intelligence into realm diplomacy or expansion orders without leaving the map.
 
 ## Verification Notes
 
 - `render_game_to_text()` exposes current map UI state including the selected map mode.
 - Province and diplomacy helper behavior is covered in `apps/web/src/lib/politicalMap.test.ts`.
+- Claims and expansion helper behavior is covered in the same test file, including allied/friendly raid locks, prepared raid state, claimed province recommendations, unknown province scouting, occupied province management, and advisor text.
 - `corepack pnpm smoke:field-command` is currently stale for the older field-command dialog text (`Field Command: Barbarian Camp 5`) and is tracked separately from the political/diplomacy map flow.
 - Browser smoke output was captured and inspected during the pass; generated artifacts are not required for normal development.

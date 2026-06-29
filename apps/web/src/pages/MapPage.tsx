@@ -97,6 +97,8 @@ interface ExpansionLogEntry {
   provinceName: string;
   action: ExpansionAction;
   message: string;
+  realmReaction: string;
+  tensionDelta: number;
   controlStatus: ProvinceControlStatus;
   createdAt: number;
 }
@@ -2213,6 +2215,8 @@ export function MapPage() {
           provinceName: selectedProvince.name,
           action,
           message: result.message,
+          realmReaction: result.realmReaction,
+          tensionDelta: result.tensionDelta,
           controlStatus: result.nextState.controlStatus,
           createdAt: now,
         },
@@ -2890,22 +2894,35 @@ export function MapPage() {
             </Button>
           </SectionCard>
 
-          {expansionLog.length > 0 ? (
-            <SectionCard kicker="HUDUT" title="Hudut Ceridesi" className={styles.expansionLogCard}>
+          <SectionCard kicker="HUDUT" title="Hudut Ceridesi" className={styles.expansionLogCard}>
+            {expansionLog.length > 0 ? (
               <div className={styles.expansionLogList}>
                 {expansionLog.slice(0, 4).map((entry) => (
                   <article key={entry.id} className={styles.expansionLogEntry}>
                     <div className={styles.expansionLogHeader}>
-                      <strong>{getExpansionActionLabel(entry.action)}</strong>
+                      <div>
+                        <strong>{entry.provinceName}</strong>
+                        <span>{getExpansionActionLabel(entry.action)}</span>
+                      </div>
                       <Badge tone={getControlStatusTone(entry.controlStatus)}>{getControlStatusLabel(entry.controlStatus)}</Badge>
                     </div>
                     <p>{entry.message}</p>
-                    <small>{entry.provinceName} · {formatMarkerAge(new Date(entry.createdAt).toISOString(), now)}</small>
+                    <small>
+                      {entry.realmReaction} ·{" "}
+                      {entry.tensionDelta > 0
+                        ? `Hudut +${entry.tensionDelta}`
+                        : entry.tensionDelta < 0
+                          ? `Hudut ${entry.tensionDelta}`
+                          : "Hudut dengede"}{" "}
+                      · {formatMarkerAge(new Date(entry.createdAt).toISOString(), now)}
+                    </small>
                   </article>
                 ))}
               </div>
-            </SectionCard>
-          ) : null}
+            ) : (
+              <p className={styles.expansionLogEmpty}>Toy modunda bir yurt seç; keşif, etki veya sancak buyruğu verdikçe sonuçlar burada tutulur.</p>
+            )}
+          </SectionCard>
 
           <SectionCard kicker="OBA TEZGAHLARI" title="Oba Kuyrukları" className={styles.marchSection}>
             <div className={styles.queueList}>
@@ -3218,18 +3235,23 @@ export function MapPage() {
               >
                 {selectedProvince.realm.shortTag}
               </button>
-              <div>
+              <div className={styles.provinceHeroText}>
                 <p className={styles.hudEyebrow}>Siyasi Yurt</p>
                 <strong className={styles.cardTitle}>{selectedProvince.name}</strong>
                 <p className={styles.muted}>
                   {selectedProvince.realm.name} | {selectedProvince.realm.identity}
                 </p>
               </div>
-              <div className={styles.provinceBadgeStack}>
-                <Badge tone={getRelationBadgeTone(selectedProvince.diplomacy.relation)}>{getRelationLabel(selectedProvince.diplomacy.relation)}</Badge>
-                <Badge tone={getProvinceBadgeTone(selectedProvince.status)}>{getProvinceStatusLabel(selectedProvince.status)}</Badge>
-                <Badge tone={getBorderTensionTone(selectedProvince.borderTension.level)}>{getBorderTensionLabel(selectedProvince.borderTension.level)}</Badge>
-                <Badge tone={getRiskBadgeTone(selectedProvince.riskLevel)}>{getProvinceRiskLabel(selectedProvince.riskLevel)}</Badge>
+              <div className={styles.provinceBadgeStack} data-province-hero-badges="true">
+                <Badge tone={getRelationBadgeTone(selectedProvince.diplomacy.relation)}>İlişki: {getRelationLabel(selectedProvince.diplomacy.relation)}</Badge>
+                <Badge tone={getProvinceBadgeTone(selectedProvince.status)}>Durum: {getProvinceStatusLabel(selectedProvince.status)}</Badge>
+                <Badge tone={getBorderTensionTone(selectedProvince.borderTension.level)}>Hudut: {getBorderTensionLabel(selectedProvince.borderTension.level)}</Badge>
+                <Badge tone={getRiskBadgeTone(selectedProvince.riskLevel)}>Risk: {getProvinceRiskLabel(selectedProvince.riskLevel)}</Badge>
+                {selectedProvinceControl ? (
+                  <Badge tone={getControlStatusTone(selectedProvinceControl.controlStatus)}>
+                    Kontrol: {getControlStatusLabel(selectedProvinceControl.controlStatus)}
+                  </Badge>
+                ) : null}
               </div>
             </section>
 
@@ -3349,7 +3371,8 @@ export function MapPage() {
             {selectedProvinceControl ? (
               <section className={styles.expansionActions} aria-label="Genişleme buyrukları">
                 {selectedExpansionActions.map((entry) => (
-                  <Button
+                  <article key={entry.action} className={styles.expansionActionItem} data-expansion-entry={entry.action}>
+                    <Button
                     key={entry.action}
                     type="button"
                     size="small"
@@ -3360,7 +3383,9 @@ export function MapPage() {
                     onClick={() => handleExpansionAction(entry.action)}
                   >
                     {entry.label}
-                  </Button>
+                    </Button>
+                    <small>{entry.reason}</small>
+                  </article>
                 ))}
               </section>
             ) : null}

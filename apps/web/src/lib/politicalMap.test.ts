@@ -207,6 +207,119 @@ describe("political map helpers", () => {
     expect(actions.some((entry) => entry.recommended)).toBe(true);
   });
 
+  it("does not offer prepare raid again after raid preparation", () => {
+    const province = buildProvinceIntel({
+      x: 38,
+      y: 44,
+      worldSize: 64,
+      region: hostileRegion,
+      fogState: "VISIBLE",
+      pois: [],
+    });
+    const preparedControl = {
+      ...getInitialProvinceControlState(province),
+      raidPrepared: true,
+      playerClaimStrength: 48,
+      resistance: 54,
+    };
+    const actions = getAvailableExpansionActions(province, preparedControl);
+
+    expect(actions.find((entry) => entry.action === "PREPARE_RAID")?.enabled).toBe(false);
+    expect(actions.find((entry) => entry.action === "PREPARE_RAID")?.reason).toContain("zaten");
+    expect(actions.find((entry) => entry.action === "LAUNCH_RAID")?.enabled).toBe(true);
+  });
+
+  it("keeps claimed provinces from recommending another claim", () => {
+    const province = buildProvinceIntel({
+      x: 37,
+      y: 44,
+      worldSize: 64,
+      region: hostileRegion,
+      fogState: "VISIBLE",
+      pois: [],
+    });
+    const claimedControl = {
+      ...getInitialProvinceControlState(province),
+      controlStatus: "claimed" as const,
+      playerClaimStrength: 55,
+      influenceByRealm: {
+        [province.realm.id]: 62,
+        player: 34,
+      },
+    };
+    const actions = getAvailableExpansionActions(province, claimedControl);
+    const claimAction = actions.find((entry) => entry.action === "CLAIM_PROVINCE");
+
+    expect(claimAction?.enabled).toBe(false);
+    expect(claimAction?.recommended).toBe(false);
+  });
+
+  it("prioritizes scout and envoy before aggression for unknown provinces", () => {
+    const province = buildProvinceIntel({
+      x: 50,
+      y: 50,
+      worldSize: 64,
+      region: unknownRegion,
+      fogState: "HIDDEN",
+      pois: [],
+    });
+    const control = getInitialProvinceControlState(province);
+    const actions = getAvailableExpansionActions(province, control);
+
+    expect(actions.find((entry) => entry.action === "SCOUT_PROVINCE")?.enabled).toBe(true);
+    expect(actions.find((entry) => entry.action === "SCOUT_PROVINCE")?.recommended).toBe(true);
+    expect(actions.find((entry) => entry.action === "CLAIM_PROVINCE")?.enabled).toBe(false);
+    expect(actions.find((entry) => entry.action === "PREPARE_RAID")?.enabled).toBe(false);
+  });
+
+  it("shifts occupied and controlled provinces toward border management", () => {
+    const province = buildProvinceIntel({
+      x: 39,
+      y: 45,
+      worldSize: 64,
+      region: hostileRegion,
+      fogState: "VISIBLE",
+      pois: [],
+    });
+    const occupiedControl = {
+      ...getInitialProvinceControlState(province),
+      controllerRealmId: "player",
+      controlStatus: "occupied" as const,
+      playerClaimStrength: 72,
+      influenceByRealm: {
+        [province.realm.id]: 36,
+        player: 68,
+      },
+      resistance: 41,
+    };
+    const actions = getAvailableExpansionActions(province, occupiedControl);
+
+    expect(actions.find((entry) => entry.action === "FORTIFY_BORDER")?.enabled).toBe(true);
+    expect(actions.find((entry) => entry.action === "FORTIFY_BORDER")?.recommended).toBe(true);
+    expect(actions.find((entry) => entry.action === "CLAIM_PROVINCE")?.enabled).toBe(false);
+    expect(actions.find((entry) => entry.action === "PREPARE_RAID")?.enabled).toBe(false);
+    expect(actions.find((entry) => entry.action === "LAUNCH_RAID")?.enabled).toBe(false);
+  });
+
+  it("advisor avoids hostile expansion guidance for friendly realms", () => {
+    const province = buildProvinceIntel({
+      x: 10,
+      y: 12,
+      worldSize: 64,
+      region: friendlyRegion,
+      fogState: "VISIBLE",
+      pois: [],
+    });
+    const control = getInitialProvinceControlState(province);
+    const actions = getAvailableExpansionActions(province, control);
+    const advisor = getExpansionAdvisorMessage(province, control);
+
+    expect(actions.find((entry) => entry.action === "PREPARE_RAID")?.enabled).toBe(false);
+    expect(actions.find((entry) => entry.action === "LAUNCH_RAID")?.enabled).toBe(false);
+    expect(advisor).not.toContain("Akın");
+    expect(advisor).toContain("töre");
+  });
+
   it("mock expansion actions increase influence and record claim progress", () => {
     const province = buildProvinceIntel({
       x: 32,

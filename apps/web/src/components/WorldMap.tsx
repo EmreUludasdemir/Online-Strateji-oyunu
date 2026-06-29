@@ -1124,7 +1124,7 @@ class FrontierMapScene extends Phaser.Scene {
 
     if (this.mapMode === "ALLIANCE" && tile.state !== "HIDDEN") {
       if (overlay.controlStatus === "influenced" || overlay.controlStatus === "claimed") {
-        this.terrainGraphics.fillStyle(MAP_COLOR_HOME, overlay.controlStatus === "claimed" ? 0.14 : 0.08);
+        this.terrainGraphics.fillStyle(MAP_COLOR_HOME, overlay.controlStatus === "claimed" ? 0.12 : 0.065);
         this.terrainGraphics.fillRect(x + 10, y + 10, MAP_TILE_WORLD_SIZE - 20, MAP_TILE_WORLD_SIZE - 20);
       }
 
@@ -1151,8 +1151,8 @@ class FrontierMapScene extends Phaser.Scene {
         this.terrainGraphics.fillCircle(x + MAP_TILE_WORLD_SIZE - 20, y + 20, 6);
       }
 
-      if ((overlay.resistance ?? 0) >= 70) {
-        this.terrainGraphics.lineStyle(1.2, MAP_COLOR_HOSTILE, 0.36);
+      if ((overlay.resistance ?? 0) >= 76 && (overlay.playerClaim || overlay.contested || overlay.controlStatus === "claimed")) {
+        this.terrainGraphics.lineStyle(1.1, MAP_COLOR_HOSTILE, 0.26);
         this.terrainGraphics.lineBetween(x + 14, y + 18, x + MAP_TILE_WORLD_SIZE - 18, y + MAP_TILE_WORLD_SIZE - 14);
       }
     }
