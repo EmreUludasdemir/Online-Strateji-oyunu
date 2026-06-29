@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildProvinceIntel,
+  getAllRealmDiplomacy,
   getAvailableProvinceActions,
+  getBorderTension,
+  getContestingRealms,
+  getProvinceClaims,
   getProvinceRiskLevel,
   getProvinceStrategicValue,
   getRealmIdentity,
@@ -31,6 +35,13 @@ const friendlyRegion: WorldRegion = {
   id: "kok-tore",
   label: "Kök Töre",
   shortLabel: "KOK",
+};
+
+const unknownRegion: WorldRegion = {
+  ...hostileRegion,
+  id: "avar-siniri",
+  label: "Avar Siniri",
+  shortLabel: "AVR",
 };
 
 describe("political map helpers", () => {
@@ -96,6 +107,60 @@ describe("political map helpers", () => {
     expect(province.status).toBe("friendly");
     expect(province.availableActions).toContain("SUPPORT");
     expect(province.availableActions).toContain("TRADE");
+  });
+
+  it("builds realm diplomacy with relations, influence, and treaties", () => {
+    const diplomacy = getAllRealmDiplomacy([friendlyRegion], 64)[0];
+
+    expect(diplomacy.realm.shortTag).toBe("KOK");
+    expect(diplomacy.relation).toBe("friendly");
+    expect(diplomacy.influence).not.toBe("none");
+    expect(diplomacy.activeTreaties.some((treaty) => treaty.type === "PASSAGE")).toBe(true);
+    expect(diplomacy.recommendedAction).toBe("REQUEST_PASSAGE");
+  });
+
+  it("adds claims and border tension around contested frontier provinces", () => {
+    const claims = getProvinceClaims({
+      x: 32,
+      y: 49,
+      worldSize: 64,
+      region: hostileRegion,
+    });
+    const contestingRealms = getContestingRealms({
+      x: 32,
+      y: 49,
+      worldSize: 64,
+      region: hostileRegion,
+      claims,
+    });
+    const tension = getBorderTension({
+      x: 32,
+      y: 49,
+      worldSize: 64,
+      region: hostileRegion,
+      claims,
+    });
+
+    expect(claims.length).toBeGreaterThan(0);
+    expect(contestingRealms.length).toBeGreaterThan(0);
+    expect(["medium", "high", "critical"]).toContain(tension.level);
+    expect(tension.involvedRealmIds.length).toBeGreaterThan(0);
+  });
+
+  it("offers scout actions for unknown realms", () => {
+    const province = buildProvinceIntel({
+      x: 48,
+      y: 49,
+      worldSize: 64,
+      region: unknownRegion,
+      fogState: "VISIBLE",
+      pois: [],
+    });
+    const scoutAction = province.availableDiplomaticActions.find((entry) => entry.action === "SCOUT_REALM");
+
+    expect(province.diplomacy.relation).toBe("unknown");
+    expect(province.diplomaticRisk).toBe("unknown");
+    expect(scoutAction?.enabled).toBe(true);
   });
 
   it("marks hidden provinces as unknown and scoutable", () => {

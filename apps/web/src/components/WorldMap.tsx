@@ -33,7 +33,15 @@ import {
   worldToTile,
 } from "./worldMapShared";
 import { getWorldRegionForTile, getWorldRegions } from "./worldRegions";
-import { getProvinceResourceValue, getRealmIdentity, type MapMode } from "../lib/politicalMap";
+import {
+  getBorderTension,
+  getProvinceClaims,
+  getProvinceResourceValue,
+  getRealmIdentity,
+  type BorderTensionLevel,
+  type MapMode,
+  type RealmRelation,
+} from "../lib/politicalMap";
 
 const poiResourceLabels: Record<PoiResourceType, string> = {
   WOOD: "Wood",
@@ -44,6 +52,15 @@ const poiResourceLabels: Record<PoiResourceType, string> = {
 
 type MapFilter = "ALL" | "CITIES" | "CAMPS" | "NODES";
 type AnimatedMarchPhase = "moving" | "staging" | "gathering" | "returning";
+
+interface MapModeTileOverlay {
+  fill: number;
+  alpha: number;
+  tension?: BorderTensionLevel;
+  claimed?: boolean;
+  playerClaim?: boolean;
+  contested?: boolean;
+}
 
 const MAP_COLOR_ALLIED = 0x72ced1;
 const MAP_COLOR_HOSTILE = 0xd47b5a;
@@ -1095,6 +1112,24 @@ class FrontierMapScene extends Phaser.Scene {
     this.terrainGraphics.fillStyle(overlay.fill, overlay.alpha);
     this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
 
+    if (this.mapMode === "ALLIANCE" && tile.state !== "HIDDEN") {
+      if (overlay.claimed) {
+        this.terrainGraphics.lineStyle(1.25, overlay.playerClaim ? MAP_COLOR_HOME : overlay.fill, overlay.playerClaim ? 0.42 : 0.26);
+        this.terrainGraphics.lineBetween(x + 16, y + MAP_TILE_WORLD_SIZE - 18, x + MAP_TILE_WORLD_SIZE - 16, y + 18);
+        this.terrainGraphics.lineBetween(x + 36, y + MAP_TILE_WORLD_SIZE - 10, x + MAP_TILE_WORLD_SIZE - 8, y + 36);
+      }
+
+      if (overlay.contested || overlay.tension === "high" || overlay.tension === "critical") {
+        this.terrainGraphics.lineStyle(overlay.tension === "critical" ? 3 : 2, overlay.tension === "critical" ? MAP_COLOR_HOSTILE : MAP_COLOR_NEUTRAL, 0.46);
+        this.terrainGraphics.strokeRect(x + 6, y + 6, MAP_TILE_WORLD_SIZE - 12, MAP_TILE_WORLD_SIZE - 12);
+      }
+
+      if (overlay.playerClaim) {
+        this.terrainGraphics.fillStyle(MAP_COLOR_HOME, 0.72);
+        this.terrainGraphics.fillCircle(x + MAP_TILE_WORLD_SIZE - 20, y + 20, 6);
+      }
+    }
+
     if (this.currentDetailLevel !== "near" && tile.state !== "HIDDEN") {
       const hash = hashCoordinate(tile.x + region.capitalX, tile.y + region.capitalY);
       if (hash % 5 === 0) {
@@ -1104,7 +1139,7 @@ class FrontierMapScene extends Phaser.Scene {
     }
   }
 
-  private getMapModeTileOverlay(tile: FogTileView, region: ReturnType<typeof getWorldRegionForTile>) {
+  private getMapModeTileOverlay(tile: FogTileView, region: ReturnType<typeof getWorldRegionForTile>): MapModeTileOverlay {
     const visibilityScale = tile.state === "VISIBLE" ? 1 : tile.state === "DISCOVERED" ? 0.64 : 0.24;
 
     if (this.mapMode === "TERRAIN") {
@@ -1127,8 +1162,36 @@ class FrontierMapScene extends Phaser.Scene {
 
     if (this.mapMode === "ALLIANCE") {
       const relation = getRealmIdentity(region).relation;
-      const fill = relation === "friendly" ? 0x2b8f98 : relation === "hostile" ? 0x9b2f2f : relation === "rival" ? 0x8f5d2b : relation === "unknown" ? 0x4a4d55 : 0x5a6254;
-      return { fill, alpha: 0.12 * visibilityScale };
+      const relationFills: Record<RealmRelation, number> = {
+        allied: 0x2b8f98,
+        friendly: 0x3b9f7a,
+        neutral: 0x6d705f,
+        wary: 0xb98a2f,
+        hostile: 0x9b2f2f,
+        rival: 0x8f3f2b,
+        unknown: 0x4a4d55,
+      };
+      const claims = getProvinceClaims({ x: tile.x, y: tile.y, worldSize: this.worldSize, region });
+      const nearbyCamps = this.pois.filter((poi) => poi.kind === "BARBARIAN_CAMP" && Math.hypot(poi.x - tile.x, poi.y - tile.y) <= 5.2).length;
+      const tension = getBorderTension({
+        x: tile.x,
+        y: tile.y,
+        worldSize: this.worldSize,
+        region,
+        fogState: tile.state,
+        claims,
+        nearbyCamps,
+      });
+      const playerClaim = claims.some((claim) => claim.claimantRealmId === "player");
+
+      return {
+        fill: relationFills[relation],
+        alpha: (0.115 + Math.min(0.08, tension.score / 1200)) * visibilityScale,
+        tension: tension.level,
+        claimed: claims.length > 0,
+        playerClaim,
+        contested: tension.involvedRealmIds.length > 0,
+      };
     }
 
     if (this.mapMode === "MARCH") {
@@ -3554,11 +3617,11 @@ class FrontierMapScene extends Phaser.Scene {
     const region = getWorldRegionForTile(tile.x, tile.y, this.worldSize);
     const realm = getRealmIdentity(region);
     const tone =
-      realm.relation === "friendly"
+      realm.relation === "allied" || realm.relation === "friendly"
         ? "success"
         : realm.relation === "hostile" || realm.relation === "rival"
           ? "danger"
-          : realm.relation === "unknown"
+          : realm.relation === "unknown" || realm.relation === "wary"
             ? "warning"
             : "info";
     this.applyHover({

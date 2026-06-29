@@ -113,6 +113,10 @@ declare global {
       mapMode?: string;
       selectedProvinceId?: string | null;
       selectedProvinceRealm?: string | null;
+      selectedProvinceDiplomaticRisk?: string | null;
+      diplomacyDrawerOpen?: boolean;
+      selectedRealmId?: string | null;
+      selectedRealmName?: string | null;
     } | null;
     frontierMapKingdom?: {
       currentTier: {

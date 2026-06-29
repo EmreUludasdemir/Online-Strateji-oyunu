@@ -230,6 +230,240 @@
   gap: 0.55rem;
 }
 
+.diplomacyCard {
+  gap: 0.7rem;
+}
+
+.diplomacySummaryRow,
+.diplomacyRealmHeader,
+.diplomacyRealmFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.diplomacySummaryRow {
+  color: var(--color-outline);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.realmPreviewList,
+.diplomacyRealmList,
+.realmTreatyList,
+.realmClaimList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.realmPreviewButton {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 42px;
+  padding: 0.55rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xs);
+  background: var(--surface-card-panel);
+  color: var(--color-on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--motion-base),
+    background var(--motion-base),
+    box-shadow var(--motion-base);
+}
+
+.realmPreviewButton:hover,
+.realmPreviewButton:focus-visible {
+  background: var(--surface-card-panel-active);
+  box-shadow: var(--shadow-gold-soft);
+  transform: translateY(-1px);
+}
+
+.realmPreviewButton span:nth-child(2),
+.diplomacyRealmHeader div {
+  min-width: 0;
+}
+
+.realmPreviewButton strong,
+.diplomacyRealmHeader strong {
+  display: block;
+}
+
+.realmPreviewButton small,
+.diplomacyRealmHeader small,
+.diplomacyRealmFooter small,
+.realmInfoGrid small,
+.provinceDiplomacyPanel small {
+  display: block;
+  color: var(--color-outline);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.realmSwatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(248, 240, 221, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(244, 215, 156, 0.08);
+}
+
+.provinceDiplomacyPanel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.provinceDiplomacyPanel > div,
+.realmInfoGrid > div,
+.realmMetricGrid > article,
+.diplomacyDrawerSummary > article {
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xs);
+  background:
+    linear-gradient(135deg, rgba(244, 215, 156, 0.06), transparent 58%),
+    var(--surface-card-panel);
+}
+
+.provinceDiplomacyPanel span,
+.realmInfoGrid span,
+.realmMetricGrid span,
+.diplomacyDrawerSummary span {
+  display: block;
+  color: var(--color-outline);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.provinceDiplomacyPanel strong,
+.realmInfoGrid strong,
+.realmMetricGrid strong,
+.diplomacyDrawerSummary strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--color-primary-fixed);
+  font-family: var(--font-mono);
+}
+
+.provinceDiplomacyActions,
+.realmActionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.realmDetailPanel,
+.diplomacyDrawer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.realmHero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(135deg, rgba(244, 215, 156, 0.1), transparent 52%),
+    var(--surface-card-panel);
+}
+
+.realmHeroMark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(248, 240, 221, 0.48);
+  border-radius: var(--radius-xs);
+  color: #140f0a;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.18), var(--shadow-soft);
+}
+
+.realmMetricGrid,
+.realmInfoGrid,
+.diplomacyDrawerSummary {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.realmMetricGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.realmInfoGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.realmTreatyList,
+.realmClaimList {
+  padding: 0.75rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xs);
+  background: rgba(10, 9, 8, 0.32);
+}
+
+.realmTreatyList > strong,
+.realmClaimList > strong {
+  color: var(--color-primary-fixed);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.realmTreatyList span,
+.realmClaimList span {
+  color: var(--color-outline);
+  font-size: 0.76rem;
+}
+
+.diplomacyDrawerSummary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.diplomacyRealmCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-panel);
+}
+
+.diplomacyRealmMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.diplomacyRealmMeta span {
+  padding: 0.32rem 0.48rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xs);
+  background: rgba(248, 240, 221, 0.05);
+  color: var(--color-outline);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
 .heroTop {
   justify-content: space-between;
 }
@@ -1604,6 +1838,10 @@
   .provinceStatGrid,
   .provinceResourceGrid,
   .provinceActionGrid,
+  .provinceDiplomacyPanel,
+  .provinceDiplomacyActions,
+  .realmMetricGrid,
+  .realmActionGrid,
   .commandStepGrid,
   .commandCueGrid,
   .selectionReadoutGrid {
@@ -1622,6 +1860,12 @@
   .provinceStatGrid,
   .provinceResourceGrid,
   .provinceActionGrid,
+  .provinceDiplomacyPanel,
+  .provinceDiplomacyActions,
+  .realmMetricGrid,
+  .realmInfoGrid,
+  .realmActionGrid,
+  .diplomacyDrawerSummary,
   .commandStepGrid,
   .commandCueGrid,
   .selectionReadoutGrid,
@@ -1644,6 +1888,17 @@
     flex-direction: column;
     align-items: flex-start;
     text-align: left;
+  }
+
+  .realmHero {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .diplomacyRealmHeader,
+  .diplomacyRealmFooter {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .mapFrame {

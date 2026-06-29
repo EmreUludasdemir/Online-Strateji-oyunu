@@ -40,7 +40,17 @@ import { copy } from "../lib/i18n";
 import { formatNumber, formatRelativeTimer, formatTimeRemaining } from "../lib/formatters";
 import {
   buildProvinceIntel,
+  canOfferTribute,
+  canProposePact,
+  getAllRealmDiplomacy,
+  getDiplomaticActionLabel,
   getMapModeLabel,
+  getRealmThreatScore,
+  type BorderTensionLevel,
+  type DiplomaticAction,
+  type DiplomaticActionItem,
+  type RealmDiplomacy,
+  type RealmRelation,
   type MapMode,
   type ProvinceAction,
   type ProvinceIntel,
@@ -447,6 +457,160 @@ function getRiskBadgeTone(risk: ProvinceRiskLevel): "success" | "warning" | "inf
   return "danger";
 }
 
+function getRelationLabel(relation: RealmRelation) {
+  const labels: Record<RealmRelation, string> = {
+    allied: "Ahidli",
+    friendly: "Dost",
+    neutral: "Tarafsız",
+    wary: "Temkinli",
+    hostile: "Hasım",
+    rival: "Rakip",
+    unknown: "Sisli",
+  };
+  return labels[relation];
+}
+
+function getRelationBadgeTone(relation: RealmRelation): "success" | "warning" | "info" | "danger" {
+  if (relation === "allied" || relation === "friendly") return "success";
+  if (relation === "hostile" || relation === "rival") return "danger";
+  if (relation === "wary" || relation === "unknown") return "warning";
+  return "info";
+}
+
+function getBorderTensionLabel(level: BorderTensionLevel) {
+  const labels: Record<BorderTensionLevel, string> = {
+    low: "Sakin",
+    medium: "Gergin",
+    high: "Sıcak",
+    critical: "Kritik",
+    unknown: "Sisli",
+  };
+  return labels[level];
+}
+
+function getBorderTensionTone(level: BorderTensionLevel): "success" | "warning" | "info" | "danger" {
+  if (level === "low") return "success";
+  if (level === "medium" || level === "unknown") return "warning";
+  return "danger";
+}
+
+function getDiplomacyPriorityScore(diplomacy: RealmDiplomacy) {
+  const relationScore: Record<RealmRelation, number> = {
+    allied: 4,
+    friendly: 8,
+    neutral: 18,
+    wary: 34,
+    hostile: 58,
+    rival: 72,
+    unknown: 46,
+  };
+  const tensionScore: Record<BorderTensionLevel, number> = {
+    low: 0,
+    medium: 16,
+    high: 32,
+    critical: 48,
+    unknown: 20,
+  };
+  return relationScore[diplomacy.relation] + tensionScore[diplomacy.borderStatus] + diplomacy.realm.strength * 0.12;
+}
+
+function getInfluenceLabel(influence: RealmDiplomacy["influence"]) {
+  const labels: Record<RealmDiplomacy["influence"], string> = {
+    none: "Bilinmiyor",
+    low: "Zayıf",
+    medium: "Orta",
+    high: "Güçlü",
+    dominant: "Baskın",
+  };
+  return labels[influence];
+}
+
+function getStanceLabel(stance: RealmDiplomacy["stance"]) {
+  const labels: Record<RealmDiplomacy["stance"], string> = {
+    oathbound: "Ahde bağlı",
+    open: "Açık toy",
+    watchful: "Temkinli",
+    closed: "Kapalı",
+    aggressive: "Sert uç",
+    obscured: "Sisli",
+  };
+  return labels[stance];
+}
+
+function getTreatyLabel(type: RealmDiplomacy["activeTreaties"][number]["type"]) {
+  const labels: Record<RealmDiplomacy["activeTreaties"][number]["type"], string> = {
+    PACT: "Ahid",
+    PASSAGE: "Geçit hakkı",
+    TRIBUTE: "Haraç",
+    NON_AGGRESSION: "Saldırmazlık",
+  };
+  return labels[type];
+}
+
+function realmActionItem(action: DiplomaticAction, enabled: boolean, reason: string): DiplomaticActionItem {
+  return {
+    action,
+    enabled,
+    reason,
+    label: getDiplomaticActionLabel(action),
+  };
+}
+
+function getRealmActionItems(diplomacy: RealmDiplomacy): DiplomaticActionItem[] {
+  const canRequestPassage =
+    diplomacy.borderStatus !== "critical" &&
+    diplomacy.relation !== "hostile" &&
+    diplomacy.relation !== "rival" &&
+    diplomacy.relation !== "unknown";
+  const canPrepareRaid =
+    diplomacy.relation === "hostile" ||
+    diplomacy.relation === "rival" ||
+    diplomacy.borderStatus === "critical";
+
+  return [
+    realmActionItem(
+      "SEND_ENVOY",
+      diplomacy.relation !== "allied" && diplomacy.relation !== "friendly",
+      diplomacy.relation === "allied" || diplomacy.relation === "friendly"
+        ? "Bu yurt zaten açık görüşme hattında."
+        : "İlişkiyi yumuşatmak ve niyeti okumak için elçi gönder.",
+    ),
+    realmActionItem(
+      "SCOUT_REALM",
+      diplomacy.relation === "unknown" || diplomacy.relation === "wary" || diplomacy.relation === "hostile" || diplomacy.relation === "rival",
+      diplomacy.relation === "allied" || diplomacy.relation === "friendly"
+        ? "Dost yurt için öncelik keşif değil."
+        : "Sisli niyetleri ve sınır gücünü okumak için keşif çıkar.",
+    ),
+    realmActionItem(
+      "OFFER_TRIBUTE",
+      canOfferTribute(diplomacy),
+      canOfferTribute(diplomacy) ? "Kısa süreli sakinlik satın alınabilir." : "Bu ilişki haraç gerektirecek kadar sert değil.",
+    ),
+    realmActionItem(
+      "REQUEST_PASSAGE",
+      canRequestPassage,
+      canRequestPassage ? "Geçit ve rota pazarlığı açılabilir." : "Bu yurtla geçit hakkı için siyasi zemin yok.",
+    ),
+    realmActionItem(
+      "PROPOSE_PACT",
+      canProposePact(diplomacy),
+      canProposePact(diplomacy) ? "Tarafsız veya temkinli yurtla kısa ahid kurulabilir." : "Pakt için ilişki veya hudut durumu uygun değil.",
+    ),
+    realmActionItem(
+      "BREAK_PACT",
+      diplomacy.activeTreaties.length > 0,
+      diplomacy.activeTreaties.length > 0 ? "Var olan ahdi bozmak hududu sertleştirir." : "Bozulacak aktif ahid yok.",
+    ),
+    realmActionItem(
+      "PREPARE_RAID",
+      canPrepareRaid,
+      canPrepareRaid ? "Siyasi risk askeri hazırlık gerektiriyor." : "Akın için yeterli siyasi gerekçe yok.",
+    ),
+    realmActionItem("VIEW_BORDER_TENSION", diplomacy.borderStatus !== "low", "Toy haritasında hudut baskısını göster."),
+  ];
+}
+
 function isEditableElement(target: EventTarget | null) {
   return (
     target instanceof HTMLInputElement ||
@@ -531,6 +695,8 @@ export function MapPage() {
   const [fieldCommand, setFieldCommand] = useState<MapFieldCommand | null>(null);
   const [fieldCommandOpenSource, setFieldCommandOpenSource] = useState<"canvas" | "automation-hook" | null>(null);
   const [selectedProvinceTile, setSelectedProvinceTile] = useState<{ x: number; y: number } | null>(null);
+  const [selectedRealmId, setSelectedRealmId] = useState<string | null>(null);
+  const [diplomacyDrawerOpen, setDiplomacyDrawerOpen] = useState(false);
   const [fieldMarkerDraft, setFieldMarkerDraft] = useState("");
   const [cameraView, setCameraView] = useState<MapCameraState>(() =>
     createInitialCameraState(state.city.coordinates.x, state.city.coordinates.y),
@@ -994,6 +1160,18 @@ export function MapPage() {
       tiles: worldChunk.tiles,
     });
   }, [selectedProvinceTile, worldChunk]);
+  const realmDiplomacies = useMemo<RealmDiplomacy[]>(
+    () => getAllRealmDiplomacy(getWorldRegions(worldChunk?.size ?? 64), worldChunk?.size ?? 64),
+    [worldChunk?.size],
+  );
+  const selectedRealmDiplomacy = useMemo(
+    () => realmDiplomacies.find((entry) => entry.realm.id === selectedRealmId) ?? null,
+    [realmDiplomacies, selectedRealmId],
+  );
+  const diplomacyPreviewRealms = useMemo(
+    () => [...realmDiplomacies].sort((a, b) => getDiplomacyPriorityScore(b) - getDiplomacyPriorityScore(a)).slice(0, 4),
+    [realmDiplomacies],
+  );
   const selectedMarch = useMemo(
     () => state.city.activeMarches.find((march) => march.id === selectedMarchId) ?? null,
     [selectedMarchId, state.city.activeMarches],
@@ -1519,6 +1697,10 @@ export function MapPage() {
       mapMode,
       selectedProvinceId: selectedProvince?.id ?? null,
       selectedProvinceRealm: selectedProvince?.realm.name ?? null,
+      selectedProvinceDiplomaticRisk: selectedProvince?.diplomaticRisk ?? null,
+      diplomacyDrawerOpen,
+      selectedRealmId,
+      selectedRealmName: selectedRealmDiplomacy?.realm.name ?? null,
     };
 
     return () => {
@@ -1531,10 +1713,14 @@ export function MapPage() {
     fieldCommand?.kind,
     fieldCommand?.label,
     fieldCommandOpenSource,
+    diplomacyDrawerOpen,
     mapMode,
     selectedCity,
     selectedMarchId,
     selectedPoi,
+    selectedRealmDiplomacy?.realm.name,
+    selectedRealmId,
+    selectedProvince?.diplomaticRisk,
     selectedProvince?.id,
     selectedProvince?.realm.name,
     selectedTargetName,
@@ -1618,6 +1804,8 @@ export function MapPage() {
       setComposerMode(null);
       setFieldCommand(null);
       setSelectedProvinceTile(null);
+      setSelectedRealmId(null);
+      setDiplomacyDrawerOpen(false);
       selectCity(city.cityId);
       setOpenedTargetKey(null);
       if (options?.focus) {
@@ -1639,6 +1827,8 @@ export function MapPage() {
       setComposerMode(null);
       setFieldCommand(null);
       setSelectedProvinceTile(null);
+      setSelectedRealmId(null);
+      setDiplomacyDrawerOpen(false);
       selectPoi(poi.id);
       setOpenedTargetKey(null);
       if (options?.focus) {
@@ -1657,6 +1847,8 @@ export function MapPage() {
     setComposerMode(null);
     setFieldCommand(null);
     setSelectedProvinceTile(null);
+    setSelectedRealmId(null);
+    setDiplomacyDrawerOpen(false);
     setSelectedMarchId(marchId);
     mapCommandRef.current?.focusMarch(marchId);
   }, []);
@@ -1665,6 +1857,8 @@ export function MapPage() {
     setFieldCommand(null);
     setSelectedMarchId(null);
     setSelectedProvinceTile(null);
+    setSelectedRealmId(null);
+    setDiplomacyDrawerOpen(false);
     setTargetSheetOpen(false);
     setComposerMode(mode);
   }, []);
@@ -1674,6 +1868,8 @@ export function MapPage() {
     setComposerMode(null);
     setFieldCommand(null);
     setTargetSheetOpen(false);
+    setSelectedRealmId(null);
+    setDiplomacyDrawerOpen(false);
     setOpenedTargetKey(null);
     selectCity(null);
     selectPoi(null);
@@ -1790,6 +1986,8 @@ export function MapPage() {
     setTargetSheetOpen(false);
     setSelectedMarchId(null);
     setSelectedProvinceTile(null);
+    setSelectedRealmId(null);
+    setDiplomacyDrawerOpen(false);
   }, []);
 
   const handleFieldCommandOpen = useCallback((command: MapFieldCommand) => {
@@ -1797,6 +1995,8 @@ export function MapPage() {
     setComposerMode(null);
     setSelectedMarchId(null);
     setSelectedProvinceTile(null);
+    setSelectedRealmId(null);
+    setDiplomacyDrawerOpen(false);
     setFieldCommandOpenSource("canvas");
     setFieldCommand(command);
     setFieldMarkerDraft(command.label);
@@ -1862,6 +2062,74 @@ export function MapPage() {
     }
   }, [fieldCommand, openComposer, selectCity, selectPoi]);
 
+  const openRealmDetail = useCallback(
+    (realmId: string) => {
+      const diplomacy = realmDiplomacies.find((entry) => entry.realm.id === realmId);
+      if (!diplomacy) {
+        return;
+      }
+
+      setSelectedRealmId(realmId);
+      setDiplomacyDrawerOpen(false);
+      setSelectedProvinceTile(null);
+      setTargetSheetOpen(false);
+      setComposerMode(null);
+      setFieldCommand(null);
+      setSelectedMarchId(null);
+      mapCommandRef.current?.focusTile(diplomacy.realm.capitalX, diplomacy.realm.capitalY);
+      setMapNotice(`${diplomacy.realm.name} elçilik defteri açıldı.`);
+    },
+    [realmDiplomacies],
+  );
+
+  const handleDiplomacyAction = useCallback(
+    (action: DiplomaticAction, diplomacy: RealmDiplomacy, province?: ProvinceIntel | null) => {
+      const actionLabel = getDiplomaticActionLabel(action);
+      const targetX = province?.x ?? diplomacy.realm.capitalX;
+      const targetY = province?.y ?? diplomacy.realm.capitalY;
+
+      if (action === "CLAIM_PROVINCE" && province) {
+        const label = `${province.realm.shortTag} iddia ${province.x},${province.y}`;
+        setSelectedProvinceTile(null);
+        setSelectedRealmId(null);
+        setFieldCommandOpenSource("canvas");
+        setFieldMarkerDraft(label);
+        setFieldCommand({
+          kind: "TILE",
+          label,
+          x: province.x,
+          y: province.y,
+        });
+        setMapNotice(`${province.name} için sancak iddiası hazırlandı.`);
+        return;
+      }
+
+      if (action === "SCOUT_REALM") {
+        const label = `${diplomacy.realm.shortTag} elçi keşfi`;
+        setSelectedProvinceTile(null);
+        setSelectedRealmId(null);
+        setFieldCommandOpenSource("canvas");
+        setFieldMarkerDraft(label);
+        setFieldCommand({
+          kind: "TILE",
+          label,
+          x: targetX,
+          y: targetY,
+        });
+        setMapNotice(`${diplomacy.realm.name} için keşif buyruğu hazırlandı.`);
+        return;
+      }
+
+      if (action === "VIEW_BORDER_TENSION") {
+        setMapMode("ALLIANCE");
+      }
+
+      mapCommandRef.current?.focusTile(targetX, targetY);
+      setMapNotice(`${actionLabel}: ${diplomacy.realm.name} için elçilik buyruğu kayda alındı.`);
+    },
+    [],
+  );
+
   const handleProvinceAction = useCallback(
     (action: ProvinceAction) => {
       if (!selectedProvince) {
@@ -1869,8 +2137,7 @@ export function MapPage() {
       }
 
       if (action === "VIEW_REALM") {
-        mapCommandRef.current?.focusTile(selectedProvince.realm.capitalX, selectedProvince.realm.capitalY);
-        setMapNotice(`${selectedProvince.realm.name} sancak merkezi haritada işaretlendi.`);
+        openRealmDetail(selectedProvince.realm.id);
         return;
       }
 
@@ -1895,7 +2162,7 @@ export function MapPage() {
       setMapNotice(`${actionLabel} buyruğu için bu yurtta somut oba, kamp veya geçit hedefi seç.`);
       mapCommandRef.current?.focusTile(selectedProvince.x, selectedProvince.y);
     },
-    [selectedProvince],
+    [openRealmDetail, selectedProvince],
   );
 
   const handleFieldMarkerCreate = useCallback(async () => {
@@ -2498,6 +2765,35 @@ export function MapPage() {
         </div>
 
         <aside className={styles.sideRail}>
+          <SectionCard kicker="ELÇİLİK" title="Toy İlişkileri" className={styles.diplomacyCard}>
+            <div className={styles.diplomacySummaryRow}>
+              <span>{realmDiplomacies.length} yurt</span>
+              <Badge tone="warning">
+                {realmDiplomacies.filter((entry) => entry.borderStatus === "high" || entry.borderStatus === "critical").length} gergin
+              </Badge>
+            </div>
+            <div className={styles.realmPreviewList}>
+              {diplomacyPreviewRealms.map((entry) => (
+                <button
+                  key={entry.realm.id}
+                  type="button"
+                  className={styles.realmPreviewButton}
+                  onClick={() => openRealmDetail(entry.realm.id)}
+                >
+                  <span className={styles.realmSwatch} style={{ background: entry.realm.primaryColor }} aria-hidden="true" />
+                  <span>
+                    <strong>{entry.realm.shortTag}</strong>
+                    <small>{entry.realm.name}</small>
+                  </span>
+                  <Badge tone={getRelationBadgeTone(entry.relation)}>{getRelationLabel(entry.relation)}</Badge>
+                </button>
+              ))}
+            </div>
+            <Button type="button" size="small" variant="secondary" onClick={() => setDiplomacyDrawerOpen(true)}>
+              Elçilik Defteri
+            </Button>
+          </SectionCard>
+
           <SectionCard kicker="OBA TEZGAHLARI" title="Oba Kuyrukları" className={styles.marchSection}>
             <div className={styles.queueList}>
               {hud.queueItems.map((item) => (
@@ -2800,9 +3096,15 @@ export function MapPage() {
         {selectedProvince ? (
           <div className={styles.provincePanel}>
             <section className={styles.provinceHero} style={{ borderColor: selectedProvince.realm.borderColor }}>
-              <div className={styles.provinceRealmMark} style={{ background: selectedProvince.realm.primaryColor }}>
+              <button
+                type="button"
+                className={styles.provinceRealmMark}
+                style={{ background: selectedProvince.realm.primaryColor }}
+                onClick={() => openRealmDetail(selectedProvince.realm.id)}
+                aria-label={`${selectedProvince.realm.name} elçilik defterini aç`}
+              >
                 {selectedProvince.realm.shortTag}
-              </div>
+              </button>
               <div>
                 <p className={styles.hudEyebrow}>Siyasi Yurt</p>
                 <strong className={styles.cardTitle}>{selectedProvince.name}</strong>
@@ -2811,7 +3113,9 @@ export function MapPage() {
                 </p>
               </div>
               <div className={styles.provinceBadgeStack}>
+                <Badge tone={getRelationBadgeTone(selectedProvince.diplomacy.relation)}>{getRelationLabel(selectedProvince.diplomacy.relation)}</Badge>
                 <Badge tone={getProvinceBadgeTone(selectedProvince.status)}>{getProvinceStatusLabel(selectedProvince.status)}</Badge>
+                <Badge tone={getBorderTensionTone(selectedProvince.borderTension.level)}>{getBorderTensionLabel(selectedProvince.borderTension.level)}</Badge>
                 <Badge tone={getRiskBadgeTone(selectedProvince.riskLevel)}>{getProvinceRiskLabel(selectedProvince.riskLevel)}</Badge>
               </div>
             </section>
@@ -2849,6 +3153,34 @@ export function MapPage() {
               <span>{formatNumber(selectedProvince.nearbyResources)} bereket</span>
               <span>{formatNumber(selectedProvince.nearbyPasses)} kapı</span>
               <span>{formatNumber(selectedProvince.nearbySanctuaries)} otağ</span>
+              <span>{formatNumber(selectedProvince.claims.length)} iddia</span>
+              <span>{formatNumber(selectedProvince.contestingRealms.length)} komşu</span>
+            </section>
+
+            <section className={styles.provinceDiplomacyPanel}>
+              <div>
+                <span>Hudut Durumu</span>
+                <strong>{selectedProvince.borderTension.label}</strong>
+                <small>{selectedProvince.borderTension.reason}</small>
+              </div>
+              <div>
+                <span>Claim</span>
+                <strong>
+                  {selectedProvince.claims.length > 0
+                    ? selectedProvince.claims.slice(0, 2).map((claim) => `${claim.claimantTag} ${claim.strength}`).join(" / ")
+                    : "Yok"}
+                </strong>
+                <small>
+                  {selectedProvince.claims.some((claim) => claim.claimantRealmId === "player")
+                    ? "Bozkır sancağı için siyasi zemin var."
+                    : "Bu yurtta doğrudan iddian yok."}
+                </small>
+              </div>
+              <div>
+                <span>Elçilik</span>
+                <strong>{selectedProvince.diplomacy.militaryIdentity}</strong>
+                <small>{selectedProvince.diplomacy.advisorText}</small>
+              </div>
             </section>
 
             <p className={styles.provinceAdvisor}>{selectedProvince.advisorText}</p>
@@ -2861,8 +3193,190 @@ export function MapPage() {
                 </Button>
               ))}
             </section>
+            <section className={styles.provinceDiplomacyActions} aria-label="Diplomasi buyrukları">
+              {selectedProvince.availableDiplomaticActions
+                .filter((entry) => entry.enabled || entry.action === "CLAIM_PROVINCE" || entry.action === "REQUEST_PASSAGE" || entry.action === "SCOUT_REALM")
+                .slice(0, 6)
+                .map((entry) => (
+                  <Button
+                    key={entry.action}
+                    type="button"
+                    size="small"
+                    variant={entry.enabled ? "secondary" : "ghost"}
+                    disabled={!entry.enabled}
+                    title={entry.reason}
+                    onClick={() => handleDiplomacyAction(entry.action, selectedProvince.diplomacy, selectedProvince)}
+                  >
+                    {entry.label}
+                  </Button>
+                ))}
+            </section>
           </div>
         ) : null}
+      </BottomSheet>
+
+      <BottomSheet
+        open={Boolean(selectedRealmDiplomacy)}
+        title={selectedRealmDiplomacy ? `Elçilik Defteri: ${selectedRealmDiplomacy.realm.name}` : "Elçilik Defteri"}
+        onClose={() => setSelectedRealmId(null)}
+        mode="aside"
+      >
+        {selectedRealmDiplomacy ? (
+          <div className={styles.realmDetailPanel}>
+            <section className={styles.realmHero} style={{ borderColor: selectedRealmDiplomacy.realm.borderColor }}>
+              <span
+                className={styles.realmHeroMark}
+                style={{ background: selectedRealmDiplomacy.realm.primaryColor }}
+                aria-hidden="true"
+              >
+                {selectedRealmDiplomacy.realm.shortTag}
+              </span>
+              <div>
+                <p className={styles.hudEyebrow}>{getStanceLabel(selectedRealmDiplomacy.stance)}</p>
+                <strong className={styles.cardTitle}>{selectedRealmDiplomacy.realm.name}</strong>
+                <p className={styles.muted}>{selectedRealmDiplomacy.realm.identity}</p>
+              </div>
+              <div className={styles.provinceBadgeStack}>
+                <Badge tone={getRelationBadgeTone(selectedRealmDiplomacy.relation)}>
+                  {getRelationLabel(selectedRealmDiplomacy.relation)}
+                </Badge>
+                <Badge tone={getBorderTensionTone(selectedRealmDiplomacy.borderStatus)}>
+                  {getBorderTensionLabel(selectedRealmDiplomacy.borderStatus)}
+                </Badge>
+              </div>
+            </section>
+
+            <section className={styles.realmMetricGrid} aria-label="Yurt gücü">
+              <article>
+                <span>Güç</span>
+                <strong>{formatNumber(selectedRealmDiplomacy.realm.strength)}</strong>
+              </article>
+              <article>
+                <span>Tehdit</span>
+                <strong>{formatNumber(getRealmThreatScore(selectedRealmDiplomacy))}</strong>
+              </article>
+              <article>
+                <span>Yurt</span>
+                <strong>{formatNumber(selectedRealmDiplomacy.controlledProvinces)}</strong>
+              </article>
+              <article>
+                <span>Nüfuz</span>
+                <strong>{getInfluenceLabel(selectedRealmDiplomacy.influence)}</strong>
+              </article>
+            </section>
+
+            <section className={styles.realmInfoGrid}>
+              <div>
+                <span>Merkez</span>
+                <strong>{selectedRealmDiplomacy.realm.capitalX}, {selectedRealmDiplomacy.realm.capitalY}</strong>
+                <small>{selectedRealmDiplomacy.militaryIdentity}</small>
+              </div>
+              <div>
+                <span>Önerilen</span>
+                <strong>{getDiplomaticActionLabel(selectedRealmDiplomacy.recommendedAction)}</strong>
+                <small>{selectedRealmDiplomacy.advisorText}</small>
+              </div>
+            </section>
+
+            <section className={styles.realmTreatyList} aria-label="Aktif ahidler">
+              <strong>Ahidler</strong>
+              {selectedRealmDiplomacy.activeTreaties.length > 0 ? (
+                selectedRealmDiplomacy.activeTreaties.map((treaty) => (
+                  <span key={treaty.id}>
+                    {getTreatyLabel(treaty.type)} · {treaty.label}
+                    {treaty.expiresInTurns == null ? "" : ` · ${treaty.expiresInTurns} tur`}
+                  </span>
+                ))
+              ) : (
+                <span>Aktif ahid yok.</span>
+              )}
+            </section>
+
+            <section className={styles.realmClaimList} aria-label="Bilinen iddialar">
+              <strong>Bilinen iddialar</strong>
+              {selectedRealmDiplomacy.knownClaims.length > 0 ? (
+                selectedRealmDiplomacy.knownClaims.slice(0, 4).map((claim) => (
+                  <span key={claim.id}>
+                    {claim.claimantTag} · {claim.label} · {formatNumber(claim.strength)}
+                  </span>
+                ))
+              ) : (
+                <span>Merkez çevresinde görünür iddia yok.</span>
+              )}
+            </section>
+
+            <p className={styles.provinceLore}>{selectedRealmDiplomacy.realm.lore}</p>
+
+            <section className={styles.realmActionGrid} aria-label="Yurt diplomasisi">
+              {getRealmActionItems(selectedRealmDiplomacy).map((entry) => (
+                <Button
+                  key={entry.action}
+                  type="button"
+                  size="small"
+                  variant={entry.enabled ? (entry.action === selectedRealmDiplomacy.recommendedAction ? "primary" : "secondary") : "ghost"}
+                  disabled={!entry.enabled}
+                  title={entry.reason}
+                  onClick={() => handleDiplomacyAction(entry.action, selectedRealmDiplomacy, selectedProvince)}
+                >
+                  {entry.label}
+                </Button>
+              ))}
+            </section>
+          </div>
+        ) : null}
+      </BottomSheet>
+
+      <BottomSheet
+        open={diplomacyDrawerOpen}
+        title="Toy İlişkileri"
+        onClose={() => setDiplomacyDrawerOpen(false)}
+        mode="aside"
+      >
+        <div className={styles.diplomacyDrawer}>
+          <section className={styles.diplomacyDrawerSummary} aria-label="Toy özeti">
+            <article>
+              <span>Yurt</span>
+              <strong>{formatNumber(realmDiplomacies.length)}</strong>
+            </article>
+            <article>
+              <span>Gergin</span>
+              <strong>
+                {formatNumber(realmDiplomacies.filter((entry) => entry.borderStatus === "high" || entry.borderStatus === "critical").length)}
+              </strong>
+            </article>
+            <article>
+              <span>Ahid</span>
+              <strong>{formatNumber(realmDiplomacies.filter((entry) => entry.activeTreaties.length > 0).length)}</strong>
+            </article>
+          </section>
+
+          <section className={styles.diplomacyRealmList} aria-label="Bilinen yurtlar">
+            {realmDiplomacies.map((entry) => (
+              <article key={entry.realm.id} className={styles.diplomacyRealmCard}>
+                <div className={styles.diplomacyRealmHeader}>
+                  <span className={styles.realmSwatch} style={{ background: entry.realm.primaryColor }} aria-hidden="true" />
+                  <div>
+                    <strong>{entry.realm.shortTag} · {entry.realm.name}</strong>
+                    <small>{entry.realm.identity}</small>
+                  </div>
+                  <Badge tone={getRelationBadgeTone(entry.relation)}>{getRelationLabel(entry.relation)}</Badge>
+                </div>
+                <div className={styles.diplomacyRealmMeta}>
+                  <span>{formatNumber(entry.realm.strength)} güç</span>
+                  <span>{getBorderTensionLabel(entry.borderStatus)} hudut</span>
+                  <span>{formatNumber(entry.controlledProvinces)} yurt</span>
+                  <span>{formatNumber(entry.knownClaims.length)} iddia</span>
+                </div>
+                <div className={styles.diplomacyRealmFooter}>
+                  <small>{entry.advisorText}</small>
+                  <Button type="button" size="small" variant="secondary" onClick={() => openRealmDetail(entry.realm.id)}>
+                    Yurdu Gör
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </section>
+        </div>
       </BottomSheet>
 
       <BottomSheet
