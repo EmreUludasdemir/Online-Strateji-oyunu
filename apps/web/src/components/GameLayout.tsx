@@ -22,7 +22,21 @@ import { formatNumber } from "../lib/formatters";
 import { summarizeRewardLines } from "../lib/rewardSummaries";
 import { copy } from "../lib/i18n";
 import { getInvalidationKeys, getSocketToast, parseSocketEvent } from "../lib/socketEvents";
-import { getSavedTutorialState, saveTutorialState, TUTORIAL_STEPS } from "../lib/tutorialFlow";
+import {
+  completeTutorialRequirement,
+  completeTutorialStep as completeTutorialStepState,
+  getCurrentTutorialStep,
+  getSavedTutorialState,
+  getTutorialHighlightTarget,
+  getTutorialProgressPercent,
+  pauseTutorialState,
+  resetTutorialState,
+  resumeTutorialState,
+  saveTutorialState,
+  shouldHighlightTutorialTarget,
+  skipTutorialState,
+  startTutorialState,
+} from "../lib/tutorialFlow";
 import type { TutorialState, TutorialStepId } from "../lib/tutorialFlow";
 import { useTheme } from "./ThemeProvider";
 import type { ActiveMapChunkMeta, MapCameraState } from "./worldMapShared";
@@ -71,6 +85,13 @@ export interface GameLayoutContext {
   openCommanderPanel: (commanderId?: string) => void;
   tutorialState: import("../lib/tutorialFlow").TutorialState;
   completeTutorialStep: (stepId: import("../lib/tutorialFlow").TutorialStepId) => void;
+  completeTutorialRequirement: (
+    requirementType: import("../lib/tutorialFlow").TutorialRequirementType,
+    meta?: { route?: string; action?: string; targetId?: string },
+  ) => void;
+  pauseTutorial: () => void;
+  resumeTutorial: () => void;
+  resetTutorial: () => void;
   skipTutorial: () => void;
 }
 
@@ -80,6 +101,7 @@ declare global {
     advanceTime?: (ms: number) => void;
     select_map_city?: (cityId: string | null) => void;
     select_map_poi?: (poiId: string | null) => void;
+    select_map_province?: (x: number, y: number) => void;
     open_map_field_command?: (command: {
       kind?: "TILE" | "CITY" | "POI";
       label?: string;
@@ -208,6 +230,12 @@ declare global {
       lastFetchErrorAt: string | null;
       readyPhase: "bootstrapping" | "fetching" | "loaded" | "error";
     } | null;
+    frontierTutorial?: {
+      reset: () => void;
+      start: () => void;
+      skip: () => void;
+      state: () => TutorialState;
+    };
   }
 }
 
@@ -328,28 +356,75 @@ export function GameLayout() {
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
 
   const [tutorialState, setTutorialState] = useState<TutorialState>(getSavedTutorialState);
-  
-  const completeTutorialStep = useCallback((stepId: TutorialStepId) => {
+
+  const persistTutorialState = useCallback((updater: (state: TutorialState) => TutorialState) => {
     setTutorialState((prev) => {
-      // Find the next step
-      const keys = Object.keys(TUTORIAL_STEPS) as TutorialStepId[];
-      const currentIndex = keys.indexOf(stepId);
-      if (currentIndex !== -1 && currentIndex < keys.length - 1) {
-        const nextStep = keys[currentIndex + 1];
-        const newState = { ...prev, currentStepId: nextStep };
-        saveTutorialState(newState);
-        return newState;
-      }
-      return prev;
+      const next = updater(prev);
+      saveTutorialState(next);
+      return next;
     });
   }, []);
 
+  const completeTutorialStep = useCallback((stepId: TutorialStepId) => {
+    persistTutorialState((prev) => completeTutorialStepState(prev, stepId));
+  }, [persistTutorialState]);
+
+  const completeTutorialRequirementForCurrentStep = useCallback(
+    (requirementType: import("../lib/tutorialFlow").TutorialRequirementType, meta?: { route?: string; action?: string; targetId?: string }) => {
+      persistTutorialState((prev) => completeTutorialRequirement(prev, requirementType, meta));
+    },
+    [persistTutorialState],
+  );
+
+  const pauseTutorial = useCallback(() => {
+    persistTutorialState((prev) => pauseTutorialState(prev));
+  }, [persistTutorialState]);
+
+  const resumeTutorial = useCallback(() => {
+    persistTutorialState((prev) => resumeTutorialState(prev));
+  }, [persistTutorialState]);
+
+  const resetTutorial = useCallback(() => {
+    const next = resetTutorialState();
+    setTutorialState(next);
+  }, []);
+
   const skipTutorial = useCallback(() => {
-    setTutorialState((prev) => {
-      const newState = { ...prev, isSkipped: true };
-      saveTutorialState(newState);
-      return newState;
-    });
+    persistTutorialState((prev) => skipTutorialState(prev));
+  }, [persistTutorialState]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tutorialCommand = params.get("tutorial");
+    if (tutorialCommand === "reset" || tutorialCommand === "start") {
+      const next = tutorialCommand === "reset" ? resetTutorialState() : startTutorialState();
+      setTutorialState(next);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    completeTutorialRequirementForCurrentStep("visit_route", { route: location.pathname });
+  }, [completeTutorialRequirementForCurrentStep, location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === "/app/map") {
+      completeTutorialRequirementForCurrentStep("map_opened", { route: location.pathname });
+    }
+  }, [completeTutorialRequirementForCurrentStep, location.pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.frontierTutorial = {
+      reset: () => setTutorialState(resetTutorialState()),
+      start: () => setTutorialState(startTutorialState()),
+      skip: () => persistTutorialState((prev) => skipTutorialState(prev)),
+      state: () => getSavedTutorialState(),
+    };
+    return () => {
+      delete window.frontierTutorial;
+    };
   }, []);
   const enqueueToast = useCallback((toast: Omit<ToastItem, "id">) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -636,6 +711,10 @@ export function GameLayout() {
       openCommanderPanel,
       tutorialState,
       completeTutorialStep,
+      completeTutorialRequirement: completeTutorialRequirementForCurrentStep,
+      pauseTutorial,
+      resumeTutorial,
+      resetTutorial,
       skipTutorial,
     };
   }, [
@@ -658,6 +737,10 @@ export function GameLayout() {
     upgradeMutation,
     tutorialState,
     completeTutorialStep,
+    completeTutorialRequirementForCurrentStep,
+    pauseTutorial,
+    resumeTutorial,
+    resetTutorial,
     skipTutorial,
   ]);
 
@@ -692,6 +775,8 @@ export function GameLayout() {
       const mapKingdom = window.frontierMapKingdom ?? null;
       const mapDiagnostics = window.frontierMapDiagnostics ?? null;
       const lastError = window.frontierLastError ?? null;
+      const currentTutorialStep = getCurrentTutorialStep(tutorialState);
+      const currentTutorialTarget = getTutorialHighlightTarget(tutorialState);
 
       return JSON.stringify({
         screen: location.pathname,
@@ -736,6 +821,16 @@ export function GameLayout() {
         },
         settings: {
           themeMode,
+        },
+        tutorial: {
+          currentStepId: tutorialState.currentStepId,
+          currentTitle: currentTutorialStep.title,
+          completedStepIds: tutorialState.completedStepIds,
+          isSkipped: tutorialState.isSkipped,
+          isPaused: tutorialState.isPaused,
+          progressPercent: getTutorialProgressPercent(tutorialState),
+          targetId: currentTutorialTarget?.id ?? null,
+          targetRoute: currentTutorialTarget?.route ?? null,
         },
         selectedCity,
         selectedPoi,
@@ -830,6 +925,7 @@ export function GameLayout() {
     sessionQuery.isPending,
     stateQuery.data,
     themeMode,
+    tutorialState,
   ]);
 
   useEffect(() => {
@@ -978,6 +1074,7 @@ export function GameLayout() {
           </div>
         }
         resources={resources}
+        resourceTargetActive={shouldHighlightTutorialTarget(tutorialState, "tutorial-target-resource-bar")}
         actions={
           <QuickActions
             onInbox={openInbox}
@@ -1010,10 +1107,13 @@ export function GameLayout() {
 
         <nav className={styles.nav}>
           {navigationItems.map((item) => {
-            const isMapTarget = tutorialState?.currentStepId === "navigate_map" && item.id === "map";
-            const isReportTarget = tutorialState?.currentStepId === "read_report" && item.id === "reports";
-            const isTutorialTarget = isMapTarget || isReportTarget;
-            const targetId = isMapTarget ? "tutorial-target-nav-map" : isReportTarget ? "tutorial-target-navigate-reports" : undefined;
+            const navTutorialTargets: Record<string, string> = {
+              map: "tutorial-target-nav-map",
+              reports: "tutorial-target-navigate-reports",
+              army: "tutorial-target-nav-army",
+            };
+            const targetId = navTutorialTargets[item.id];
+            const isTutorialTarget = targetId ? shouldHighlightTutorialTarget(tutorialState, targetId) : false;
 
             return (
               <NavLink
@@ -1325,6 +1425,9 @@ export function GameLayout() {
       <TutorialOverlay 
         tutorialState={tutorialState} 
         completeTutorialStep={completeTutorialStep} 
+        pauseTutorial={pauseTutorial}
+        resumeTutorial={resumeTutorial}
+        resetTutorial={resetTutorial}
         skipTutorial={skipTutorial} 
       />
     </div>

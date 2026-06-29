@@ -1,25 +1,37 @@
 import { NavLink } from "react-router-dom";
 import type { TutorialState } from "../../lib/tutorialFlow";
+import { shouldHighlightTutorialTarget } from "../../lib/tutorialFlow";
 
 import { copy } from "../../lib/i18n";
 import styles from "../GameLayoutShell.module.css";
 
 export function MobileBottomNav({ tutorialState }: { tutorialState?: TutorialState }) {
+  const cityTarget = shouldHighlightTutorialTarget(tutorialState, "tutorial-target-nav-city");
+  const mapTarget = shouldHighlightTutorialTarget(tutorialState, "tutorial-target-nav-map");
+  const reportsTarget = shouldHighlightTutorialTarget(tutorialState, "tutorial-target-navigate-reports");
+
   return (
     <nav className={styles.mobileNav}>
       <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? styles.mobileLinkActive : styles.mobileLink)}>
         {copy.hud.dashboard}
       </NavLink>
-      <NavLink to="/app/city" className={({ isActive }) => (isActive ? styles.mobileLinkActive : styles.mobileLink)}>
+      <NavLink
+        to="/app/city"
+        className={({ isActive }) => [
+          isActive ? styles.mobileLinkActive : styles.mobileLink,
+          cityTarget ? "is-tutorial-active" : "",
+        ].filter(Boolean).join(" ")}
+        data-tutorial-target={cityTarget ? "tutorial-target-nav-city" : undefined}
+      >
         Şehir
       </NavLink>
       <NavLink
         to="/app/map"
         className={({ isActive }) => [
           isActive ? styles.mobileLinkActive : styles.mobileLink,
-          tutorialState?.currentStepId === "navigate_map" ? "is-tutorial-active" : ""
+          mapTarget ? "is-tutorial-active" : "",
         ].filter(Boolean).join(" ")}
-        data-tutorial-target={tutorialState?.currentStepId === "navigate_map" ? "tutorial-target-nav-map" : undefined}
+        data-tutorial-target={mapTarget ? "tutorial-target-nav-map" : undefined}
       >
         {copy.hud.map}
       </NavLink>
@@ -27,9 +39,9 @@ export function MobileBottomNav({ tutorialState }: { tutorialState?: TutorialSta
         to="/app/reports"
         className={({ isActive }) => [
           isActive ? styles.mobileLinkActive : styles.mobileLink,
-          tutorialState?.currentStepId === "read_report" ? "is-tutorial-active" : ""
+          reportsTarget ? "is-tutorial-active" : "",
         ].filter(Boolean).join(" ")}
-        data-tutorial-target={tutorialState?.currentStepId === "read_report" ? "tutorial-target-navigate-reports" : undefined}
+        data-tutorial-target={reportsTarget ? "tutorial-target-navigate-reports" : undefined}
       >
         {copy.hud.reports}
       </NavLink>

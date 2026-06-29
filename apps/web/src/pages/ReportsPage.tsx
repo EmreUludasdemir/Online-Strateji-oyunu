@@ -145,7 +145,8 @@ function getCombatTimeline(report: ReportEntryView): Array<{ time: string; desc:
 
 export function ReportsPage() {
   const navigate = useNavigate();
-  const { notifications, state, tutorialState, completeTutorialStep } = useGameLayoutContext();
+  const { notifications, state, tutorialState, completeTutorialRequirement } = useGameLayoutContext();
+  const activeTutorialStepId = tutorialState.isSkipped || tutorialState.isPaused ? null : tutorialState.currentStepId;
   const [searchParams, setSearchParams] = useSearchParams();
   const [kindFilter, setKindFilter] = useState<"ALL" | ReportEntryView["kind"]>("ALL");
   const [resultFilter, setResultFilter] = useState<"ALL" | "ATTACKER_WIN" | "DEFENDER_HOLD" | "LOGISTICS">("ALL");
@@ -227,10 +228,10 @@ export function ReportsPage() {
   );
 
   useEffect(() => {
-    if (activeReport && tutorialState?.currentStepId === "read_report") {
-      completeTutorialStep("read_report");
+    if (activeReport) {
+      completeTutorialRequirement("report_opened", { targetId: activeReport.id });
     }
-  }, [activeReport, tutorialState?.currentStepId, completeTutorialStep]);
+  }, [activeReport, completeTutorialRequirement]);
 
   if (reportsQuery.isPending) {
     return (
@@ -329,9 +330,9 @@ export function ReportsPage() {
                     className={[
                       styles.reportCard,
                       isActive ? styles.reportCardActive : "",
-                      tutorialState?.currentStepId === "read_report" && !isActive ? "is-tutorial-active" : ""
+                      activeTutorialStepId === "read_report" && !isActive ? "is-tutorial-active" : ""
                     ].filter(Boolean).join(" ")}
-                    data-tutorial-target={tutorialState?.currentStepId === "read_report" && !isActive ? "tutorial-target-report-card" : undefined}
+                    data-tutorial-target={activeTutorialStepId === "read_report" && !isActive ? "tutorial-target-report-card" : undefined}
                     onClick={() => setSearchParams({ focus: report.id })}
                   >
                     <div className={styles.reportCardMeta}>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type TroopType } from "@frontier/shared";
 import { useGameLayoutContext } from "../components/GameLayout";
 import { PageHero } from "../components/ui/PageHero";
@@ -25,7 +25,8 @@ const TROOP_DESCRIPTIONS: Record<TroopType, string> = {
 
 export function ArmyPage() {
   const now = useNow();
-  const { state, train, isTraining, tutorialState, completeTutorialStep } = useGameLayoutContext();
+  const { state, train, isTraining, tutorialState, completeTutorialRequirement } = useGameLayoutContext();
+  const activeTutorialStepId = tutorialState.isSkipped || tutorialState.isPaused ? null : tutorialState.currentStepId;
 
   const [quantities, setQuantities] = useState<Record<TroopType, number>>({
     INFANTRY: 50,
@@ -40,11 +41,15 @@ export function ArmyPage() {
   const handleTrain = async (type: TroopType) => {
     if (quantities[type] > 0 && !state.city.activeTraining) {
       await train(type, quantities[type]);
-      if (tutorialState?.currentStepId === "train_troops") {
-        completeTutorialStep("train_troops");
-      }
+      completeTutorialRequirement("training_started", { targetId: type });
     }
   };
+
+  useEffect(() => {
+    if (state.city.activeTraining?.troopType === "INFANTRY") {
+      completeTutorialRequirement("training_started", { targetId: "INFANTRY" });
+    }
+  }, [completeTutorialRequirement, state.city.activeTraining?.troopType]);
 
   const totalTroops = useMemo(() => {
     return state.city.troops.reduce((acc, t) => acc + t.quantity, 0);
@@ -172,8 +177,8 @@ export function ArmyPage() {
 
                 <Button
                   variant="primary"
-                  className={tutorialState?.currentStepId === "train_troops" && troop.type === "INFANTRY" ? "is-tutorial-active" : undefined}
-                  data-tutorial-target={tutorialState?.currentStepId === "train_troops" && troop.type === "INFANTRY" ? "tutorial-target-barracks-train" : undefined}
+                  className={activeTutorialStepId === "train_troops" && troop.type === "INFANTRY" ? "is-tutorial-active" : undefined}
+                  data-tutorial-target={activeTutorialStepId === "train_troops" && troop.type === "INFANTRY" ? "tutorial-target-barracks-train" : undefined}
                   onClick={() => handleTrain(troop.type)}
                   disabled={!canAfford || isBusy || qty < 1}
                 >

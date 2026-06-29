@@ -15,15 +15,20 @@ export function TopHud({
   brand,
   resources,
   actions,
+  resourceTargetActive,
 }: {
   brand?: ReactNode;
   resources: Array<{ label: string; value: number; tooltip?: ReactNode }>;
   actions: ReactNode;
+  resourceTargetActive?: boolean;
 }) {
   return (
     <header className={styles.topHud}>
       {brand && <div className={styles.topBrand}>{brand}</div>}
-      <div className={styles.resourceRow}>
+      <div
+        className={[styles.resourceRow, resourceTargetActive ? "is-tutorial-active" : ""].filter(Boolean).join(" ")}
+        data-tutorial-target={resourceTargetActive ? "tutorial-target-resource-bar" : undefined}
+      >
         {resources.map((resource) => (
           <ResourcePill
             key={resource.label}

@@ -707,8 +707,9 @@ export function MapPage() {
     isSendingMarch,
     isRecallingMarch,
     tutorialState,
-    completeTutorialStep,
+    completeTutorialRequirement,
   } = useGameLayoutContext();
+  const activeTutorialStepId = tutorialState.isSkipped || tutorialState.isPaused ? null : tutorialState.currentStepId;
   const mapCommandRef = useRef<WorldMapHandle | null>(null);
   const scoutTrailTimersRef = useRef<number[]>([]);
   const minimapPingTimerRef = useRef<number | null>(null);
@@ -1216,6 +1217,11 @@ export function MapPage() {
     () => (selectedProvince && selectedProvinceControl ? getAvailableExpansionActions(selectedProvince, selectedProvinceControl) : []),
     [selectedProvince, selectedProvinceControl],
   );
+  useEffect(() => {
+    if (activeTutorialStepId === "scout_province" && selectedProvinceControl?.lastScoutedAt) {
+      completeTutorialRequirement("province_scouted", { action: "SCOUT" });
+    }
+  }, [activeTutorialStepId, completeTutorialRequirement, selectedProvinceControl?.lastScoutedAt]);
   const selectedExpansionFeedback = selectedProvince ? (expansionFeedbackByProvince[selectedProvince.id] ?? null) : null;
   const realmDiplomacies = useMemo<RealmDiplomacy[]>(
     () => getAllRealmDiplomacy(getWorldRegions(worldChunk?.size ?? 64), worldChunk?.size ?? 64),
@@ -1877,11 +1883,8 @@ export function MapPage() {
       if (!city.isCurrentPlayer) {
         setTargetSheetOpen(true);
       }
-      if (tutorialState?.currentStepId === "select_target") {
-        completeTutorialStep("select_target");
-      }
     },
-    [selectCity, tutorialState, completeTutorialStep],
+    [selectCity],
   );
 
   const handlePoiSelect = useCallback(
@@ -1898,11 +1901,8 @@ export function MapPage() {
         mapCommandRef.current?.focusPoi(poi.id);
       }
       setTargetSheetOpen(true);
-      if (tutorialState?.currentStepId === "select_target") {
-        completeTutorialStep("select_target");
-      }
     },
-    [selectPoi, tutorialState, completeTutorialStep],
+    [selectPoi],
   );
 
   const handleMarchSelect = useCallback((marchId: string) => {
@@ -1937,7 +1937,19 @@ export function MapPage() {
     selectCity(null);
     selectPoi(null);
     setSelectedProvinceTile({ x, y });
-  }, [selectCity, selectPoi]);
+    completeTutorialRequirement("province_selected", { targetId: `${x},${y}` });
+  }, [completeTutorialRequirement, selectCity, selectPoi]);
+
+  useEffect(() => {
+    window.select_map_province = (x: number, y: number) => {
+      handleProvinceSelect(x, y);
+      mapCommandRef.current?.focusTile(x, y);
+    };
+
+    return () => {
+      delete window.select_map_province;
+    };
+  }, [handleProvinceSelect]);
 
   const handleMinimapClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
@@ -2225,8 +2237,13 @@ export function MapPage() {
       setMapMode("ALLIANCE");
       setMapNotice(result.message);
       mapCommandRef.current?.focusTile(selectedProvince.x, selectedProvince.y);
+      if (action === "SCOUT_PROVINCE") {
+        completeTutorialRequirement("province_scouted", { action });
+      } else {
+        completeTutorialRequirement("province_expansion_action", { action });
+      }
     },
-    [now, selectedProvince, selectedProvinceControl],
+    [completeTutorialRequirement, now, selectedProvince, selectedProvinceControl],
   );
 
   const handleProvinceAction = useCallback(
@@ -2241,6 +2258,17 @@ export function MapPage() {
       }
 
       if (action === "SCOUT" || action === "CLAIM") {
+        const expansionAction = action === "SCOUT" ? "SCOUT_PROVINCE" : "CLAIM_PROVINCE";
+        const canUseExpansionAction = selectedExpansionActions.some((entry) => entry.action === expansionAction && entry.enabled);
+        if (
+          ((action === "SCOUT" && activeTutorialStepId === "scout_province") ||
+            (action === "CLAIM" && activeTutorialStepId === "claim_or_influence")) &&
+          canUseExpansionAction
+        ) {
+          handleExpansionAction(expansionAction);
+          return;
+        }
+
         const label =
           action === "SCOUT"
             ? `${selectedProvince.realm.shortTag} keşif ${selectedProvince.x},${selectedProvince.y}`
@@ -2261,7 +2289,7 @@ export function MapPage() {
       setMapNotice(`${actionLabel} buyruğu için bu yurtta somut oba, kamp veya geçit hedefi seç.`);
       mapCommandRef.current?.focusTile(selectedProvince.x, selectedProvince.y);
     },
-    [openRealmDetail, selectedProvince],
+    [activeTutorialStepId, handleExpansionAction, openRealmDetail, selectedExpansionActions, selectedProvince],
   );
 
   const handleFieldMarkerCreate = useCallback(async () => {
@@ -2454,6 +2482,7 @@ export function MapPage() {
       }
       setComposerMode(null);
       setTargetSheetOpen(false);
+      completeTutorialRequirement("march_sent", { action: "SCOUT" });
       return;
     }
 
@@ -2467,6 +2496,7 @@ export function MapPage() {
       });
       setComposerMode(null);
       setTargetSheetOpen(false);
+      completeTutorialRequirement("march_sent", { action: "RALLY" });
       return;
     }
 
@@ -2474,9 +2504,7 @@ export function MapPage() {
       await sendMarch({ targetCityId: selectedCity.cityId, commanderId, troops: troopPayload });
       setComposerMode(null);
       setTargetSheetOpen(false);
-      if (tutorialState?.currentStepId === "send_march") {
-        completeTutorialStep("send_march");
-      }
+      completeTutorialRequirement("march_sent", { action: "CITY_ATTACK" });
       return;
     }
 
@@ -2484,9 +2512,7 @@ export function MapPage() {
       await sendMarch({ objective: composerMode, targetPoiId: selectedPoi.id, commanderId, troops: troopPayload });
       setComposerMode(null);
       setTargetSheetOpen(false);
-      if (tutorialState?.currentStepId === "send_march") {
-        completeTutorialStep("send_march");
-      }
+      completeTutorialRequirement("march_sent", { action: composerMode });
     }
   };
   handleComposerConfirmRef.current = handleComposerConfirm;
@@ -2495,7 +2521,15 @@ export function MapPage() {
     <section className={styles.page}>
       <section className={styles.battlefieldLayout}>
         <div className={styles.mapStage}>
-          <article className={styles.mapFrame}>
+          <article
+            className={[
+              styles.mapFrame,
+              activeTutorialStepId === "select_province" ? "is-tutorial-active" : "",
+            ].filter(Boolean).join(" ")}
+            data-tutorial-target={
+              activeTutorialStepId === "select_province" ? "tutorial-target-map-canvas" : undefined
+            }
+          >
             <div className={styles.tacticalHud}>
               {selectedTargetName ? (
                 <section className={styles.intelPanel}>
@@ -3380,6 +3414,19 @@ export function MapPage() {
                     disabled={!entry.enabled}
                     title={entry.reason}
                     data-expansion-action={entry.action}
+                    data-tutorial-target={
+                      activeTutorialStepId === "scout_province" && entry.action === "SCOUT_PROVINCE" && entry.enabled
+                        ? "tutorial-target-province-scout"
+                        : activeTutorialStepId === "claim_or_influence" && entry.enabled
+                          ? "tutorial-target-province-claim"
+                          : undefined
+                    }
+                    className={
+                      (activeTutorialStepId === "scout_province" && entry.action === "SCOUT_PROVINCE" && entry.enabled) ||
+                      (activeTutorialStepId === "claim_or_influence" && entry.enabled)
+                        ? "is-tutorial-active"
+                        : undefined
+                    }
                     onClick={() => handleExpansionAction(entry.action)}
                   >
                     {entry.label}
@@ -3392,7 +3439,26 @@ export function MapPage() {
 
             <section className={styles.provinceActionGrid}>
               {selectedProvince.availableActions.map((action) => (
-                <Button key={action} type="button" size="small" variant={action === "RAID" ? "primary" : "secondary"} onClick={() => handleProvinceAction(action)}>
+                <Button
+                  key={action}
+                  type="button"
+                  size="small"
+                  variant={action === "RAID" ? "primary" : "secondary"}
+                  data-tutorial-target={
+                    activeTutorialStepId === "scout_province" && action === "SCOUT"
+                      ? "tutorial-target-province-scout"
+                      : activeTutorialStepId === "claim_or_influence" && action === "CLAIM"
+                        ? "tutorial-target-province-claim"
+                        : undefined
+                  }
+                  className={
+                    (activeTutorialStepId === "scout_province" && action === "SCOUT") ||
+                    (activeTutorialStepId === "claim_or_influence" && action === "CLAIM")
+                      ? "is-tutorial-active"
+                      : undefined
+                  }
+                  onClick={() => handleProvinceAction(action)}
+                >
                   {getProvinceActionLabel(action)}
                 </Button>
               ))}
@@ -3603,8 +3669,8 @@ export function MapPage() {
               <Button
                 type="button"
                 disabled={isSendingMarch || (composerMode !== "SCOUT" && totalAssignedTroops <= 0)}
-                className={tutorialState?.currentStepId === "send_march" ? "is-tutorial-active" : undefined}
-                data-tutorial-target={tutorialState?.currentStepId === "send_march" ? "tutorial-target-composer-send" : undefined}
+                className={activeTutorialStepId === "send_march" ? "is-tutorial-active" : undefined}
+                data-tutorial-target={activeTutorialStepId === "send_march" ? "tutorial-target-composer-send" : undefined}
                 onClick={() => void handleComposerConfirm()}
               >
                 {composerActionLabel}

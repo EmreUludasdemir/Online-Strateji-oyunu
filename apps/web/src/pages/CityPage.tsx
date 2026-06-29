@@ -1,6 +1,6 @@
 import type { BuildingType, BuildingView, ResourceKey } from "@frontier/shared";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useGameLayoutContext } from "../components/GameLayout";
@@ -131,7 +131,8 @@ const BUILDING_CATEGORIES: { label: string; types: BuildingType[] }[] = [
 export function CityPage() {
   const now = useNow();
   const navigate = useNavigate();
-  const { state, upgrade, isUpgrading, tutorialState, completeTutorialStep } = useGameLayoutContext();
+  const { state, upgrade, isUpgrading, tutorialState, completeTutorialRequirement } = useGameLayoutContext();
+  const activeTutorialStepId = tutorialState.isSkipped || tutorialState.isPaused ? null : tutorialState.currentStepId;
   const [selectedBuildingType, setSelectedBuildingType] = useState<BuildingType | null>(null);
 
   const city = state.city;
@@ -167,8 +168,8 @@ export function CityPage() {
   };
 
   const advisorSuggestions = useMemo<import("../lib/balanceHelpers").AdvisorSuggestion[]>(() => {
-    if (tutorialState && !tutorialState.isSkipped && tutorialState.currentStepId !== "completed") {
-      const step = TUTORIAL_STEPS[tutorialState.currentStepId];
+    if (activeTutorialStepId && activeTutorialStepId !== "completed") {
+      const step = TUTORIAL_STEPS[activeTutorialStepId];
       if (step?.advisorMessage) {
         return [{
           id: "tutorial",
@@ -179,14 +180,18 @@ export function CityPage() {
       }
     }
     return getAdvisorSuggestions(city);
-  }, [city, tutorialState]);
+  }, [activeTutorialStepId, city]);
 
   const handleUpgrade = async (buildingType: BuildingType) => {
     await upgrade(buildingType);
-    if (tutorialState?.currentStepId === "upgrade_townhall" && buildingType === "TOWN_HALL") {
-      completeTutorialStep("upgrade_townhall");
-    }
+    completeTutorialRequirement("upgrade_started", { targetId: buildingType });
   };
+
+  useEffect(() => {
+    if (activeUpgrade?.buildingType === "TOWN_HALL" || (townHall?.level ?? 0) > 1) {
+      completeTutorialRequirement("upgrade_started", { targetId: "TOWN_HALL" });
+    }
+  }, [activeUpgrade?.buildingType, completeTutorialRequirement, townHall?.level]);
 
   return (
     <section className={styles.page}>
@@ -252,7 +257,7 @@ export function CityPage() {
                     const status = getBuildingStatus(building);
                     const isSelected = selectedBuildingType === building.type;
                     const bonus = getBuildingBonus(building.type, building.level, city);
-                    const isTutorialActiveForBuilding = tutorialState?.currentStepId === "upgrade_townhall" && building.type === "TOWN_HALL";
+                    const isTutorialActiveForBuilding = activeTutorialStepId === "upgrade_townhall" && building.type === "TOWN_HALL";
 
                     return (
                       <button
@@ -369,8 +374,8 @@ export function CityPage() {
                 <Button
                   type="button"
                   variant="primary"
-                  data-tutorial-target={tutorialState?.currentStepId === "upgrade_townhall" && selectedBuilding.type === "TOWN_HALL" ? "tutorial-target-townhall-upgrade" : undefined}
-                  className={tutorialState?.currentStepId === "upgrade_townhall" && selectedBuilding.type === "TOWN_HALL" ? "is-tutorial-active" : undefined}
+                  data-tutorial-target={activeTutorialStepId === "upgrade_townhall" && selectedBuilding.type === "TOWN_HALL" ? "tutorial-target-townhall-upgrade" : undefined}
+                  className={activeTutorialStepId === "upgrade_townhall" && selectedBuilding.type === "TOWN_HALL" ? "is-tutorial-active" : undefined}
                   onClick={() => handleUpgrade(selectedBuilding.type)}
                   disabled={
                     isUpgrading ||
@@ -389,8 +394,8 @@ export function CityPage() {
                     type="button" 
                     variant="secondary" 
                     onClick={() => navigate("/app/army")}
-                    data-tutorial-target={tutorialState?.currentStepId === "train_troops" ? "tutorial-target-barracks-train" : undefined}
-                    className={tutorialState?.currentStepId === "train_troops" ? "is-tutorial-active" : undefined}
+                    data-tutorial-target={activeTutorialStepId === "train_troops" ? "tutorial-target-barracks-train" : undefined}
+                    className={activeTutorialStepId === "train_troops" ? "is-tutorial-active" : undefined}
                   >
                     Ordu Sayfası
                   </Button>

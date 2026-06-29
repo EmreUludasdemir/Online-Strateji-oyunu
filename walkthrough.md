@@ -83,14 +83,51 @@
    - empty state tells the player to select a province and issue a first expansion order.
 7. Re-check `Toy` mode on the world map. Influence, claim, contested status, occupation/control, and high resistance now affect overlay marks without adding map text clutter.
 
+## First 5 Minutes Tutorial
+
+1. Reset the first-time flow with `/app/dashboard?tutorial=reset` or start it fresh with `/app/dashboard?tutorial=start`.
+2. The `Kağan Brifingi` advisor opens as an in-world Divan guidance card. It shows:
+   - chapter label,
+   - step count and progress bar,
+   - current objective,
+   - short strategic reason,
+   - focused target label,
+   - pause, skip, and primary action controls.
+3. Chapter 1 teaches city economy:
+   - accept `Başlangıç Buyruğu`,
+   - inspect the top resource bar,
+   - open `Oba Merkezi`,
+   - complete the Town Hall / `Kağan Otağı` upgrade condition.
+4. Chapter 2 teaches army preparation:
+   - open `Kışla`,
+   - start infantry training or resume past an already active infantry queue,
+   - open `Sefer Haritası`.
+5. Chapter 3 teaches province expansion:
+   - select a nearby province to open `Yurt Defteri`,
+   - scout it or continue if the province is already observed,
+   - move to influence/claim guidance,
+   - later steps guide a march and report read.
+6. Completion is not based on plain button clicks. Steps advance when the app observes the real route/action state:
+   - route visited,
+   - upgrade started or already achieved,
+   - infantry training started,
+   - province selected,
+   - province scout/observed state,
+   - expansion action,
+   - march sent,
+   - report opened.
+7. Tutorial state persists in `localStorage` under `frontier_tutorial_state`. It supports paused, skipped, completed, and reset states.
+8. For browser smoke and QA, `window.select_map_province(x, y)` uses the same province-selection path as the Phaser canvas and is exposed only as an automation helper.
+
 ## Expected Feel
 
-The map should now read closer to a browser grand-strategy layer: realms have names, colors, borders, relations, claims, treaties, province control, and province-level strategic identity. The player can inspect provinces without needing a city, camp, or resource node under the cursor, then move from province intelligence into realm diplomacy or expansion orders without leaving the map.
+The map and onboarding should now read closer to a browser grand-strategy layer: realms have names, colors, borders, relations, claims, treaties, province control, and province-level strategic identity. The first-time flow teaches those systems through Kağan/Divan commands instead of an external product tour.
 
 ## Verification Notes
 
 - `render_game_to_text()` exposes current map UI state including the selected map mode.
 - Province and diplomacy helper behavior is covered in `apps/web/src/lib/politicalMap.test.ts`.
 - Claims and expansion helper behavior is covered in the same test file, including allied/friendly raid locks, prepared raid state, claimed province recommendations, unknown province scouting, occupied province management, and advisor text.
+- Tutorial state, route/action progression, storage, reset, advisor, and highlight target behavior are covered in `apps/web/src/lib/tutorialFlow.test.ts`.
 - `corepack pnpm smoke:field-command` is currently stale for the older field-command dialog text (`Field Command: Barbarian Camp 5`) and is tracked separately from the political/diplomacy map flow.
 - Browser smoke output was captured and inspected during the pass; generated artifacts are not required for normal development.
