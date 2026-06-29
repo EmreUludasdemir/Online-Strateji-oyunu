@@ -42,17 +42,28 @@ import {
   buildProvinceIntel,
   canOfferTribute,
   canProposePact,
+  applyExpansionActionMock,
   getAllRealmDiplomacy,
+  getAvailableExpansionActions,
+  getClaimProgress,
   getDiplomaticActionLabel,
+  getExpansionAdvisorMessage,
+  getExpansionActionLabel,
+  getInfluenceProgress,
+  getInitialProvinceControlState,
   getMapModeLabel,
   getRealmThreatScore,
   type BorderTensionLevel,
   type DiplomaticAction,
   type DiplomaticActionItem,
+  type ExpansionAction,
+  type ExpansionActionResult,
   type RealmDiplomacy,
   type RealmRelation,
   type MapMode,
   type ProvinceAction,
+  type ProvinceControlState,
+  type ProvinceControlStatus,
   type ProvinceIntel,
   type ProvinceRiskLevel,
   type ProvinceStatus,
@@ -78,6 +89,16 @@ interface ShortcutDefinition {
   id: string;
   label: string;
   keys: string;
+}
+
+interface ExpansionLogEntry {
+  id: string;
+  provinceId: string;
+  provinceName: string;
+  action: ExpansionAction;
+  message: string;
+  controlStatus: ProvinceControlStatus;
+  createdAt: number;
 }
 
 const BASE_MARCH_SECONDS_PER_TILE = 20;
@@ -494,6 +515,26 @@ function getBorderTensionTone(level: BorderTensionLevel): "success" | "warning" 
   return "danger";
 }
 
+function getControlStatusLabel(status: ProvinceControlStatus) {
+  const labels: Record<ProvinceControlStatus, string> = {
+    unknown: "Bilinmeyen Yurt",
+    observed: "Gözlenen Sancak",
+    influenced: "Etki Altında",
+    claimed: "İddia Edildi",
+    contested: "Çekişmeli Hudut",
+    occupied: "İşgal Altında",
+    controlled: "Bağlı Yurt",
+  };
+  return labels[status];
+}
+
+function getControlStatusTone(status: ProvinceControlStatus): "success" | "warning" | "info" | "danger" {
+  if (status === "controlled" || status === "influenced") return "success";
+  if (status === "claimed" || status === "observed") return "info";
+  if (status === "unknown") return "warning";
+  return "danger";
+}
+
 function getDiplomacyPriorityScore(diplomacy: RealmDiplomacy) {
   const relationScore: Record<RealmRelation, number> = {
     allied: 4,
@@ -697,6 +738,9 @@ export function MapPage() {
   const [selectedProvinceTile, setSelectedProvinceTile] = useState<{ x: number; y: number } | null>(null);
   const [selectedRealmId, setSelectedRealmId] = useState<string | null>(null);
   const [diplomacyDrawerOpen, setDiplomacyDrawerOpen] = useState(false);
+  const [provinceControlOverrides, setProvinceControlOverrides] = useState<Record<string, ProvinceControlState>>({});
+  const [expansionFeedbackByProvince, setExpansionFeedbackByProvince] = useState<Record<string, ExpansionActionResult>>({});
+  const [expansionLog, setExpansionLog] = useState<ExpansionLogEntry[]>([]);
   const [fieldMarkerDraft, setFieldMarkerDraft] = useState("");
   const [cameraView, setCameraView] = useState<MapCameraState>(() =>
     createInitialCameraState(state.city.coordinates.x, state.city.coordinates.y),
@@ -1160,6 +1204,17 @@ export function MapPage() {
       tiles: worldChunk.tiles,
     });
   }, [selectedProvinceTile, worldChunk]);
+  const selectedProvinceControl = useMemo<ProvinceControlState | null>(() => {
+    if (!selectedProvince) {
+      return null;
+    }
+    return provinceControlOverrides[selectedProvince.id] ?? getInitialProvinceControlState(selectedProvince);
+  }, [provinceControlOverrides, selectedProvince]);
+  const selectedExpansionActions = useMemo(
+    () => (selectedProvince && selectedProvinceControl ? getAvailableExpansionActions(selectedProvince, selectedProvinceControl) : []),
+    [selectedProvince, selectedProvinceControl],
+  );
+  const selectedExpansionFeedback = selectedProvince ? (expansionFeedbackByProvince[selectedProvince.id] ?? null) : null;
   const realmDiplomacies = useMemo<RealmDiplomacy[]>(
     () => getAllRealmDiplomacy(getWorldRegions(worldChunk?.size ?? 64), worldChunk?.size ?? 64),
     [worldChunk?.size],
@@ -1698,6 +1753,10 @@ export function MapPage() {
       selectedProvinceId: selectedProvince?.id ?? null,
       selectedProvinceRealm: selectedProvince?.realm.name ?? null,
       selectedProvinceDiplomaticRisk: selectedProvince?.diplomaticRisk ?? null,
+      selectedProvinceControlStatus: selectedProvinceControl?.controlStatus ?? null,
+      selectedProvinceInfluence: selectedProvinceControl ? getInfluenceProgress(selectedProvinceControl) : null,
+      selectedProvinceClaim: selectedProvinceControl ? getClaimProgress(selectedProvinceControl) : null,
+      expansionLogCount: expansionLog.length,
       diplomacyDrawerOpen,
       selectedRealmId,
       selectedRealmName: selectedRealmDiplomacy?.realm.name ?? null,
@@ -1720,6 +1779,8 @@ export function MapPage() {
     selectedPoi,
     selectedRealmDiplomacy?.realm.name,
     selectedRealmId,
+    selectedProvinceControl,
+    expansionLog.length,
     selectedProvince?.diplomaticRisk,
     selectedProvince?.id,
     selectedProvince?.realm.name,
@@ -2128,6 +2189,40 @@ export function MapPage() {
       setMapNotice(`${actionLabel}: ${diplomacy.realm.name} için elçilik buyruğu kayda alındı.`);
     },
     [],
+  );
+
+  const handleExpansionAction = useCallback(
+    (action: ExpansionAction) => {
+      if (!selectedProvince || !selectedProvinceControl) {
+        return;
+      }
+
+      const result = applyExpansionActionMock(selectedProvince, selectedProvinceControl, action, new Date(now));
+      setProvinceControlOverrides((current) => ({
+        ...current,
+        [selectedProvince.id]: result.nextState,
+      }));
+      setExpansionFeedbackByProvince((current) => ({
+        ...current,
+        [selectedProvince.id]: result,
+      }));
+      setExpansionLog((current) => [
+        {
+          id: `${selectedProvince.id}:${action}:${now}`,
+          provinceId: selectedProvince.id,
+          provinceName: selectedProvince.name,
+          action,
+          message: result.message,
+          controlStatus: result.nextState.controlStatus,
+          createdAt: now,
+        },
+        ...current,
+      ].slice(0, 8));
+      setMapMode("ALLIANCE");
+      setMapNotice(result.message);
+      mapCommandRef.current?.focusTile(selectedProvince.x, selectedProvince.y);
+    },
+    [now, selectedProvince, selectedProvinceControl],
   );
 
   const handleProvinceAction = useCallback(
@@ -2718,6 +2813,7 @@ export function MapPage() {
                 selectedPoiId={selectedPoiId}
                 selectedMarchId={selectedMarchId}
                 selectedProvinceTile={selectedProvinceTile}
+                provinceControlStates={provinceControlOverrides}
                 onSelectCity={(cityId) => {
                   const city = worldChunk.cities.find((entry) => entry.cityId === cityId);
                   if (city) {
@@ -2793,6 +2889,23 @@ export function MapPage() {
               Elçilik Defteri
             </Button>
           </SectionCard>
+
+          {expansionLog.length > 0 ? (
+            <SectionCard kicker="HUDUT" title="Hudut Ceridesi" className={styles.expansionLogCard}>
+              <div className={styles.expansionLogList}>
+                {expansionLog.slice(0, 4).map((entry) => (
+                  <article key={entry.id} className={styles.expansionLogEntry}>
+                    <div className={styles.expansionLogHeader}>
+                      <strong>{getExpansionActionLabel(entry.action)}</strong>
+                      <Badge tone={getControlStatusTone(entry.controlStatus)}>{getControlStatusLabel(entry.controlStatus)}</Badge>
+                    </div>
+                    <p>{entry.message}</p>
+                    <small>{entry.provinceName} · {formatMarkerAge(new Date(entry.createdAt).toISOString(), now)}</small>
+                  </article>
+                ))}
+              </div>
+            </SectionCard>
+          ) : null}
 
           <SectionCard kicker="OBA TEZGAHLARI" title="Oba Kuyrukları" className={styles.marchSection}>
             <div className={styles.queueList}>
@@ -3183,8 +3296,74 @@ export function MapPage() {
               </div>
             </section>
 
+            {selectedProvinceControl ? (
+              <section className={styles.provinceControlPanel} aria-label="Kontrol ve etki">
+                <div className={styles.provinceSectionHeader}>
+                  <div>
+                    <span>Kontrol & Etki</span>
+                    <strong>{getControlStatusLabel(selectedProvinceControl.controlStatus)}</strong>
+                  </div>
+                  <Badge tone={getControlStatusTone(selectedProvinceControl.controlStatus)}>
+                    {formatNumber(selectedProvinceControl.expansionDifficulty)} zorluk
+                  </Badge>
+                </div>
+                <div className={styles.expansionProgressGrid}>
+                  {[
+                    { id: "influence", label: "Etki", value: getInfluenceProgress(selectedProvinceControl) },
+                    { id: "claim", label: "Claim", value: getClaimProgress(selectedProvinceControl) },
+                    { id: "resistance", label: "Direnç", value: selectedProvinceControl.resistance },
+                    { id: "control", label: "Kontrol", value: selectedProvinceControl.influenceByRealm[selectedProvince.realm.id] ?? 0 },
+                  ].map((entry) => (
+                    <article key={entry.id} className={styles.expansionProgressCard} data-expansion-meter={entry.id}>
+                      <div>
+                        <span>{entry.label}</span>
+                        <strong>{formatNumber(entry.value)}%</strong>
+                      </div>
+                      <span className={styles.expansionBarTrack} aria-hidden="true">
+                        <span className={styles.expansionBarFill} style={{ width: `${Math.max(3, Math.min(100, entry.value))}%` }} />
+                      </span>
+                    </article>
+                  ))}
+                </div>
+                <p className={styles.expansionAdvisor}>{getExpansionAdvisorMessage(selectedProvince, selectedProvinceControl)}</p>
+              </section>
+            ) : null}
+
+            {selectedExpansionFeedback ? (
+              <section className={styles.expansionFeedback} aria-live="polite">
+                <strong>{selectedExpansionFeedback.message}</strong>
+                <span>{selectedExpansionFeedback.realmReaction}</span>
+                <small>
+                  {selectedExpansionFeedback.tensionDelta > 0
+                    ? `Hudut baskısı +${selectedExpansionFeedback.tensionDelta}`
+                    : selectedExpansionFeedback.tensionDelta < 0
+                      ? `Hudut baskısı ${selectedExpansionFeedback.tensionDelta}`
+                      : "Hudut baskısı değişmedi"}
+                </small>
+              </section>
+            ) : null}
+
             <p className={styles.provinceAdvisor}>{selectedProvince.advisorText}</p>
             <p className={styles.provinceLore}>{selectedProvince.realm.lore}</p>
+
+            {selectedProvinceControl ? (
+              <section className={styles.expansionActions} aria-label="Genişleme buyrukları">
+                {selectedExpansionActions.map((entry) => (
+                  <Button
+                    key={entry.action}
+                    type="button"
+                    size="small"
+                    variant={entry.enabled ? (entry.recommended ? "primary" : "secondary") : "ghost"}
+                    disabled={!entry.enabled}
+                    title={entry.reason}
+                    data-expansion-action={entry.action}
+                    onClick={() => handleExpansionAction(entry.action)}
+                  >
+                    {entry.label}
+                  </Button>
+                ))}
+              </section>
+            ) : null}
 
             <section className={styles.provinceActionGrid}>
               {selectedProvince.availableActions.map((action) => (

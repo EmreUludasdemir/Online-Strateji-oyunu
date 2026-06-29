@@ -20,6 +20,17 @@ export type DiplomaticAction =
   | "CLAIM_PROVINCE"
   | "PREPARE_RAID"
   | "VIEW_BORDER_TENSION";
+export type ProvinceControlStatus = "unknown" | "observed" | "influenced" | "claimed" | "contested" | "occupied" | "controlled";
+export type ExpansionAction =
+  | "SCOUT_PROVINCE"
+  | "SEND_ENVOY"
+  | "ESTABLISH_INFLUENCE"
+  | "CLAIM_PROVINCE"
+  | "PREPARE_RAID"
+  | "LAUNCH_RAID"
+  | "DEMAND_SUBMISSION"
+  | "FORTIFY_BORDER"
+  | "WITHDRAW_CLAIM";
 export type ProvinceStatus = "friendly" | "neutral" | "hostile" | "contested" | "unknown";
 export type ProvinceRiskLevel = "low" | "guarded" | "dangerous" | "deadly" | "unknown";
 export type ProvinceAction = "SCOUT" | "MARCH" | "RAID" | "CLAIM" | "SUPPORT" | "TRADE" | "VIEW_REALM";
@@ -86,6 +97,39 @@ export interface DiplomaticActionItem {
   label: string;
   enabled: boolean;
   reason: string;
+}
+
+export interface ProvinceControlState {
+  provinceId: string;
+  ownerRealmId: string;
+  controllerRealmId: string;
+  influenceByRealm: Record<string, number>;
+  playerClaimStrength: number;
+  contestedByRealmIds: string[];
+  controlStatus: ProvinceControlStatus;
+  lastScoutedAt: string | null;
+  unrest: number;
+  resistance: number;
+  expansionDifficulty: number;
+  raidPrepared: boolean;
+  fortified: boolean;
+}
+
+export interface ExpansionActionItem {
+  action: ExpansionAction;
+  label: string;
+  enabled: boolean;
+  reason: string;
+  recommended: boolean;
+}
+
+export interface ExpansionActionResult {
+  action: ExpansionAction;
+  nextState: ProvinceControlState;
+  message: string;
+  advisorText: string;
+  realmReaction: string;
+  tensionDelta: number;
 }
 
 export interface ProvinceResourceValue {
@@ -472,7 +516,7 @@ export function getProvinceStrategicValue(x: number, y: number, worldSize: numbe
   return clamp(tierValue + terrainValue + nearbyPasses * 11 + nearbySanctuaries * 9 + nearbyCamps * 4, 1, 100);
 }
 
-function buildProvinceId(region: WorldRegion, x: number, y: number) {
+export function buildProvinceId(region: WorldRegion, x: number, y: number) {
   return `${region.id}:${x}:${y}`;
 }
 
@@ -677,13 +721,24 @@ export function canProposePact(diplomacy: Pick<RealmDiplomacy, "relation" | "bor
   return !hasPact && (diplomacy.relation === "friendly" || diplomacy.relation === "neutral" || diplomacy.relation === "wary") && diplomacy.borderStatus !== "critical";
 }
 
-export function canPrepareRaid(province: Pick<ProvinceIntel, "diplomacy" | "borderTension" | "status">) {
-  return province.status === "contested" || province.diplomacy.relation === "hostile" || province.diplomacy.relation === "rival" || province.borderTension.level === "critical";
+export function canPrepareRaid(province: Pick<ProvinceIntel, "diplomacy" | "borderTension" | "status"> & { controlState?: Pick<ProvinceControlState, "playerClaimStrength" | "controlStatus" | "controllerRealmId" | "raidPrepared"> }) {
+  if (province.controlState?.controllerRealmId === "player" || province.controlState?.controlStatus === "controlled") return false;
+  if (province.controlState?.raidPrepared) return false;
+  if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return false;
+  return (
+    province.status === "contested" ||
+    province.diplomacy.relation === "hostile" ||
+    province.diplomacy.relation === "rival" ||
+    province.borderTension.level === "critical" ||
+    (province.controlState?.playerClaimStrength ?? 0) >= 45
+  );
 }
 
-export function canClaimProvince(province: Pick<ProvinceIntel, "diplomacy" | "strategicValue" | "status" | "riskLevel" | "claims">) {
+export function canClaimProvince(province: Pick<ProvinceIntel, "diplomacy" | "strategicValue" | "status" | "riskLevel" | "claims"> & { controlState?: ProvinceControlState }) {
   if (province.status === "unknown" || province.riskLevel === "unknown") return false;
   if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return false;
+  if (province.controlState?.controlStatus === "controlled") return false;
+  if ((province.controlState?.playerClaimStrength ?? 0) >= 70) return false;
   if (province.claims.some((claim) => claim.claimantRealmId === "player" && claim.strength >= 70)) return false;
   return province.strategicValue >= 45;
 }
@@ -758,6 +813,321 @@ export function getAvailableDiplomaticActions(province: ProvinceIntel): Diplomat
     actionItem("VIEW_BORDER_TENSION", province.borderTension.level !== "low", province.borderTension.reason),
   ];
   return actions;
+}
+
+function getRiskResistance(riskLevel: ProvinceRiskLevel) {
+  const scores: Record<ProvinceRiskLevel, number> = {
+    low: 4,
+    guarded: 18,
+    dangerous: 34,
+    deadly: 48,
+    unknown: 26,
+  };
+  return scores[riskLevel];
+}
+
+function getTensionDifficulty(level: BorderTensionLevel) {
+  const scores: Record<BorderTensionLevel, number> = {
+    low: 2,
+    medium: 12,
+    high: 24,
+    critical: 38,
+    unknown: 18,
+  };
+  return scores[level];
+}
+
+export function getInfluenceProgress(controlState: Pick<ProvinceControlState, "influenceByRealm">) {
+  return clamp(Math.round(controlState.influenceByRealm.player ?? 0), 0, 100);
+}
+
+export function getClaimProgress(controlState: Pick<ProvinceControlState, "playerClaimStrength">) {
+  return clamp(Math.round(controlState.playerClaimStrength), 0, 100);
+}
+
+export function getExpansionDifficulty(province: Pick<ProvinceIntel, "strategicValue" | "riskLevel" | "realm" | "borderTension">, controlState?: Pick<ProvinceControlState, "resistance" | "unrest" | "influenceByRealm" | "playerClaimStrength" | "fortified">) {
+  const playerInfluence = controlState ? getInfluenceProgress(controlState) : 0;
+  const playerClaim = controlState ? getClaimProgress(controlState) : 0;
+  const fortifyPenalty = controlState?.fortified ? 8 : 0;
+  return clamp(
+    Math.round(
+      province.strategicValue * 0.25 +
+        province.realm.strength * 0.22 +
+        getRiskResistance(province.riskLevel) +
+        getTensionDifficulty(province.borderTension.level) +
+        (controlState?.resistance ?? 36) * 0.34 +
+        (controlState?.unrest ?? 18) * 0.16 +
+        fortifyPenalty -
+        playerInfluence * 0.24 -
+        playerClaim * 0.18,
+    ),
+    1,
+    100,
+  );
+}
+
+export function getProvinceControlStatus(
+  province: Pick<ProvinceIntel, "status" | "riskLevel" | "borderTension">,
+  controlState: Pick<ProvinceControlState, "controllerRealmId" | "influenceByRealm" | "playerClaimStrength" | "contestedByRealmIds" | "resistance">,
+): ProvinceControlStatus {
+  if (province.status === "unknown" || province.riskLevel === "unknown") return "unknown";
+  const playerInfluence = getInfluenceProgress(controlState);
+  const playerClaim = getClaimProgress(controlState);
+  if (controlState.controllerRealmId === "player" && playerInfluence >= 72 && controlState.resistance <= 34) return "controlled";
+  if (controlState.controllerRealmId === "player") return "occupied";
+  if (controlState.contestedByRealmIds.length > 0 || province.borderTension.level === "high" || province.borderTension.level === "critical") return "contested";
+  if (playerClaim >= 42) return "claimed";
+  if (playerInfluence >= 24) return "influenced";
+  return "observed";
+}
+
+export function getInitialProvinceControlState(province: Pick<ProvinceIntel, "id" | "realm" | "claims" | "contestingRealms" | "diplomacy" | "riskLevel" | "status" | "strategicValue" | "borderTension">): ProvinceControlState {
+  const playerClaim = province.claims.find((claim) => claim.claimantRealmId === "player")?.strength ?? 0;
+  const playerInfluence = clamp(Math.round(playerClaim * 0.28 + (province.diplomacy.relation === "neutral" ? 8 : province.diplomacy.relation === "wary" ? 4 : 0)), 0, 38);
+  const ownerInfluence = clamp(Math.round(48 + province.realm.strength * 0.34 + getRelationThreat(province.diplomacy.relation) * 0.18), 35, 94);
+  const resistance = clamp(
+    Math.round(20 + getRelationThreat(province.diplomacy.relation) * 0.38 + getRiskResistance(province.riskLevel) * 0.64 + province.strategicValue * 0.1),
+    8,
+    96,
+  );
+  const base: ProvinceControlState = {
+    provinceId: province.id,
+    ownerRealmId: province.realm.id,
+    controllerRealmId: province.realm.id,
+    influenceByRealm: {
+      [province.realm.id]: ownerInfluence,
+      player: playerInfluence,
+    },
+    playerClaimStrength: playerClaim,
+    contestedByRealmIds: province.contestingRealms.map((realm) => realm.id),
+    controlStatus: "observed",
+    lastScoutedAt: province.status === "unknown" ? null : new Date(0).toISOString(),
+    unrest: clamp(Math.round(getTensionDifficulty(province.borderTension.level) + province.strategicValue * 0.12), 0, 100),
+    resistance,
+    expansionDifficulty: 0,
+    raidPrepared: false,
+    fortified: false,
+  };
+  base.controlStatus = getProvinceControlStatus(province, base);
+  base.expansionDifficulty = getExpansionDifficulty(province, base);
+  return base;
+}
+
+export function canEstablishInfluence(province: Pick<ProvinceIntel, "status" | "diplomacy" | "borderTension">, controlState: Pick<ProvinceControlState, "controlStatus" | "resistance" | "controllerRealmId">) {
+  if (province.status === "unknown" || controlState.controlStatus === "unknown") return false;
+  if (controlState.controllerRealmId === "player" || controlState.controlStatus === "controlled") return false;
+  if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return false;
+  return controlState.resistance < 86 && province.borderTension.level !== "critical";
+}
+
+export function canLaunchRaid(province: Pick<ProvinceIntel, "riskLevel" | "diplomacy" | "borderTension">, controlState: Pick<ProvinceControlState, "raidPrepared" | "playerClaimStrength" | "resistance" | "controllerRealmId">) {
+  if (province.riskLevel === "unknown" || controlState.controllerRealmId === "player") return false;
+  if (!controlState.raidPrepared) return false;
+  if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return false;
+  return controlState.playerClaimStrength >= 32 || province.borderTension.level === "critical" || controlState.resistance <= 58;
+}
+
+export function canDemandSubmission(province: Pick<ProvinceIntel, "status" | "diplomacy">, controlState: Pick<ProvinceControlState, "controllerRealmId" | "playerClaimStrength" | "resistance" | "influenceByRealm">) {
+  if (province.status === "unknown" || controlState.controllerRealmId === "player") return false;
+  if (province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly") return false;
+  return getInfluenceProgress(controlState) >= 52 && controlState.playerClaimStrength >= 48 && controlState.resistance <= 58;
+}
+
+export function getExpansionActionLabel(action: ExpansionAction) {
+  const labels: Record<ExpansionAction, string> = {
+    SCOUT_PROVINCE: "Yurdu Keşfet",
+    SEND_ENVOY: "Elçi Yolla",
+    ESTABLISH_INFLUENCE: "Etki Kur",
+    CLAIM_PROVINCE: "Sancak İddiası",
+    PREPARE_RAID: "Akın Hazırla",
+    LAUNCH_RAID: "Akın Başlat",
+    DEMAND_SUBMISSION: "Bağlılık İste",
+    FORTIFY_BORDER: "Hududu Pekiştir",
+    WITHDRAW_CLAIM: "İddiayı Çek",
+  };
+  return labels[action];
+}
+
+function expansionActionItem(action: ExpansionAction, enabled: boolean, reason: string, recommended: boolean): ExpansionActionItem {
+  return {
+    action,
+    label: getExpansionActionLabel(action),
+    enabled,
+    reason,
+    recommended,
+  };
+}
+
+function getRecommendedExpansionAction(province: ProvinceIntel, controlState: ProvinceControlState): ExpansionAction {
+  if (controlState.controlStatus === "unknown" || !controlState.lastScoutedAt) return "SCOUT_PROVINCE";
+  if (getInfluenceProgress(controlState) < 28 && canEstablishInfluence(province, controlState)) return "ESTABLISH_INFLUENCE";
+  if (controlState.playerClaimStrength < 45 && canClaimProvince({ ...province, controlState })) return "CLAIM_PROVINCE";
+  if (!controlState.raidPrepared && canPrepareRaid({ ...province, controlState })) return "PREPARE_RAID";
+  if (canDemandSubmission(province, controlState)) return "DEMAND_SUBMISSION";
+  if (canLaunchRaid(province, controlState)) return "LAUNCH_RAID";
+  return "SEND_ENVOY";
+}
+
+export function getAvailableExpansionActions(province: ProvinceIntel, controlState: ProvinceControlState = getInitialProvinceControlState(province)): ExpansionActionItem[] {
+  const recommended = getRecommendedExpansionAction(province, controlState);
+  const scoutEnabled = controlState.controlStatus === "unknown" || !controlState.lastScoutedAt || province.riskLevel === "unknown";
+  const influenceEnabled = canEstablishInfluence(province, controlState);
+  const claimEnabled = canClaimProvince({ ...province, controlState });
+  const prepareRaidEnabled = canPrepareRaid({ ...province, controlState });
+  const launchRaidEnabled = canLaunchRaid(province, controlState);
+  const demandEnabled = canDemandSubmission(province, controlState);
+  const fortifyEnabled =
+    controlState.controlStatus === "claimed" ||
+    controlState.controlStatus === "contested" ||
+    controlState.controlStatus === "occupied" ||
+    controlState.controlStatus === "controlled" ||
+    getInfluenceProgress(controlState) >= 38;
+  const withdrawEnabled = controlState.playerClaimStrength > 0 || controlState.controlStatus === "claimed";
+
+  return [
+    expansionActionItem("SCOUT_PROVINCE", scoutEnabled, scoutEnabled ? "Keşif, risk ve direnci netleştirir." : "Bu yurt zaten gözlenmiş.", recommended === "SCOUT_PROVINCE"),
+    expansionActionItem(
+      "SEND_ENVOY",
+      province.diplomacy.relation !== "allied" && province.diplomacy.relation !== "friendly",
+      province.diplomacy.relation === "allied" || province.diplomacy.relation === "friendly" ? "Dost yurtta baskı kurma önceliği yok." : "Elçi, düşük riskli nüfuz sağlar.",
+      recommended === "SEND_ENVOY",
+    ),
+    expansionActionItem("ESTABLISH_INFLUENCE", influenceEnabled, influenceEnabled ? "Yerel beyleri Toy etkisine yaklaştır." : "Direnç, ilişki veya hudut durumu etki için uygun değil.", recommended === "ESTABLISH_INFLUENCE"),
+    expansionActionItem("CLAIM_PROVINCE", claimEnabled, claimEnabled ? "Siyasi iddiayı Toy kayıtlarına geçir." : "Dost, zayıf gerekçeli veya zaten güçlü iddialı yurt.", recommended === "CLAIM_PROVINCE"),
+    expansionActionItem("PREPARE_RAID", prepareRaidEnabled, prepareRaidEnabled ? "Akın için sancak ve rota hazırlığı yap." : "Akın için siyasi gerekçe zayıf.", recommended === "PREPARE_RAID"),
+    expansionActionItem("LAUNCH_RAID", launchRaidEnabled, launchRaidEnabled ? "Hazırlanan akını başlat." : "Önce akın hazırlığı, iddia veya zayıf direnç gerekir.", recommended === "LAUNCH_RAID"),
+    expansionActionItem("DEMAND_SUBMISSION", demandEnabled, demandEnabled ? "Güçlü iddia ve nüfuzla bağlılık iste." : "Nüfuz/iddia düşük veya direnç yüksek.", recommended === "DEMAND_SUBMISSION"),
+    expansionActionItem("FORTIFY_BORDER", fortifyEnabled, fortifyEnabled ? "Hudut çizgisini pekiştir, direnci düşür." : "Önce etki veya iddia oluştur.", recommended === "FORTIFY_BORDER"),
+    expansionActionItem("WITHDRAW_CLAIM", withdrawEnabled, withdrawEnabled ? "Siyasi baskıyı düşür, iddiayı geri çek." : "Geri çekilecek iddia yok.", recommended === "WITHDRAW_CLAIM"),
+  ];
+}
+
+export function getExpansionAdvisorMessage(province: ProvinceIntel, controlState: ProvinceControlState = getInitialProvinceControlState(province)) {
+  const influence = getInfluenceProgress(controlState);
+  const claim = getClaimProgress(controlState);
+  if (controlState.controlStatus === "unknown") {
+    return "Bu yurt sisli. Önce keşif yapmadan claim veya akın kararı zayıf bilgiye dayanır.";
+  }
+  if (province.borderTension.level === "critical") {
+    return "Hudut zaten kritik. Yeni baskı misilleme doğurabilir; önce nüfuz veya tahkimat düşün.";
+  }
+  if (province.strategicValue >= 72 && influence < 30) {
+    return "Bu yurt stratejik ama siyasi zemin zayıf. Claimden önce etki kurmak daha güvenli.";
+  }
+  if (claim > 0 && claim < 45) {
+    return "Claim zayıf. Akın başlatmadan önce elçi ve nüfuzla iddiayı güçlendir.";
+  }
+  if (controlState.resistance <= 34 && province.realm.strength < 70) {
+    return "Düşük direnç ve zayıf kontrol burayı iyi bir genişleme hedefi yapıyor.";
+  }
+  if (province.terrain === "pass") {
+    return "Bu geçit hattını kontrol etmek yürüyüş ve hudut baskısını iyileştirir.";
+  }
+  return "Nüfuz, claim ve direnç dengesini koru; acele akın yerine siyasi zemin kurmak daha ucuz olabilir.";
+}
+
+export function applyExpansionActionMock(
+  province: ProvinceIntel,
+  currentState: ProvinceControlState = getInitialProvinceControlState(province),
+  action: ExpansionAction,
+  now = new Date(),
+): ExpansionActionResult {
+  const nextState: ProvinceControlState = {
+    ...currentState,
+    influenceByRealm: { ...currentState.influenceByRealm },
+    contestedByRealmIds: [...currentState.contestedByRealmIds],
+  };
+  let message = "";
+  let realmReaction = "Yurt şimdilik tepki vermedi.";
+  let tensionDelta = 0;
+
+  const addInfluence = (amount: number) => {
+    nextState.influenceByRealm.player = clamp((nextState.influenceByRealm.player ?? 0) + amount, 0, 100);
+  };
+
+  if (action === "SCOUT_PROVINCE") {
+    nextState.lastScoutedAt = now.toISOString();
+    nextState.resistance = clamp(nextState.resistance - 6, 0, 100);
+    addInfluence(4);
+    message = "Keşif kolu yurttaki direnci ve geçit baskısını raporladı.";
+    realmReaction = province.diplomacy.relation === "unknown" ? "Sisli yurt keşif izini fark etmedi." : "Yerel nöbetçiler keşif hareketini izledi.";
+  } else if (action === "SEND_ENVOY") {
+    addInfluence(10);
+    nextState.unrest = clamp(nextState.unrest - 3, 0, 100);
+    tensionDelta = province.diplomacy.relation === "hostile" || province.diplomacy.relation === "rival" ? 2 : -2;
+    message = `${province.realm.name} içinde elçiler Toy sözünü yaydı.`;
+    realmReaction = "Yerel beyler daha dikkatli ama görüşmeye açık.";
+  } else if (action === "ESTABLISH_INFLUENCE") {
+    addInfluence(18);
+    nextState.unrest = clamp(nextState.unrest + 3, 0, 100);
+    nextState.resistance = clamp(nextState.resistance - 4, 0, 100);
+    tensionDelta = 5;
+    message = "Toy etkisi yurtta güç kazandı; sınırdaki dikkat arttı.";
+    realmReaction = "Kontrol eden yurt bu nüfuzu siyasi baskı sayabilir.";
+  } else if (action === "CLAIM_PROVINCE") {
+    nextState.playerClaimStrength = clamp(nextState.playerClaimStrength + 28 + Math.round(getInfluenceProgress(nextState) * 0.12), 0, 100);
+    nextState.unrest = clamp(nextState.unrest + 8, 0, 100);
+    tensionDelta = 10;
+    message = "Sancak iddiası Toy kayıtlarına geçti. Rakip yurtlar bunu not etti.";
+    realmReaction = province.diplomacy.relation === "rival" ? "Rakip yurt karşı iddiayı sertleştirdi." : "Hudut beyleri iddiayı tartışmaya başladı.";
+  } else if (action === "PREPARE_RAID") {
+    nextState.raidPrepared = true;
+    nextState.unrest = clamp(nextState.unrest + 5, 0, 100);
+    tensionDelta = 8;
+    message = "Akın sancağı hazırlandı; rota ve iaşe düzeni kuruldu.";
+    realmReaction = "Sınır nöbetleri sıkılaştı.";
+  } else if (action === "LAUNCH_RAID") {
+    const raidPressure = 18 + Math.round((nextState.playerClaimStrength + getInfluenceProgress(nextState)) * 0.16);
+    nextState.resistance = clamp(nextState.resistance - raidPressure, 0, 100);
+    nextState.unrest = clamp(nextState.unrest + 14, 0, 100);
+    addInfluence(12);
+    nextState.playerClaimStrength = clamp(nextState.playerClaimStrength + 10, 0, 100);
+    nextState.raidPrepared = false;
+    tensionDelta = 16;
+    if (nextState.resistance <= 38 && getInfluenceProgress(nextState) >= 42) {
+      nextState.controllerRealmId = "player";
+      message = "Akın başarılı oldu; yurt fiilen işgal altına alındı.";
+      realmReaction = "Eski sahipleri karşı hamle için sancak topluyor.";
+    } else {
+      message = "Akın baskı kurdu ama yurt henüz teslim olmadı.";
+      realmReaction = "Direnç sürüyor; ikinci baskı daha pahalı olabilir.";
+    }
+  } else if (action === "DEMAND_SUBMISSION") {
+    nextState.controllerRealmId = "player";
+    addInfluence(16);
+    nextState.resistance = clamp(nextState.resistance - 18, 0, 100);
+    nextState.unrest = clamp(nextState.unrest + 6, 0, 100);
+    tensionDelta = 12;
+    message = "Bağlılık talebi kabul gördü; yurt Toy denetimine geçti.";
+    realmReaction = "Komşu yurtlar bu bağlılığı sınır genişlemesi olarak okuyacak.";
+  } else if (action === "FORTIFY_BORDER") {
+    nextState.fortified = true;
+    addInfluence(8);
+    nextState.resistance = clamp(nextState.resistance - 5, 0, 100);
+    nextState.unrest = clamp(nextState.unrest - 8, 0, 100);
+    tensionDelta = 3;
+    message = "Hudut pekiştirildi; Toy etkisi daha görünür hale geldi.";
+    realmReaction = "Tahkimat, yakın yurtlarda dikkat uyandırdı.";
+  } else if (action === "WITHDRAW_CLAIM") {
+    nextState.playerClaimStrength = 0;
+    nextState.raidPrepared = false;
+    nextState.unrest = clamp(nextState.unrest - 10, 0, 100);
+    tensionDelta = -12;
+    message = "Sancak iddiası geri çekildi; hudut baskısı azaldı.";
+    realmReaction = "Yerel beyler geri adımı siyasi nefes olarak gördü.";
+  }
+
+  nextState.controlStatus = getProvinceControlStatus(province, nextState);
+  nextState.expansionDifficulty = getExpansionDifficulty(province, nextState);
+
+  return {
+    action,
+    nextState,
+    message,
+    advisorText: getExpansionAdvisorMessage(province, nextState),
+    realmReaction,
+    tensionDelta,
+  };
 }
 
 export function getAvailableProvinceActions(province: Pick<ProvinceIntel, "status" | "riskLevel" | "realm">): ProvinceAction[] {

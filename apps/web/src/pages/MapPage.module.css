@@ -356,10 +356,165 @@
 }
 
 .provinceDiplomacyActions,
-.realmActionGrid {
+.realmActionGrid,
+.expansionActions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
+}
+
+.provinceControlPanel {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(244, 215, 156, 0.22);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(135deg, rgba(226, 194, 117, 0.09), transparent 55%),
+    rgba(12, 10, 8, 0.34);
+}
+
+.provinceSectionHeader,
+.expansionLogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.provinceSectionHeader span {
+  display: block;
+  color: var(--color-outline);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.provinceSectionHeader strong {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-primary-fixed);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-style: italic;
+}
+
+.expansionProgressGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.expansionProgressCard {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xs);
+  background: var(--surface-card-panel);
+}
+
+.expansionProgressCard div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.expansionProgressCard span {
+  color: var(--color-outline);
+  font-size: 0.68rem;
+}
+
+.expansionProgressCard strong {
+  color: var(--color-primary-fixed);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.expansionBarTrack {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(248, 240, 221, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(248, 240, 221, 0.06);
+}
+
+.expansionBarFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(181, 152, 91, 0.72), rgba(244, 215, 156, 0.98));
+}
+
+.expansionProgressCard[data-expansion-meter="resistance"] .expansionBarFill {
+  background: linear-gradient(90deg, rgba(155, 47, 47, 0.72), rgba(212, 123, 90, 0.98));
+}
+
+.expansionProgressCard[data-expansion-meter="control"] .expansionBarFill {
+  background: linear-gradient(90deg, rgba(43, 143, 152, 0.7), rgba(114, 206, 209, 0.95));
+}
+
+.expansionAdvisor {
+  margin: 0;
+  color: var(--color-outline);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.expansionFeedback {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 0.85rem;
+  border-left: 3px solid var(--color-primary-fixed-dim);
+  border-radius: var(--radius-xs);
+  background: rgba(226, 194, 117, 0.1);
+}
+
+.expansionFeedback strong {
+  color: var(--color-primary-fixed);
+  font-size: 0.84rem;
+}
+
+.expansionFeedback span,
+.expansionFeedback small {
+  color: var(--color-outline);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.expansionLogCard {
+  gap: 0.7rem;
+}
+
+.expansionLogList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.expansionLogEntry {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-xs);
+  background: var(--surface-card-panel);
+}
+
+.expansionLogEntry p {
+  margin: 0;
+  color: var(--color-on-surface);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.expansionLogEntry small {
+  color: var(--color-outline);
+  font-size: 0.68rem;
 }
 
 .realmDetailPanel,
@@ -1840,6 +1995,8 @@
   .provinceActionGrid,
   .provinceDiplomacyPanel,
   .provinceDiplomacyActions,
+  .expansionProgressGrid,
+  .expansionActions,
   .realmMetricGrid,
   .realmActionGrid,
   .commandStepGrid,
@@ -1862,6 +2019,8 @@
   .provinceActionGrid,
   .provinceDiplomacyPanel,
   .provinceDiplomacyActions,
+  .expansionProgressGrid,
+  .expansionActions,
   .realmMetricGrid,
   .realmInfoGrid,
   .realmActionGrid,

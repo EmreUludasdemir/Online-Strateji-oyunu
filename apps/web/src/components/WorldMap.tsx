@@ -34,12 +34,15 @@ import {
 } from "./worldMapShared";
 import { getWorldRegionForTile, getWorldRegions } from "./worldRegions";
 import {
+  buildProvinceId,
   getBorderTension,
   getProvinceClaims,
   getProvinceResourceValue,
   getRealmIdentity,
   type BorderTensionLevel,
   type MapMode,
+  type ProvinceControlState,
+  type ProvinceControlStatus,
   type RealmRelation,
 } from "../lib/politicalMap";
 
@@ -60,6 +63,9 @@ interface MapModeTileOverlay {
   claimed?: boolean;
   playerClaim?: boolean;
   contested?: boolean;
+  controlStatus?: ProvinceControlStatus;
+  playerInfluence?: number;
+  resistance?: number;
 }
 
 const MAP_COLOR_ALLIED = 0x72ced1;
@@ -121,6 +127,7 @@ interface WorldMapProps {
   selectedPoiId: string | null;
   selectedMarchId: string | null;
   selectedProvinceTile?: { x: number; y: number } | null;
+  provinceControlStates?: Record<string, ProvinceControlState>;
   onSelectCity: (cityId: string) => void;
   onSelectPoi: (poiId: string) => void;
   onSelectMarch: (marchId: string) => void;
@@ -344,6 +351,7 @@ interface SceneConfig {
   selectedPoiId: string | null;
   selectedMarchId: string | null;
   selectedProvinceTile?: { x: number; y: number } | null;
+  provinceControlStates?: Record<string, ProvinceControlState>;
   onSelectCity: (cityId: string) => void;
   onSelectPoi: (poiId: string) => void;
   onSelectMarch: (marchId: string) => void;
@@ -461,6 +469,7 @@ class FrontierMapScene extends Phaser.Scene {
   private selectedPoiId: string | null = null;
   private selectedMarchId: string | null = null;
   private selectedProvinceTile: { x: number; y: number } | null = null;
+  private provinceControlStates: Record<string, ProvinceControlState> = {};
   private onSelectCity: (cityId: string) => void = () => undefined;
   private onSelectPoi: (poiId: string) => void = () => undefined;
   private onSelectMarch: (marchId: string) => void = () => undefined;
@@ -691,6 +700,7 @@ class FrontierMapScene extends Phaser.Scene {
     this.selectedPoiId = config.selectedPoiId;
     this.selectedMarchId = config.selectedMarchId;
     this.selectedProvinceTile = config.selectedProvinceTile ?? null;
+    this.provinceControlStates = config.provinceControlStates ?? {};
     this.onSelectCity = config.onSelectCity;
     this.onSelectPoi = config.onSelectPoi;
     this.onSelectMarch = config.onSelectMarch;
@@ -1113,6 +1123,18 @@ class FrontierMapScene extends Phaser.Scene {
     this.terrainGraphics.fillRect(x, y, MAP_TILE_WORLD_SIZE, MAP_TILE_WORLD_SIZE);
 
     if (this.mapMode === "ALLIANCE" && tile.state !== "HIDDEN") {
+      if (overlay.controlStatus === "influenced" || overlay.controlStatus === "claimed") {
+        this.terrainGraphics.fillStyle(MAP_COLOR_HOME, overlay.controlStatus === "claimed" ? 0.14 : 0.08);
+        this.terrainGraphics.fillRect(x + 10, y + 10, MAP_TILE_WORLD_SIZE - 20, MAP_TILE_WORLD_SIZE - 20);
+      }
+
+      if (overlay.controlStatus === "occupied" || overlay.controlStatus === "controlled") {
+        this.terrainGraphics.lineStyle(overlay.controlStatus === "controlled" ? 4 : 3, MAP_COLOR_HOME, 0.72);
+        this.terrainGraphics.strokeRect(x + 4, y + 4, MAP_TILE_WORLD_SIZE - 8, MAP_TILE_WORLD_SIZE - 8);
+        this.terrainGraphics.fillStyle(MAP_COLOR_HOME, overlay.controlStatus === "controlled" ? 0.18 : 0.12);
+        this.terrainGraphics.fillRect(x + 8, y + 8, MAP_TILE_WORLD_SIZE - 16, MAP_TILE_WORLD_SIZE - 16);
+      }
+
       if (overlay.claimed) {
         this.terrainGraphics.lineStyle(1.25, overlay.playerClaim ? MAP_COLOR_HOME : overlay.fill, overlay.playerClaim ? 0.42 : 0.26);
         this.terrainGraphics.lineBetween(x + 16, y + MAP_TILE_WORLD_SIZE - 18, x + MAP_TILE_WORLD_SIZE - 16, y + 18);
@@ -1127,6 +1149,11 @@ class FrontierMapScene extends Phaser.Scene {
       if (overlay.playerClaim) {
         this.terrainGraphics.fillStyle(MAP_COLOR_HOME, 0.72);
         this.terrainGraphics.fillCircle(x + MAP_TILE_WORLD_SIZE - 20, y + 20, 6);
+      }
+
+      if ((overlay.resistance ?? 0) >= 70) {
+        this.terrainGraphics.lineStyle(1.2, MAP_COLOR_HOSTILE, 0.36);
+        this.terrainGraphics.lineBetween(x + 14, y + 18, x + MAP_TILE_WORLD_SIZE - 18, y + MAP_TILE_WORLD_SIZE - 14);
       }
     }
 
@@ -1173,6 +1200,7 @@ class FrontierMapScene extends Phaser.Scene {
       };
       const claims = getProvinceClaims({ x: tile.x, y: tile.y, worldSize: this.worldSize, region });
       const nearbyCamps = this.pois.filter((poi) => poi.kind === "BARBARIAN_CAMP" && Math.hypot(poi.x - tile.x, poi.y - tile.y) <= 5.2).length;
+      const controlState = this.provinceControlStates[buildProvinceId(region, tile.x, tile.y)];
       const tension = getBorderTension({
         x: tile.x,
         y: tile.y,
@@ -1182,15 +1210,20 @@ class FrontierMapScene extends Phaser.Scene {
         claims,
         nearbyCamps,
       });
-      const playerClaim = claims.some((claim) => claim.claimantRealmId === "player");
+      const playerClaim = claims.some((claim) => claim.claimantRealmId === "player") || (controlState?.playerClaimStrength ?? 0) > 0;
+      const playerInfluence = Math.round(controlState?.influenceByRealm.player ?? 0);
+      const controlStatus = controlState?.controlStatus;
 
       return {
-        fill: relationFills[relation],
-        alpha: (0.115 + Math.min(0.08, tension.score / 1200)) * visibilityScale,
+        fill: controlStatus === "occupied" || controlStatus === "controlled" ? MAP_COLOR_HOME : controlStatus === "influenced" || controlStatus === "claimed" ? 0xb5985b : relationFills[relation],
+        alpha: (0.115 + Math.min(0.08, tension.score / 1200) + Math.min(0.06, playerInfluence / 1400)) * visibilityScale,
         tension: tension.level,
-        claimed: claims.length > 0,
+        claimed: claims.length > 0 || (controlState?.playerClaimStrength ?? 0) > 0,
         playerClaim,
-        contested: tension.involvedRealmIds.length > 0,
+        contested: tension.involvedRealmIds.length > 0 || controlStatus === "contested",
+        controlStatus,
+        playerInfluence,
+        resistance: controlState?.resistance,
       };
     }
 
@@ -3695,6 +3728,7 @@ export default function WorldMap({
   selectedPoiId,
   selectedMarchId,
   selectedProvinceTile,
+  provinceControlStates,
   onSelectCity,
   onSelectPoi,
   onSelectMarch,
@@ -3831,6 +3865,7 @@ export default function WorldMap({
       selectedPoiId,
       selectedMarchId,
       selectedProvinceTile,
+      provinceControlStates,
       onSelectCity,
       onSelectPoi,
       onSelectMarch,
@@ -3867,6 +3902,7 @@ export default function WorldMap({
     selectedCityId,
     selectedMarchId,
     selectedProvinceTile,
+    provinceControlStates,
     selectedPoiId,
     tiles,
     worldSize,

@@ -114,6 +114,10 @@ declare global {
       selectedProvinceId?: string | null;
       selectedProvinceRealm?: string | null;
       selectedProvinceDiplomaticRisk?: string | null;
+      selectedProvinceControlStatus?: string | null;
+      selectedProvinceInfluence?: number | null;
+      selectedProvinceClaim?: number | null;
+      expansionLogCount?: number;
       diplomacyDrawerOpen?: boolean;
       selectedRealmId?: string | null;
       selectedRealmName?: string | null;
