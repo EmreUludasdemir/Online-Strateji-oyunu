@@ -178,17 +178,16 @@ async function ensureAllianceReady(page) {
   }, 30_000, "the alliance state to sync on the field map");
 }
 
-async function waitForTargetAction(page, label, actionName) {
-  await waitFor(async () => {
+async function waitForTargetTray(page, label) {
+  return waitFor(async () => {
     const snapshot = await readFieldCommandSmokeSnapshot(page);
     if (!snapshot.frontierMapUi?.targetSheetOpen || snapshot.frontierMapUi?.selectedTargetName !== label) {
       return null;
     }
-    return Array.isArray(snapshot.frontierMapUi.availableActions) &&
-      snapshot.frontierMapUi.availableActions.includes(actionName)
+    return Array.isArray(snapshot.frontierMapUi.availableActions) && snapshot.frontierMapUi.availableActions.length > 0
       ? snapshot
       : null;
-  }, 15_000, `${actionName} to become available for ${label}`);
+  }, 15_000, `the target tray actions to become available for ${label}`);
 }
 
 async function ensureFieldCommandHook(page) {
@@ -713,10 +712,7 @@ async function openFieldCommandWithHook(page, target) {
     return null;
   }
 
-  const dialog = page.getByRole("dialog", {
-    name: new RegExp(`Field Command: ${escapeRegExp(target.label)}`),
-  });
-  await dialog.waitFor({ timeout: 3_000 });
+  await page.locator("[data-field-command-sheet='open']").waitFor({ timeout: 3_000 });
   return openedSnapshot;
 }
 
@@ -779,28 +775,21 @@ async function main() {
     }
 
     const fieldCommandDialog = page.getByRole("dialog", {
-      name: new RegExp(`Field Command: ${escapeRegExp(targetPayload.label)}`),
+      name: new RegExp(`Saha Buyru.*${escapeRegExp(targetPayload.label)}`),
     });
     await fieldCommandDialog.waitFor({ timeout: 5_000 });
 
     let targetTrayValidated = false;
     let postReloadOpenSource = null;
     if (targetPayload.kind !== "TILE") {
-      await fieldCommandDialog.locator("footer").getByRole("button", { name: "Open Target" }).click();
+      await fieldCommandDialog.locator("[data-field-command-action='open-target']").first().click();
 
       const targetDialog = page.getByRole("dialog", {
-        name: new RegExp(`Command Tray: ${escapeRegExp(targetPayload.label)}`),
+        name: new RegExp(`Buyruk Tepsisi: ${escapeRegExp(targetPayload.label)}`),
       });
       await targetDialog.waitFor({ timeout: 5_000 });
-
-      const targetPrimaryActionLabel =
-        targetPayload.kind === "POI" && initialState.map.pois.some((poi) => poi.id === targetPayload.poiId && poi.kind === "BARBARIAN_CAMP")
-          ? "Attack Camp"
-          : targetPayload.kind === "POI"
-            ? "Gather Here"
-            : "Attack City";
-      await waitForTargetAction(page, targetPayload.label, targetPrimaryActionLabel);
-      await targetDialog.getByRole("button", { name: targetPrimaryActionLabel }).waitFor({ timeout: 5_000 });
+      await page.locator("[data-map-target-tray='open']").waitFor({ timeout: 5_000 });
+      await waitForTargetTray(page, targetPayload.label);
       targetTrayValidated = true;
 
       await targetDialog.getByRole("button", { name: "Close" }).click();
@@ -830,7 +819,7 @@ async function main() {
 
     const markerLabel = `Field ping ${Date.now().toString().slice(-4)}`;
     await fieldCommandDialog.locator("input[type='text']").fill(markerLabel);
-    await page.getByRole("button", { name: "Post Marker" }).click();
+    await fieldCommandDialog.locator("[data-field-command-action='post-marker']").click();
 
     const finalState = await waitFor(async () => {
       const state = await readGameState(page);

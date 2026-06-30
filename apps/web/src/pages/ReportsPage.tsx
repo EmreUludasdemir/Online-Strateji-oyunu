@@ -145,7 +145,7 @@ function getCombatTimeline(report: ReportEntryView): Array<{ time: string; desc:
 
 export function ReportsPage() {
   const navigate = useNavigate();
-  const { notifications, state, tutorialState, completeTutorialRequirement } = useGameLayoutContext();
+  const { notifications, state, tutorialState, completeTutorialRequirement, playAudioCue } = useGameLayoutContext();
   const activeTutorialStepId = tutorialState.isSkipped || tutorialState.isPaused ? null : tutorialState.currentStepId;
   const [searchParams, setSearchParams] = useSearchParams();
   const [kindFilter, setKindFilter] = useState<"ALL" | ReportEntryView["kind"]>("ALL");
@@ -333,7 +333,16 @@ export function ReportsPage() {
                       activeTutorialStepId === "read_report" && !isActive ? "is-tutorial-active" : ""
                     ].filter(Boolean).join(" ")}
                     data-tutorial-target={activeTutorialStepId === "read_report" && !isActive ? "tutorial-target-report-card" : undefined}
-                    onClick={() => setSearchParams({ focus: report.id })}
+                    onClick={() => {
+                      playAudioCue(
+                        report.kind === "RESOURCE_GATHER"
+                          ? "resource_gained"
+                          : report.result === "ATTACKER_WIN"
+                            ? "victory"
+                            : "defeat",
+                      );
+                      setSearchParams({ focus: report.id });
+                    }}
                   >
                     <div className={styles.reportCardMeta}>
                       <span>{getReportRibbon(report)}</span>

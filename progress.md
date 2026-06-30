@@ -370,3 +370,26 @@ Original prompt: Build a browser-based online strategy game MVP with a React + V
   - `corepack pnpm --filter @frontier/web build` passed with only the existing Phaser chunk-size warning.
   - The installed develop-web-game skill client still cannot resolve its own `playwright` dependency, so the repo fallback client was used successfully: `node scripts/web_game_playwright_client.js --url http://localhost:5173/login --click-selector "[data-demo-login='demo_alpha']" --actions-file scripts/web_game_noop_actions.json --iterations 1 --pause-ms 700 --screenshot-dir output/tutorial-client`.
   - A direct Playwright tutorial smoke logged in, reset the tutorial, verified advisor/resource/city/army/map/province flow, selected province `33,32` through `window.select_map_province`, verified progression to `claim_or_influence`, checked mobile advisor layout, and reported zero console/page errors. Screenshots live under `output/tutorial-direct-smoke`.
+- 2026-06-30: Added the Sound Design / Audio Feedback foundation. `audioEvents.ts` now defines quiet procedural cues by category (`ui`, `map`, `combat`, `notification`), `audioManager.ts` handles persisted settings, mute/master/category volume, reduced-motion scaling, Web Audio unlock, throttling, and safe no-op behavior, and `useAudioFeedback.ts` wires the manager into React.
+- 2026-06-30: Added a compact top-HUD sound toggle with persisted `frontier_audio_settings`, `window.frontierAudio` QA controls, and `render_game_to_text().audio` output. Core gameplay hooks now play subtle cues for panel open/close, tutorial progression, upgrades, training, research, marches, scout/province actions, diplomacy/claims/raids, resources, report victory/defeat, and UI errors.
+- 2026-06-30: Added `apps/web/public/assets/audio/manifest.json` as the future real-asset mapping strategy while keeping the current implementation dependency-free and procedural.
+- 2026-06-30: Validation after the audio pass:
+  - `corepack pnpm --filter @frontier/web exec tsc -p tsconfig.json --noEmit` passed.
+  - `corepack pnpm --filter @frontier/web test` passed: 12 files, 54 tests.
+  - `corepack pnpm --filter @frontier/web build` passed with only the existing Phaser chunk-size warning.
+  - The installed develop-web-game skill client still cannot resolve its own `playwright` dependency from the skill directory; the repo fallback client passed with `output/audio-client`.
+  - A direct Playwright audio smoke logged in with `demo_alpha`, toggled sound mute/unmute, verified `localStorage` persistence, triggered a UI cue, switched the map to `THREAT`, confirmed `render_game_to_text().audio.lastCueId`, captured desktop screenshots under `output/audio-direct-smoke`, and reported zero console/page errors.
+- 2026-06-30: Final QA / demo polish / release-readiness pass.
+  - Added stable QA hooks for map modes, diplomacy drawer, realm detail, target actions, and field-command actions so smoke tests no longer depend on volatile button copy.
+  - Added `/app/leaderboard` as a compatibility redirect to `/app/leaderboards`.
+  - Added `scripts/smoke_release_demo.mjs` and `corepack pnpm smoke:release-demo` to verify demo login, audio toggle persistence, tutorial state, dashboard/city/army/map/reports routing, one province expansion action, diplomacy drawer, and desktop/mobile screenshots.
+  - Updated stale field-command and kingdom-core smokes from old English dialog/action labels to the current Turkish UI/state hooks.
+  - Added `output/` to `.gitignore`; generated smoke screenshots/logs are treated as runtime artifacts, not source.
+- 2026-06-30: Validation after the final QA pass:
+  - `node --check scripts/smoke_release_demo.mjs`, `node --check scripts/smoke_map_field_command.mjs`, and `node --check scripts/smoke_kingdom_core.mjs` passed.
+  - `corepack pnpm --filter @frontier/web exec tsc -p tsconfig.json --noEmit` passed.
+  - `corepack pnpm --filter @frontier/web test` passed: 12 files, 54 tests.
+  - `corepack pnpm --filter @frontier/web build` passed with only the existing Phaser chunk-size warning.
+  - `corepack pnpm smoke:release-demo` passed; screenshots were captured under `output/release-demo-smoke` and visually inspected for desktop political-map/diplomacy and mobile map readability.
+  - `corepack pnpm smoke:field-command` passed against the current `Saha Buyrugu` / `Buyruk Tepsisi` flow.
+  - `corepack pnpm smoke:e2e` passed after updating the kingdom-core smoke to current target-action hooks.

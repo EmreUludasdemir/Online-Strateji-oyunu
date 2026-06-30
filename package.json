@@ -11,6 +11,7 @@
     "test": "corepack pnpm --filter @frontier/server test && corepack pnpm --filter @frontier/web test",
     "smoke:e2e": "node ./scripts/smoke_e2e_suite.mjs",
     "smoke:field-command": "node ./scripts/smoke_field_command_suite.mjs",
+    "smoke:release-demo": "node ./scripts/smoke_release_demo.mjs",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "corepack pnpm --filter @frontier/server prisma:migrate",

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "strategy": "Procedural Web Audio cues are active by default. Drop compressed audio assets here later and map them by cue id without changing gameplay hooks.",
+  "categories": {
+    "ui": {
+      "volume": "quiet",
+      "futureFiles": [
+        "ui_primary.ogg",
+        "ui_secondary.ogg",
+        "panel_open.ogg",
+        "panel_close.ogg",
+        "ui_error.ogg"
+      ]
+    },
+    "map": {
+      "volume": "quiet",
+      "futureFiles": [
+        "province_selected.ogg",
+        "map_mode_changed.ogg",
+        "province_scouted.ogg",
+        "claim_created.ogg",
+        "march_sent.ogg"
+      ]
+    },
+    "combat": {
+      "volume": "low-medium",
+      "futureFiles": [
+        "raid_prepared.ogg",
+        "battle_report_received.ogg",
+        "victory.ogg",
+        "defeat.ogg"
+      ]
+    },
+    "notification": {
+      "volume": "quiet",
+      "futureFiles": [
+        "tutorial_step_completed.ogg",
+        "tutorial_completed.ogg",
+        "resource_gained.ogg",
+        "warning.ogg"
+      ]
+    }
+  },
+  "notes": [
+    "Keep files short, dry, and non-looping.",
+    "Avoid loud music autoplay.",
+    "Prefer brass, wood, leather, parchment, low drum, and seal/stamp textures.",
+    "No cue should be required for gameplay logic."
+  ]
+}

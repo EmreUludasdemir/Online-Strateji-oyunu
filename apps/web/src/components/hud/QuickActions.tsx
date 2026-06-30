@@ -47,17 +47,48 @@ function CommanderIcon() {
   );
 }
 
+function SoundIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path
+        d="M4.5 9.5h3.1l4.5-3.7v12.4l-4.5-3.7H4.5z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      {muted ? (
+        <>
+          <path d="M16.4 9.4l3.2 3.2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="M19.6 9.4l-3.2 3.2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <path d="M15.8 9.2a4 4 0 0 1 0 5.6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="M18.4 7a7.3 7.3 0 0 1 0 10" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export function QuickActions({
   onInbox,
   onStore,
   onCommander,
+  onToggleSound,
   showStore = true,
+  soundMuted = false,
 }: {
   onInbox: () => void;
   onStore?: () => void;
   onCommander: () => void;
+  onToggleSound?: () => void;
   showStore?: boolean;
+  soundMuted?: boolean;
 }) {
+  const soundLabel = soundMuted ? "Sesi Aç" : "Sesi Kapat";
+
   return (
     <>
       <IconButton type="button" aria-label={copy.hud.openInbox} data-quick-action="inbox" onClick={onInbox}>
@@ -71,6 +102,18 @@ export function QuickActions({
       <IconButton type="button" aria-label={copy.hud.openCommander} data-quick-action="commander" onClick={onCommander}>
         <CommanderIcon />
       </IconButton>
+      {onToggleSound ? (
+        <IconButton
+          type="button"
+          aria-label={soundLabel}
+          title={soundMuted ? "Ses Kapalı" : "Ses Açık"}
+          data-quick-action="sound"
+          data-audio-muted={soundMuted ? "true" : "false"}
+          onClick={onToggleSound}
+        >
+          <SoundIcon muted={soundMuted} />
+        </IconButton>
+      ) : null}
     </>
   );
 }

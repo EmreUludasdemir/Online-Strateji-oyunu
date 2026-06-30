@@ -280,6 +280,14 @@ Run the Playwright browser smoke against running local dev servers:
 corepack pnpm smoke:e2e
 ```
 
+Run the focused release-demo smoke against a running local web shell:
+
+```powershell
+corepack pnpm smoke:release-demo
+```
+
+The release smoke checks demo login, audio toggle persistence, tutorial state, dashboard/city/army/map/reports routing, one province expansion action, the diplomacy drawer, and desktop/mobile screenshots under `output/release-demo-smoke/`.
+
 The smoke script:
 
 - logs in as `demo_alpha`

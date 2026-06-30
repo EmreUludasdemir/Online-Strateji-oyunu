@@ -11,12 +11,14 @@ import type {
   TroopType,
   WorldChunkResponse,
 } from "@frontier/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 
 import { api, ApiClientError } from "../api";
 import type { CreateMarchPayload } from "../api";
 import { trackAnalyticsEvent, trackAnalyticsOnce } from "../lib/analytics";
+import type { AudioCueId } from "../lib/audioEvents";
+import type { AudioSettings } from "../lib/audioManager";
 import { getLaunchPhaseLabel, usePublicBootstrap } from "../lib/bootstrap";
 import { formatNumber } from "../lib/formatters";
 import { summarizeRewardLines } from "../lib/rewardSummaries";
@@ -38,6 +40,7 @@ import {
   startTutorialState,
 } from "../lib/tutorialFlow";
 import type { TutorialState, TutorialStepId } from "../lib/tutorialFlow";
+import { useAudioFeedback } from "../lib/useAudioFeedback";
 import { useTheme } from "./ThemeProvider";
 import type { ActiveMapChunkMeta, MapCameraState } from "./worldMapShared";
 import styles from "./GameLayoutShell.module.css";
@@ -83,6 +86,10 @@ export interface GameLayoutContext {
   openInbox: () => void;
   openStorePreview: () => void;
   openCommanderPanel: (commanderId?: string) => void;
+  audioSettings: AudioSettings;
+  playAudioCue: (cueId: AudioCueId | string, options?: { force?: boolean; volume?: number }) => void;
+  setAudioSettings: (updater: AudioSettings | ((current: AudioSettings) => AudioSettings)) => void;
+  toggleAudioMuted: () => void;
   tutorialState: import("../lib/tutorialFlow").TutorialState;
   completeTutorialStep: (stepId: import("../lib/tutorialFlow").TutorialStepId) => void;
   completeTutorialRequirement: (
@@ -236,6 +243,21 @@ declare global {
       skip: () => void;
       state: () => TutorialState;
     };
+    frontierAudio?: {
+      state: () => {
+        muted: boolean;
+        enabled: boolean;
+        masterVolume: number;
+        unlocked: boolean;
+        supported: boolean;
+        lastCueId: AudioCueId | null;
+        lastCueAt: string | null;
+      };
+      play: (cueId: AudioCueId | string) => void;
+      setMuted: (muted: boolean) => void;
+      setMasterVolume: (volume: number) => void;
+      toggleMuted: () => void;
+    };
   }
 }
 
@@ -354,8 +376,17 @@ export function GameLayout() {
   const [commanderPanelId, setCommanderPanelId] = useState<string | null>(null);
   const [themeSheetOpen, setThemeSheetOpen] = useState(false);
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const {
+    settings: audioSettings,
+    setSettings: setAudioSettings,
+    toggleMuted: toggleAudioMuted,
+    play: playAudioCue,
+    getSnapshot: getAudioSnapshot,
+  } = useAudioFeedback();
 
   const [tutorialState, setTutorialState] = useState<TutorialState>(getSavedTutorialState);
+  const previousTutorialStepIdRef = useRef<TutorialStepId | null>(tutorialState.currentStepId);
+  const previousTutorialCompletedAtRef = useRef<string | undefined>(tutorialState.completedAt);
 
   const persistTutorialState = useCallback((updater: (state: TutorialState) => TutorialState) => {
     setTutorialState((prev) => {
@@ -387,11 +418,13 @@ export function GameLayout() {
   const resetTutorial = useCallback(() => {
     const next = resetTutorialState();
     setTutorialState(next);
-  }, []);
+    playAudioCue("tutorial_start");
+  }, [playAudioCue]);
 
   const skipTutorial = useCallback(() => {
     persistTutorialState((prev) => skipTutorialState(prev));
-  }, [persistTutorialState]);
+    playAudioCue("tutorial_skipped");
+  }, [persistTutorialState, playAudioCue]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -399,8 +432,9 @@ export function GameLayout() {
     if (tutorialCommand === "reset" || tutorialCommand === "start") {
       const next = tutorialCommand === "reset" ? resetTutorialState() : startTutorialState();
       setTutorialState(next);
+      playAudioCue("tutorial_start");
     }
-  }, [location.search]);
+  }, [location.search, playAudioCue]);
 
   useEffect(() => {
     completeTutorialRequirementForCurrentStep("visit_route", { route: location.pathname });
@@ -411,6 +445,21 @@ export function GameLayout() {
       completeTutorialRequirementForCurrentStep("map_opened", { route: location.pathname });
     }
   }, [completeTutorialRequirementForCurrentStep, location.pathname]);
+
+  useEffect(() => {
+    const previousStepId = previousTutorialStepIdRef.current;
+    const previousCompletedAt = previousTutorialCompletedAtRef.current;
+    const completedNow = Boolean(tutorialState.completedAt && tutorialState.completedAt !== previousCompletedAt);
+
+    if (completedNow) {
+      playAudioCue("tutorial_completed");
+    } else if (previousStepId && previousStepId !== tutorialState.currentStepId && !tutorialState.isSkipped) {
+      playAudioCue("tutorial_step_completed");
+    }
+
+    previousTutorialStepIdRef.current = tutorialState.currentStepId;
+    previousTutorialCompletedAtRef.current = tutorialState.completedAt;
+  }, [playAudioCue, tutorialState.completedAt, tutorialState.currentStepId, tutorialState.isSkipped]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -426,6 +475,35 @@ export function GameLayout() {
       delete window.frontierTutorial;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.frontierAudio = {
+      state: () => {
+        const snapshot = getAudioSnapshot();
+        return {
+          muted: snapshot.muted,
+          enabled: snapshot.enabled,
+          masterVolume: snapshot.masterVolume,
+          unlocked: snapshot.unlocked,
+          supported: snapshot.supported,
+          lastCueId: snapshot.lastCueId,
+          lastCueAt: snapshot.lastCueAt,
+        };
+      },
+      play: (cueId) => playAudioCue(cueId),
+      setMuted: (muted) => setAudioSettings((current) => ({ ...current, muted })),
+      setMasterVolume: (masterVolume) => setAudioSettings((current) => ({ ...current, masterVolume })),
+      toggleMuted: toggleAudioMuted,
+    };
+
+    return () => {
+      delete window.frontierAudio;
+    };
+  }, [getAudioSnapshot, playAudioCue, setAudioSettings, toggleAudioMuted]);
   const enqueueToast = useCallback((toast: Omit<ToastItem, "id">) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setToasts((current) => [...current.slice(-3), { id, ...toast }]);
@@ -482,6 +560,7 @@ export function GameLayout() {
       navigate("/login", { replace: true });
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Çıkış yapılamadı";
       enqueueToast({ tone: "error", title: "Çıkış Hatası", body: message });
     },
@@ -496,6 +575,7 @@ export function GameLayout() {
           buildingType,
         });
       }
+      playAudioCue("upgrade_started");
       enqueueToast({
         tone: "success",
         title: "Yükseltme Başladı",
@@ -503,6 +583,7 @@ export function GameLayout() {
       });
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Yükseltme başlatılamadı";
       enqueueToast({ tone: "error", title: "Yükseltme Hatası", body: message });
     },
@@ -518,6 +599,7 @@ export function GameLayout() {
           quantity: payload.quantity,
         });
       }
+      playAudioCue("training_started");
       enqueueToast({
         tone: "success",
         title: "Talim Kuyruğa Alındı",
@@ -525,6 +607,7 @@ export function GameLayout() {
       });
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Talim kuyruğa alınamadı";
       enqueueToast({ tone: "error", title: "Talim Hatası", body: message });
     },
@@ -538,6 +621,7 @@ export function GameLayout() {
       trackAnalyticsEvent("research_started", {
         researchType: payload.researchType,
       });
+      playAudioCue("research_started");
       enqueueToast({
         tone: "info",
         title: "Töre Çalışması Başladı",
@@ -545,6 +629,7 @@ export function GameLayout() {
       });
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Töre çalışması başlatılamadı";
       enqueueToast({ tone: "error", title: "Bilge Hatası", body: message });
     },
@@ -567,6 +652,7 @@ export function GameLayout() {
         objective: march.objective,
         target: march.targetPoiName ?? march.targetCityName ?? "unknown",
       });
+      playAudioCue("march_sent");
       const targetName = march.targetPoiName ?? march.targetCityName ?? "target";
       const missionLabel = march.objective === "RESOURCE_GATHER" ? "Hasat Seferi" : "Sefer Gönderildi";
       enqueueToast({
@@ -576,6 +662,7 @@ export function GameLayout() {
       });
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Sefer gönderilemedi";
       enqueueToast({ tone: "error", title: "Sefer Hatası", body: message });
     },
@@ -588,6 +675,7 @@ export function GameLayout() {
         queryClient.invalidateQueries({ queryKey: ["game-state"] }),
         queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
       ]);
+      playAudioCue("panel_close");
       enqueueToast({
         tone: "warning",
         title: "Sefer Geri Çağrıldı",
@@ -595,6 +683,7 @@ export function GameLayout() {
       });
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Sefer geri çağrılamadı";
       enqueueToast({ tone: "error", title: "Geri Çağırma Hatası", body: message });
     },
@@ -612,8 +701,10 @@ export function GameLayout() {
         title: "Commander Upgraded",
         body: "Command records have been updated.",
       });
+      playAudioCue("upgrade_completed");
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Failed to upgrade commander";
       enqueueToast({ tone: "error", title: "Commander Upgrade Failed", body: message });
     },
@@ -632,8 +723,10 @@ export function GameLayout() {
         title: "Inbox Reward Claimed",
         body: "Resources and entitlements have been refreshed.",
       });
+      playAudioCue("resource_gained");
     },
     onError: (error) => {
+      playAudioCue("ui_error");
       const message = error instanceof ApiClientError ? error.message : "Failed to claim reward";
       enqueueToast({ tone: "error", title: "Claim Failed", body: message });
     },
@@ -642,23 +735,34 @@ export function GameLayout() {
   useSocketNotifications(Boolean(stateQuery.data), enqueueToast);
 
   const openInbox = useCallback(() => {
+    playAudioCue("panel_open");
     setInboxOpen(true);
     trackAnalyticsEvent("inbox_opened");
-  }, []);
+  }, [playAudioCue]);
 
   const openStorePreview = useCallback(() => {
     if (!bootstrapQuery.data?.storeEnabled) {
       return;
     }
 
+    playAudioCue("panel_open");
     setStorePreviewOpen(true);
     trackAnalyticsEvent("store_opened");
-  }, [bootstrapQuery.data?.storeEnabled]);
+  }, [bootstrapQuery.data?.storeEnabled, playAudioCue]);
 
   const openCommanderPanel = useCallback((commanderId?: string) => {
+    playAudioCue("panel_open");
     setCommanderPanelId(commanderId ?? null);
     setCommanderPanelOpen(true);
-  }, []);
+  }, [playAudioCue]);
+
+  const handleToggleAudioMuted = useCallback(() => {
+    const nextMuted = !audioSettings.muted;
+    setAudioSettings((current) => ({ ...current, muted: nextMuted }));
+    if (!nextMuted) {
+      window.setTimeout(() => playAudioCue("ui_primary", { force: true }), 0);
+    }
+  }, [audioSettings.muted, playAudioCue, setAudioSettings]);
 
   useEffect(() => {
     if (!bootstrapQuery.data?.storeEnabled && storePreviewOpen) {
@@ -709,6 +813,10 @@ export function GameLayout() {
       openInbox,
       openStorePreview,
       openCommanderPanel,
+      audioSettings,
+      playAudioCue,
+      setAudioSettings,
+      toggleAudioMuted,
       tutorialState,
       completeTutorialStep,
       completeTutorialRequirement: completeTutorialRequirementForCurrentStep,
@@ -719,12 +827,14 @@ export function GameLayout() {
     };
   }, [
     bootstrapQuery.data,
+    audioSettings,
     location.pathname,
     mailboxQuery.data?.unreadCount,
     marchMutation,
     openCommanderPanel,
     openInbox,
     openStorePreview,
+    playAudioCue,
     recallMutation,
     researchMutation,
     selectCity,
@@ -732,7 +842,9 @@ export function GameLayout() {
     selectedCityId,
     selectedPoiId,
     stateQuery.data,
+    setAudioSettings,
     toasts.length,
+    toggleAudioMuted,
     trainMutation,
     upgradeMutation,
     tutorialState,
@@ -822,6 +934,7 @@ export function GameLayout() {
         settings: {
           themeMode,
         },
+        audio: getAudioSnapshot(),
         tutorial: {
           currentStepId: tutorialState.currentStepId,
           currentTitle: currentTutorialStep.title,
@@ -914,6 +1027,7 @@ export function GameLayout() {
     };
   }, [
     bootstrapQuery.data,
+    getAudioSnapshot,
     location.pathname,
     queryClient,
     selectCity,
@@ -1080,7 +1194,9 @@ export function GameLayout() {
             onInbox={openInbox}
             onStore={openStorePreview}
             onCommander={() => openCommanderPanel()}
+            onToggleSound={handleToggleAudioMuted}
             showStore={storeEnabled}
+            soundMuted={audioSettings.muted}
           />
         }
       />

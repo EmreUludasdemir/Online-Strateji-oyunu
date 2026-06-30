@@ -41,22 +41,19 @@ function parseArgs(argv) {
   return args;
 }
 
-async function confirmComposerAction(page, composerTitle, actionName) {
+async function confirmComposerAction(page, composerMode) {
   await waitFor(async () => {
     const state = await readMapUiState(page);
-    if (!state?.composerMode) {
-      return null;
-    }
-    return state.composerActionLabel === actionName ? state : null;
-  }, 10_000, `${actionName} composer readiness`);
+    return state?.composerMode === composerMode ? state : null;
+  }, 10_000, `${composerMode} composer readiness`);
 
-  const dialog = getComposerDialog(page, composerTitle);
-  await dialog.waitFor({ timeout: 5_000 });
+  await page.locator(`[data-map-composer='${composerMode}']`).waitFor({ timeout: 5_000 });
 
   try {
     await page.evaluate(() => window.confirm_map_command_composer?.());
   } catch {
-    await clickDialogAction(page, () => getComposerDialog(page, composerTitle), actionName);
+    const state = await readMapUiState(page);
+    await clickDialogAction(page, () => getComposerDialog(page), state?.composerActionLabel ?? "Confirm");
   }
 }
 
@@ -123,11 +120,29 @@ function escapeRegExp(value) {
 }
 
 function getTargetDialog(page, label) {
-  return page.getByRole("dialog", { name: new RegExp(`Command Tray: ${escapeRegExp(label)}`) });
+  return page.getByRole("dialog", { name: new RegExp(`Buyruk Tepsisi: ${escapeRegExp(label)}`) });
 }
 
-function getComposerDialog(page, title) {
-  return page.getByRole("dialog", { name: title });
+function getComposerDialog(page) {
+  return page.getByRole("dialog").filter({ has: page.locator("[data-map-composer]") });
+}
+
+async function clickTargetAction(page, actionMode, reseatTarget) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      const actionButton = page.locator(`button[data-target-action='${actionMode}']`).first();
+      await actionButton.waitFor({ timeout: 6_000 });
+      await actionButton.click({ timeout: 5_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await reseatTarget();
+      await page.waitForTimeout(300 * attempt);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(`Target action ${actionMode} could not be clicked.`);
 }
 
 async function clickDialogAction(page, getDialog, actionName) {
@@ -206,15 +221,12 @@ async function dispatchMarch(page) {
     await waitForTargetTray(page, targetPoi.label);
 
     if (totalTroops <= 0) {
-      await ensureActionVisible(page, targetPoi.label, "Send Scout", async () => {
+      await clickTargetAction(page, "SCOUT", async () => {
         await page.evaluate((poiId) => {
           window.select_map_poi?.(poiId);
         }, targetPoi.id);
       });
-      await clickDialogAction(page, () => getTargetDialog(page, targetPoi.label), "Send Scout");
-      const scoutDialog = getComposerDialog(page, "Scout Mission");
-      await scoutDialog.waitFor({ timeout: 5_000 });
-      await confirmComposerAction(page, "Scout Mission", "Send Scout");
+      await confirmComposerAction(page, "SCOUT");
       return {
         mission: "SCOUT",
         targetName: targetPoi.label,
@@ -222,19 +234,14 @@ async function dispatchMarch(page) {
       };
     }
 
-    const targetActionName = targetPoi.canGather ? "Gather Here" : "Attack Camp";
-    const composerTitle = targetPoi.canGather ? "Gathering Orders" : "Camp Assault";
-    const confirmActionName = targetPoi.canGather ? "Start Gathering" : "March to Camp";
+    const targetActionMode = targetPoi.canGather ? "RESOURCE_GATHER" : "BARBARIAN_ATTACK";
 
-    await ensureActionVisible(page, targetPoi.label, targetActionName, async () => {
+    await clickTargetAction(page, targetActionMode, async () => {
       await page.evaluate((poiId) => {
         window.select_map_poi?.(poiId);
       }, targetPoi.id);
     });
-    await clickDialogAction(page, () => getTargetDialog(page, targetPoi.label), targetActionName);
-    const composerDialog = getComposerDialog(page, composerTitle);
-    await composerDialog.waitFor({ timeout: 5_000 });
-    await confirmComposerAction(page, composerTitle, confirmActionName);
+    await confirmComposerAction(page, targetActionMode);
 
     const sentState = await waitFor(async () => {
       const state = await readGameState(page);
@@ -264,15 +271,12 @@ async function dispatchMarch(page) {
   await waitForTargetTray(page, targetCity.cityName);
 
   if (totalTroops <= 0) {
-    await ensureActionVisible(page, targetCity.cityName, "Send Scout", async () => {
+    await clickTargetAction(page, "SCOUT", async () => {
       await page.evaluate((cityId) => {
         window.select_map_city?.(cityId);
       }, targetCity.cityId);
     });
-    await clickDialogAction(page, () => getTargetDialog(page, targetCity.cityName), "Send Scout");
-    const scoutDialog = getComposerDialog(page, "Scout Mission");
-    await scoutDialog.waitFor({ timeout: 5_000 });
-    await confirmComposerAction(page, "Scout Mission", "Send Scout");
+    await confirmComposerAction(page, "SCOUT");
     return {
       mission: "SCOUT",
       targetName: targetCity.cityName,
@@ -280,15 +284,12 @@ async function dispatchMarch(page) {
     };
   }
 
-  await ensureActionVisible(page, targetCity.cityName, "Attack City", async () => {
+  await clickTargetAction(page, "CITY_ATTACK", async () => {
     await page.evaluate((cityId) => {
       window.select_map_city?.(cityId);
     }, targetCity.cityId);
   });
-  await clickDialogAction(page, () => getTargetDialog(page, targetCity.cityName), "Attack City");
-  const composerDialog = getComposerDialog(page, "March Orders");
-  await composerDialog.waitFor({ timeout: 5_000 });
-  await confirmComposerAction(page, "March Orders", "Send March");
+  await confirmComposerAction(page, "CITY_ATTACK");
 
   const sentState = await waitFor(async () => {
     const state = await readGameState(page);
@@ -319,9 +320,9 @@ async function main() {
       const state = await readGameState(page);
       if (
         state?.screen === "/app/dashboard" &&
-        state.city.troops?.length === 3 &&
+        state.city.troops?.length >= 3 &&
         state.city.commanders?.length >= 1 &&
-        state.city.research?.length === 6
+        state.city.research?.length >= 6
       ) {
         return state;
       }

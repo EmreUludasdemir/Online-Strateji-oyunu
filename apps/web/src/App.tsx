@@ -98,6 +98,7 @@ export default function App() {
                     <Route path="commanders" element={<CommanderPage />} />
                     <Route path="map" element={<MapPage />} />
                     <Route path="reports" element={<ReportsPage />} />
+                    <Route path="leaderboard" element={<Navigate to="/app/leaderboards" replace />} />
                     <Route path="leaderboards" element={<LeaderboardPage />} />
                     <Route path="messages" element={<MessageCenterPage />} />
                     <Route path="market" element={<MarketPage />} />

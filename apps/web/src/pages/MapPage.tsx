@@ -36,6 +36,7 @@ import {
   getMapRadiusForDetail,
 } from "../components/worldMapShared";
 import { trackAnalyticsEvent } from "../lib/analytics";
+import { getExpansionAudioCue } from "../lib/audioEvents";
 import { copy } from "../lib/i18n";
 import { formatNumber, formatRelativeTimer, formatTimeRemaining } from "../lib/formatters";
 import {
@@ -708,6 +709,7 @@ export function MapPage() {
     isRecallingMarch,
     tutorialState,
     completeTutorialRequirement,
+    playAudioCue,
   } = useGameLayoutContext();
   const activeTutorialStepId = tutorialState.isSkipped || tutorialState.isPaused ? null : tutorialState.currentStepId;
   const mapCommandRef = useRef<WorldMapHandle | null>(null);
@@ -816,6 +818,7 @@ export function MapPage() {
         queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
         queryClient.invalidateQueries({ queryKey: ["mailbox"] }),
       ]);
+      playAudioCue("province_scouted");
     },
   });
 
@@ -827,6 +830,7 @@ export function MapPage() {
         queryClient.invalidateQueries({ queryKey: ["rallies"] }),
         queryClient.invalidateQueries({ queryKey: ["alliance-state"] }),
       ]);
+      playAudioCue("march_sent");
     },
   });
 
@@ -839,6 +843,7 @@ export function MapPage() {
       ]);
       setMapNotice("Toy işareti bozkır haritasına bırakıldı.");
       setMarkerDraft("");
+      playAudioCue("claim_created");
     },
   });
 
@@ -850,6 +855,7 @@ export function MapPage() {
         queryClient.invalidateQueries({ queryKey: ["game-state"] }),
         queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
       ]);
+      playAudioCue("panel_close");
       setMapNotice("İşaret bozkır haritasından kaldırıldı.");
     },
   });
@@ -869,6 +875,7 @@ export function MapPage() {
         queryClient.invalidateQueries({ queryKey: ["world-chunk"] }),
         queryClient.invalidateQueries({ queryKey: ["game-state"] }),
       ]);
+      playAudioCue("march_sent");
     },
   });
 
@@ -1233,7 +1240,7 @@ export function MapPage() {
   );
   const diplomacyPreviewRealms = useMemo(
     () => [...realmDiplomacies].sort((a, b) => getDiplomacyPriorityScore(b) - getDiplomacyPriorityScore(a)).slice(0, 4),
-    [realmDiplomacies],
+    [playAudioCue, realmDiplomacies],
   );
   const selectedMarch = useMemo(
     () => state.city.activeMarches.find((march) => march.id === selectedMarchId) ?? null,
@@ -1882,9 +1889,10 @@ export function MapPage() {
       }
       if (!city.isCurrentPlayer) {
         setTargetSheetOpen(true);
+        playAudioCue("province_selected");
       }
     },
-    [selectCity],
+    [playAudioCue, selectCity],
   );
 
   const handlePoiSelect = useCallback(
@@ -1901,8 +1909,9 @@ export function MapPage() {
         mapCommandRef.current?.focusPoi(poi.id);
       }
       setTargetSheetOpen(true);
+      playAudioCue("province_selected");
     },
-    [selectPoi],
+    [playAudioCue, selectPoi],
   );
 
   const handleMarchSelect = useCallback((marchId: string) => {
@@ -1914,7 +1923,8 @@ export function MapPage() {
     setDiplomacyDrawerOpen(false);
     setSelectedMarchId(marchId);
     mapCommandRef.current?.focusMarch(marchId);
-  }, []);
+    playAudioCue("panel_open");
+  }, [playAudioCue]);
 
   const openComposer = useCallback((mode: ComposerMode) => {
     setFieldCommand(null);
@@ -1924,7 +1934,13 @@ export function MapPage() {
     setDiplomacyDrawerOpen(false);
     setTargetSheetOpen(false);
     setComposerMode(mode);
-  }, []);
+    playAudioCue("panel_open");
+  }, [playAudioCue]);
+
+  const handleMapModeChange = useCallback((mode: MapMode) => {
+    setMapMode(mode);
+    playAudioCue("map_mode_changed");
+  }, [playAudioCue]);
 
   const handleProvinceSelect = useCallback((x: number, y: number) => {
     setSelectedMarchId(null);
@@ -1938,7 +1954,8 @@ export function MapPage() {
     selectPoi(null);
     setSelectedProvinceTile({ x, y });
     completeTutorialRequirement("province_selected", { targetId: `${x},${y}` });
-  }, [completeTutorialRequirement, selectCity, selectPoi]);
+    playAudioCue("province_selected");
+  }, [completeTutorialRequirement, playAudioCue, selectCity, selectPoi]);
 
   useEffect(() => {
     window.select_map_province = (x: number, y: number) => {
@@ -2063,7 +2080,8 @@ export function MapPage() {
     setSelectedProvinceTile(null);
     setSelectedRealmId(null);
     setDiplomacyDrawerOpen(false);
-  }, []);
+    playAudioCue("panel_close");
+  }, [playAudioCue]);
 
   const handleFieldCommandOpen = useCallback((command: MapFieldCommand) => {
     setTargetSheetOpen(false);
@@ -2075,13 +2093,14 @@ export function MapPage() {
     setFieldCommandOpenSource("canvas");
     setFieldCommand(command);
     setFieldMarkerDraft(command.label);
+    playAudioCue("field_command_opened");
     trackAnalyticsEvent("target_sheet_opened", {
       targetType: "FIELD_COMMAND",
       commandKind: command.kind,
       x: command.x,
       y: command.y,
     });
-  }, []);
+  }, [playAudioCue]);
 
   const handleFieldCommandFocus = useCallback(() => {
     if (!fieldCommand) {
@@ -2152,6 +2171,7 @@ export function MapPage() {
       setFieldCommand(null);
       setSelectedMarchId(null);
       mapCommandRef.current?.focusTile(diplomacy.realm.capitalX, diplomacy.realm.capitalY);
+      playAudioCue("realm_dossier_opened");
       setMapNotice(`${diplomacy.realm.name} elçilik defteri açıldı.`);
     },
     [realmDiplomacies],
@@ -2175,6 +2195,7 @@ export function MapPage() {
           x: province.x,
           y: province.y,
         });
+        playAudioCue("claim_created");
         setMapNotice(`${province.name} için sancak iddiası hazırlandı.`);
         return;
       }
@@ -2191,6 +2212,7 @@ export function MapPage() {
           x: targetX,
           y: targetY,
         });
+        playAudioCue("province_scouted");
         setMapNotice(`${diplomacy.realm.name} için keşif buyruğu hazırlandı.`);
         return;
       }
@@ -2200,9 +2222,10 @@ export function MapPage() {
       }
 
       mapCommandRef.current?.focusTile(targetX, targetY);
+      playAudioCue("diplomacy_action");
       setMapNotice(`${actionLabel}: ${diplomacy.realm.name} için elçilik buyruğu kayda alındı.`);
     },
-    [],
+    [playAudioCue],
   );
 
   const handleExpansionAction = useCallback(
@@ -2237,13 +2260,14 @@ export function MapPage() {
       setMapMode("ALLIANCE");
       setMapNotice(result.message);
       mapCommandRef.current?.focusTile(selectedProvince.x, selectedProvince.y);
+      playAudioCue(getExpansionAudioCue(action));
       if (action === "SCOUT_PROVINCE") {
         completeTutorialRequirement("province_scouted", { action });
       } else {
         completeTutorialRequirement("province_expansion_action", { action });
       }
     },
-    [completeTutorialRequirement, now, selectedProvince, selectedProvinceControl],
+    [completeTutorialRequirement, now, playAudioCue, selectedProvince, selectedProvinceControl],
   );
 
   const handleProvinceAction = useCallback(
@@ -2616,7 +2640,8 @@ export function MapPage() {
                       type="button"
                       size="small"
                       variant={mapMode === mode ? "primary" : "secondary"}
-                      onClick={() => setMapMode(mode)}
+                      data-map-mode={mode}
+                      onClick={() => handleMapModeChange(mode)}
                     >
                       {getMapModeLabel(mode)}
                     </Button>
@@ -2912,6 +2937,7 @@ export function MapPage() {
                   key={entry.realm.id}
                   type="button"
                   className={styles.realmPreviewButton}
+                  data-realm-action="open-realm-detail"
                   onClick={() => openRealmDetail(entry.realm.id)}
                 >
                   <span className={styles.realmSwatch} style={{ background: entry.realm.primaryColor }} aria-hidden="true" />
@@ -2923,7 +2949,13 @@ export function MapPage() {
                 </button>
               ))}
             </div>
-            <Button type="button" size="small" variant="secondary" onClick={() => setDiplomacyDrawerOpen(true)}>
+            <Button
+              type="button"
+              size="small"
+              variant="secondary"
+              data-map-action="open-diplomacy-drawer"
+              onClick={() => setDiplomacyDrawerOpen(true)}
+            >
               Elçilik Defteri
             </Button>
           </SectionCard>
@@ -3264,6 +3296,7 @@ export function MapPage() {
                 type="button"
                 className={styles.provinceRealmMark}
                 style={{ background: selectedProvince.realm.primaryColor }}
+                data-realm-action="open-realm-detail"
                 onClick={() => openRealmDetail(selectedProvince.realm.id)}
                 aria-label={`${selectedProvince.realm.name} elçilik defterini aç`}
               >
@@ -3639,7 +3672,13 @@ export function MapPage() {
                 </div>
                 <div className={styles.diplomacyRealmFooter}>
                   <small>{entry.advisorText}</small>
-                  <Button type="button" size="small" variant="secondary" onClick={() => openRealmDetail(entry.realm.id)}>
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="secondary"
+                    data-realm-action="open-realm-detail"
+                    onClick={() => openRealmDetail(entry.realm.id)}
+                  >
                     Yurdu Gör
                   </Button>
                 </div>
@@ -3847,21 +3886,21 @@ export function MapPage() {
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Keşif Taraması</p>
                   <strong className={styles.commandActionTitle}>Keşif hattını aç</strong>
-                  <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
+                  <Button type="button" variant="secondary" data-target-action="SCOUT" onClick={() => openComposer("SCOUT")}>
                     {copy.map.scout}
                   </Button>
                 </article>
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Toy Çağrısı</p>
                   <strong className={styles.commandActionTitle}>Sancak kaldır</strong>
-                  <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
+                  <Button type="button" variant="ghost" data-target-action="RALLY" onClick={() => openComposer("RALLY")}>
                     {copy.map.rally}
                   </Button>
                 </article>
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Ana Buyruk</p>
                   <strong className={styles.commandActionTitle}>Kuşatma düzenini gönder</strong>
-                  <Button type="button" variant="primary" onClick={() => openComposer(targetPrimaryMode)}>
+                  <Button type="button" variant="primary" data-target-action={targetPrimaryMode} onClick={() => openComposer(targetPrimaryMode)}>
                     {targetPrimaryActionLabel}
                   </Button>
                 </article>
@@ -3909,7 +3948,7 @@ export function MapPage() {
                 <article className={styles.commandActionCard}>
                   <p className={styles.commandActionEyebrow}>Keşif Taraması</p>
                   <strong className={styles.commandActionTitle}>Hedefi oku</strong>
-                  <Button type="button" variant="secondary" onClick={() => openComposer("SCOUT")}>
+                  <Button type="button" variant="secondary" data-target-action="SCOUT" onClick={() => openComposer("SCOUT")}>
                     {copy.map.scout}
                   </Button>
                 </article>
@@ -3917,7 +3956,7 @@ export function MapPage() {
                   <article className={styles.commandActionCard}>
                     <p className={styles.commandActionEyebrow}>Toy Çağrısı</p>
                     <strong className={styles.commandActionTitle}>Toy hattı aç</strong>
-                    <Button type="button" variant="ghost" onClick={() => openComposer("RALLY")}>
+                    <Button type="button" variant="ghost" data-target-action="RALLY" onClick={() => openComposer("RALLY")}>
                       {copy.map.rally}
                     </Button>
                   </article>
@@ -3927,7 +3966,7 @@ export function MapPage() {
                   <strong className={styles.commandActionTitle}>
                     {selectedPoi.kind === "BARBARIAN_CAMP" ? "Akın kolunu gönder" : "Hasat düzenini aç"}
                   </strong>
-                  <Button type="button" variant="primary" onClick={() => openComposer(targetPrimaryMode)}>
+                  <Button type="button" variant="primary" data-target-action={targetPrimaryMode} onClick={() => openComposer(targetPrimaryMode)}>
                     {targetPrimaryActionLabel}
                   </Button>
                 </article>
@@ -3971,7 +4010,12 @@ export function MapPage() {
                 Konuma odaklan
               </Button>
               {fieldCommandCanOpenTarget ? (
-                <Button type="button" variant="ghost" onClick={handleFieldCommandOpenTarget}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  data-field-command-action="open-target"
+                  onClick={handleFieldCommandOpenTarget}
+                >
                   Hedefi aç
                 </Button>
               ) : null}
@@ -3985,7 +4029,7 @@ export function MapPage() {
         }
       >
         {fieldCommand ? (
-          <div className={styles.composerGrid}>
+          <div className={styles.composerGrid} data-field-command-sheet="open">
             <section className={styles.composerHero}>
               <div>
                 <p className={styles.hudEyebrow}>Saha Buyruğu</p>
@@ -4021,7 +4065,7 @@ export function MapPage() {
                 <p className={styles.commandActionCopy}>
                   Araziyi, rotayı veya rapor işaretlerini okumak için kamerayı bu koordinata al.
                 </p>
-                <Button type="button" variant="secondary" onClick={handleFieldCommandFocus}>
+                <Button type="button" variant="secondary" data-field-command-action="focus" onClick={handleFieldCommandFocus}>
                   Konuma odaklan
                 </Button>
               </article>
@@ -4033,7 +4077,13 @@ export function MapPage() {
                 <p className={styles.commandActionCopy}>
                   Oba ve POI saha buyrukları keşif, toy ve sefer kararlarına doğrudan atlar.
                 </p>
-                <Button type="button" variant="ghost" disabled={!fieldCommandCanOpenTarget} onClick={handleFieldCommandOpenTarget}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={!fieldCommandCanOpenTarget}
+                  data-field-command-action="open-target"
+                  onClick={handleFieldCommandOpenTarget}
+                >
                   Hedefi aç
                 </Button>
               </article>
@@ -4043,7 +4093,12 @@ export function MapPage() {
                 <p className={styles.commandActionCopy}>
                   Bu konumu toy işaretlerine yaz; kamera kayınca bile koordinat okunur kalsın.
                 </p>
-                <Button type="button" onClick={() => void handleFieldMarkerCreate()} disabled={createMarkerMutation.isPending}>
+                <Button
+                  type="button"
+                  data-field-command-action="post-marker"
+                  onClick={() => void handleFieldMarkerCreate()}
+                  disabled={createMarkerMutation.isPending}
+                >
                   {createMarkerMutation.isPending ? "Gönderiliyor" : "İşaret bırak"}
                 </Button>
               </article>

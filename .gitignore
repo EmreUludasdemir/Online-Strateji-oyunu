@@ -6,6 +6,7 @@ dist
 coverage
 playwright-report
 test-results
+output/
 apps/server/generated
 apps/server/prisma/dev.db
 apps/web/.vite
